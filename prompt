@@ -1,0 +1,1048 @@
+# Noto
+
+Développe **Noto**, une application Windows moderne, minimaliste et légère permettant principalement de **visualiser différents types de fichiers**, avec des fonctions d'édition adaptées lorsque cela est pertinent.
+
+Noto doit être pensé comme un **viewer universel simple**, pas comme un IDE, un gestionnaire de fichiers ou une suite bureautique.
+
+Le projet sera publié sur un **repository GitHub public**. Le repository doit donc être propre, professionnel, compréhensible et directement présentable à d'autres développeurs.
+
+---
+
+# 1. Philosophie du projet
+
+Noto doit suivre une règle simple :
+
+> **Ouvrir rapidement un fichier et le rendre agréable à consulter.**
+
+L'application doit être volontairement simple.
+
+Pas de :
+
+* compte utilisateur
+* cloud
+* synchronisation
+* IA
+* serveur obligatoire
+* système de collaboration
+* fonctionnalités sociales
+* abonnement
+* télémétrie intrusive
+
+Tout doit fonctionner **localement sur le PC**.
+
+Noto doit pouvoir être utilisé comme une petite application installée sur Windows, sans configuration compliquée.
+
+---
+
+# 2. Plateforme
+
+Cible principale :
+
+**Windows**
+
+L'application doit pouvoir être distribuée sous forme d'un véritable installateur Windows.
+
+Objectifs :
+
+* `.exe` installable
+* installation simple
+* désinstallation propre
+* raccourci Menu Démarrer
+* raccourci Bureau proposé pendant l'installation si pertinent
+* icône propre
+* nom de l'application : **Noto**
+
+Une version portable peut être proposée en complément si cela est simple à maintenir.
+
+Choisis une technologie adaptée à ce type d'application.
+
+Priorités :
+
+1. stabilité
+2. performances
+3. légèreté
+4. simplicité du code
+5. facilité de maintenance
+6. facilité de build
+7. compatibilité Windows
+
+Évite les dépendances inutiles.
+
+---
+
+# 3. Formats pris en charge
+
+Noto doit pouvoir ouvrir le maximum de formats utiles sans devenir une suite bureautique.
+
+## Texte / Markdown
+
+* `.md`
+* `.markdown`
+* `.txt`
+* `.text`
+* `.log`
+
+## Code
+
+* `.js`
+* `.ts`
+* `.jsx`
+* `.tsx`
+* `.html`
+* `.css`
+* `.scss`
+* `.json`
+* `.xml`
+* `.yaml`
+* `.yml`
+* `.py`
+* `.java`
+* `.c`
+* `.cpp`
+* `.h`
+* `.hpp`
+* `.cs`
+* `.php`
+* `.sql`
+* `.sh`
+* `.bat`
+* `.cmd`
+* `.ps1`
+
+## Configuration
+
+* `.ini`
+* `.env`
+* `.toml`
+* `.conf`
+* `.editorconfig`
+* `.gitignore`
+* `.gitattributes`
+
+## Documents
+
+* `.pdf`
+
+## Images
+
+* `.png`
+* `.jpg`
+* `.jpeg`
+* `.gif`
+* `.webp`
+* `.bmp`
+* `.svg`
+* `.ico`
+* `.tif`
+* `.tiff`
+
+## Données
+
+* `.csv`
+
+## Web
+
+* `.html`
+* éventuellement `.htm`
+
+---
+
+# 4. Gestion des formats inconnus
+
+Si l'utilisateur ouvre un fichier dont l'extension n'est pas officiellement supportée :
+
+Si le fichier semble être du texte :
+
+→ proposer de l'ouvrir comme fichier texte.
+
+Sinon :
+
+→ afficher une page propre indiquant que le format n'est actuellement pas pris en charge.
+
+Ne jamais faire planter Noto simplement parce qu'un fichier est inconnu.
+
+Afficher une erreur compréhensible en français.
+
+---
+
+# 5. Viewer Markdown
+
+Le Markdown est l'une des fonctionnalités principales de Noto.
+
+Lorsqu'un fichier `.md` est ouvert, afficher directement son **rendu Markdown**.
+
+Supporter au minimum :
+
+* titres H1 à H6
+* paragraphes
+* gras
+* italique
+* texte barré
+* listes
+* listes numérotées
+* listes imbriquées
+* citations
+* liens
+* images
+* tableaux
+* code inline
+* blocs de code
+* séparateurs
+* cases à cocher
+* ancres
+* liens internes
+* caractères échappés
+
+Le rendu doit être :
+
+* lisible
+* propre
+* moderne
+* agréable sur les longs documents
+
+Le rendu doit rester proche d'un Markdown classique.
+
+Ne pas inventer un système de mise en page complètement différent.
+
+---
+
+# 6. Éditeur Markdown
+
+Le viewer reste le mode principal.
+
+L'édition doit être accessible depuis une action claire :
+
+**Éditer**
+
+Lorsque l'utilisateur clique dessus, Noto passe en mode édition.
+
+Prévoir :
+
+* éditeur Markdown
+* coloration syntaxique
+* numéros de lignes
+* indentation
+* Ctrl + S
+* annuler
+* rétablir
+* rechercher
+* remplacer
+* copier
+* couper
+* coller
+* sélection normale
+* aperçu en temps réel
+
+L'utilisateur doit pouvoir passer facilement entre :
+
+**Édition ↔ Aperçu**
+
+sans perdre ses modifications.
+
+Si un fichier contient des modifications non sauvegardées :
+
+→ Noto doit l'indiquer clairement.
+
+Si l'utilisateur tente de fermer le fichier :
+
+→ demander confirmation uniquement si nécessaire.
+
+---
+
+# 7. Édition des autres fichiers texte
+
+Noto ne doit pas devenir un IDE.
+
+Cependant, pour les fichiers texte et code simples, il peut être possible d'activer un mode édition.
+
+Par exemple :
+
+`.txt`
+
+→ lecture + édition
+
+`.json`
+
+→ lecture + édition
+
+`.js`
+
+→ lecture + édition simple
+
+etc.
+
+L'objectif est surtout de permettre une petite modification rapide.
+
+Pas besoin de :
+
+* terminal
+* debugger
+* extensions IDE
+* compilation
+* Git intégré
+* autocomplétion complexe
+
+---
+
+# 8. Viewer de code
+
+Pour les fichiers de code :
+
+* coloration syntaxique
+* police monospace
+* numéros de lignes
+* recherche
+* sélection
+* copie
+* zoom
+* défilement fluide
+
+Le rendu doit être adapté au langage détecté.
+
+Pour JSON :
+
+* coloration syntaxique
+* indentation lisible
+* structure facile à comprendre
+
+Pour les gros fichiers, éviter de charger inutilement tout le contenu dans l'interface si cela provoque des ralentissements.
+
+---
+
+# 9. Viewer HTML
+
+Pour les fichiers HTML, proposer deux modes :
+
+### Code
+
+Afficher le HTML avec coloration syntaxique.
+
+### Aperçu
+
+Afficher le rendu HTML.
+
+L'utilisateur doit pouvoir passer facilement de :
+
+**Code ↔ Aperçu**
+
+Le rendu doit être isolé correctement afin qu'un fichier HTML local ne puisse pas compromettre l'application.
+
+---
+
+# 10. Viewer PDF
+
+Noto doit proposer un viewer PDF simple.
+
+Fonctions :
+
+* affichage des pages
+* page suivante
+* page précédente
+* numéro de page
+* aller à une page
+* zoom
+* zoom +
+* zoom -
+* ajuster à la largeur
+* ajuster à la page
+* défilement
+* recherche lorsque supportée correctement
+
+Pas besoin d'éditer les PDF.
+
+---
+
+# 11. Viewer d'images
+
+Pour les images :
+
+* affichage centré
+* ajustement à la fenêtre
+* taille réelle
+* zoom
+* zoom avant
+* zoom arrière
+* déplacement de l'image lorsqu'elle est zoomée
+* rotation si facilement réalisable
+* informations basiques sur l'image
+
+Formats :
+
+PNG, JPG, JPEG, GIF, WEBP, BMP, SVG, ICO, TIFF.
+
+Pour les GIF :
+
+→ conserver l'animation.
+
+Pour SVG :
+
+→ afficher correctement le rendu vectoriel.
+
+---
+
+# 12. Viewer CSV
+
+Pour les fichiers `.csv` :
+
+Afficher les données sous forme de tableau.
+
+Prévoir :
+
+* lignes
+* colonnes
+* défilement horizontal
+* défilement vertical
+* lecture correcte des séparateurs courants
+* gestion des valeurs contenant des guillemets
+* affichage propre des cellules
+
+Noto n'a pas besoin de devenir un tableur.
+
+---
+
+# 13. Glisser-déposer
+
+L'utilisateur doit pouvoir faire :
+
+**Fichier → glisser dans Noto → ouverture immédiate**
+
+Supporter le drag & drop depuis l'Explorateur Windows.
+
+Si plusieurs fichiers sont déposés :
+
+→ gérer proprement la situation, par exemple avec une liste de fichiers ouverts.
+
+---
+
+# 14. Fichiers récents
+
+Ajouter une petite section :
+
+**Récents**
+
+Elle doit rester locale.
+
+Afficher :
+
+* nom du fichier
+* chemin éventuellement tronqué
+* type
+* date de dernière ouverture
+
+Prévoir une possibilité de supprimer un élément de la liste.
+
+Si le fichier n'existe plus :
+
+→ l'indiquer proprement.
+
+---
+
+# 15. Intégration Windows
+
+Noto doit être correctement déclaré auprès de Windows comme application capable d'ouvrir les formats qu'il prend en charge.
+
+IMPORTANT :
+
+**Noto ne doit PAS imposer ses associations de fichiers.**
+
+Lors de l'installation, l'utilisateur doit conserver le contrôle.
+
+Windows doit simplement savoir que Noto peut ouvrir certains formats.
+
+Ainsi l'utilisateur pourra naturellement faire :
+
+**clic droit → Ouvrir avec → Noto**
+
+et éventuellement :
+
+**Toujours utiliser cette application**
+
+Noto doit donc apparaître correctement dans la liste des applications compatibles avec les formats pris en charge.
+
+Ne pas remplacer automatiquement les applications par défaut existantes.
+
+Ne pas forcer Noto comme programme par défaut.
+
+Les associations doivent être déclarées proprement dans le package/installateur Windows.
+
+---
+
+# 16. Interface
+
+L'interface doit être :
+
+* moderne
+* minimaliste
+* élégante
+* rapide
+* professionnelle
+* claire
+
+Le design doit être discret.
+
+Éviter absolument :
+
+* néons
+* effets futuristes
+* animations excessives
+* gradients partout
+* énormes boutons
+* interface de dashboard
+* 50 paramètres inutiles
+
+Noto doit donner l'impression d'un **petit logiciel Windows premium et simple**.
+
+---
+
+# 17. Écran d'accueil
+
+Lorsqu'aucun fichier n'est ouvert :
+
+Afficher une interface simple avec :
+
+**Noto**
+
+et quelques actions :
+
+* Ouvrir un fichier
+* Ouvrir plusieurs fichiers
+* éventuellement Ouvrir un dossier
+* fichiers récents
+* zone de glisser-déposer
+
+Ne pas surcharger l'écran.
+
+---
+
+# 18. Barre supérieure
+
+Lorsqu'un fichier est ouvert, la barre supérieure doit rester minimaliste.
+
+Afficher principalement :
+
+* nom du fichier
+* éventuellement type
+* action principale
+* Éditer lorsque disponible
+* rechercher
+* menu supplémentaire
+
+Les actions secondaires peuvent être regroupées dans un menu.
+
+---
+
+# 19. Onglets
+
+Les onglets sont autorisés si cela améliore réellement l'utilisation.
+
+Exemple :
+
+`README.md | config.json | image.png`
+
+Chaque fichier peut alors être ouvert dans son propre onglet.
+
+Mais ne pas ajouter les onglets si cela rend l'application inutilement complexe.
+
+L'objectif reste la simplicité.
+
+---
+
+# 20. Thèmes
+
+Prévoir :
+
+* thème clair
+* thème sombre
+
+Le thème sombre doit être particulièrement travaillé.
+
+Tous les composants doivent respecter le thème :
+
+* viewer
+* éditeur
+* PDF
+* images
+* tableaux
+* menus
+* paramètres
+* fenêtres d'erreur
+
+---
+
+# 21. Paramètres
+
+Créer une petite page de paramètres.
+
+Ne pas créer un énorme panneau de configuration.
+
+Catégories possibles :
+
+### Apparence
+
+* thème
+* taille du texte
+
+### Éditeur
+
+* taille de police
+* numéros de lignes
+* retour à la ligne automatique
+
+### Général
+
+* fichiers récents
+* comportement à l'ouverture
+
+Les paramètres doivent être sauvegardés localement.
+
+---
+
+# 22. Gestion des erreurs
+
+Toutes les erreurs visibles par l'utilisateur doivent être compréhensibles.
+
+Ne jamais afficher simplement :
+
+`Error 0x800...`
+
+Afficher plutôt :
+
+> Impossible d'ouvrir ce fichier.
+
+Puis une explication courte et éventuellement un bouton :
+
+**Copier les détails**
+
+Prévoir des états :
+
+* chargement
+* fichier vide
+* fichier trop volumineux
+* format inconnu
+* fichier inaccessible
+* PDF invalide
+* image invalide
+* erreur de sauvegarde
+
+L'application ne doit jamais afficher un écran vide sans explication.
+
+---
+
+# 23. Performance
+
+Noto doit être rapide au démarrage.
+
+Attention particulièrement aux :
+
+* gros fichiers texte
+* gros fichiers JSON
+* gros fichiers Markdown
+* PDF volumineux
+* images très lourdes
+
+Éviter les opérations bloquantes sur l'interface.
+
+Si un fichier prend du temps à charger :
+
+→ afficher un état de chargement.
+
+Si un fichier est extrêmement volumineux :
+
+→ prévenir l'utilisateur avant une opération potentiellement lourde.
+
+---
+
+# 24. Sécurité
+
+Tout fonctionne localement.
+
+Les fichiers ouverts par l'utilisateur ne doivent pas être envoyés vers un serveur.
+
+Pour HTML et SVG, faire particulièrement attention au contenu potentiellement dangereux.
+
+Ne pas exécuter arbitrairement du contenu provenant d'un fichier.
+
+---
+
+# 25. Architecture du projet
+
+Le projet doit être organisé proprement.
+
+Ne pas mettre tout le code dans un seul fichier.
+
+Créer une architecture claire avec des dossiers séparés pour :
+
+* interface
+* viewers
+* éditeur
+* parsing
+* gestion des fichiers
+* paramètres
+* composants UI
+* utilitaires
+* assets
+* configuration
+* tests
+
+L'architecture exacte dépendra de la technologie choisie, mais elle doit rester simple.
+
+Ne pas créer 200 fichiers inutiles juste pour donner l'impression que le projet est complexe.
+
+---
+
+# 26. GitHub public
+
+Le repository doit être prêt à être rendu public.
+
+Créer au minimum :
+
+```text
+Noto/
+├── src/
+├── assets/
+├── tests/
+├── docs/
+├── screenshots/
+├── .github/
+│   └── workflows/
+├── .gitignore
+├── README.md
+├── LICENSE
+├── CONTRIBUTING.md
+├── SECURITY.md
+├── CHANGELOG.md
+└── ...
+```
+
+Adapter cette structure à la technologie choisie.
+
+---
+
+# 27. README.md
+
+Le README doit être réellement professionnel.
+
+Il doit contenir :
+
+* logo Noto
+* présentation courte
+* aperçu du projet
+* screenshots
+* fonctionnalités
+* formats supportés
+* installation
+* utilisation
+* raccourcis clavier
+* développement
+* build
+* contribution
+* licence
+
+Ajouter des badges utiles uniquement.
+
+Ne pas mettre 30 badges inutiles.
+
+Le README doit permettre à quelqu'un qui découvre le projet de comprendre Noto en moins de deux minutes.
+
+---
+
+# 28. Screenshots
+
+Créer un dossier :
+
+`screenshots/`
+
+Il doit contenir de vraies captures de l'application.
+
+Prévoir notamment :
+
+1. écran d'accueil
+2. viewer Markdown
+3. éditeur Markdown
+4. viewer code
+5. viewer PDF
+6. viewer image
+7. viewer CSV
+8. thème clair
+9. thème sombre
+
+Les screenshots doivent être propres et montrer l'interface réelle.
+
+Ils pourront être utilisés dans le README GitHub.
+
+Si l'environnement permet de générer automatiquement ces captures, fais-le.
+
+Sinon, préparer clairement la structure et les indications nécessaires pour les ajouter.
+
+---
+
+# 29. Documentation
+
+Créer un dossier `docs/` si nécessaire.
+
+Documenter notamment :
+
+* architecture
+* installation
+* développement
+* build Windows
+* ajout d'un nouveau format
+* création d'un viewer
+* système de thèmes
+* packaging
+
+La documentation doit rester compréhensible pour un développeur qui découvre le projet.
+
+---
+
+# 30. GitHub Actions
+
+Mettre en place une CI simple.
+
+À chaque Pull Request ou push important :
+
+* installation des dépendances
+* vérification du projet
+* lint si pertinent
+* tests
+* build si raisonnable
+
+Prévoir également un workflow de release si cela est pertinent.
+
+Le but est d'avoir un projet réellement maintenable sur GitHub.
+
+---
+
+# 31. Tests
+
+Créer des tests pour les parties importantes.
+
+Tester notamment :
+
+* parsing Markdown
+* ouverture de fichiers
+* détection des extensions
+* JSON
+* CSV
+* gestion des erreurs
+* sauvegarde
+* conversion/rendu Markdown
+
+Pas besoin de tester chaque pixel de l'interface.
+
+---
+
+# 32. Packaging
+
+Créer une vraie procédure de build Windows.
+
+Le projet doit permettre de produire :
+
+* application installable
+* éventuellement version portable
+
+Tester que l'application installée :
+
+* démarre correctement
+* possède son icône
+* peut ouvrir les fichiers supportés
+* apparaît dans les applications Windows compatibles
+* se désinstalle correctement
+
+---
+
+# 33. Icône et identité visuelle
+
+Créer une identité visuelle simple autour du nom :
+
+**Noto**
+
+Le logo doit être :
+
+* minimal
+* reconnaissable
+* lisible en petite taille
+* adapté à une icône Windows
+* cohérent avec l'interface
+
+Pas besoin d'un logo compliqué.
+
+Prévoir les assets nécessaires pour Windows et GitHub.
+
+---
+
+# 34. Langue
+
+L'interface principale doit être en **français**.
+
+Les messages d'erreur doivent également être en français.
+
+Préparer néanmoins l'architecture de manière à pouvoir ajouter l'anglais plus tard sans refaire toute l'application.
+
+---
+
+# 35. Raccourcis clavier
+
+Prévoir au minimum :
+
+* `Ctrl + O` → ouvrir
+* `Ctrl + S` → sauvegarder
+* `Ctrl + Shift + S` → enregistrer sous si pertinent
+* `Ctrl + F` → rechercher
+* `Ctrl + H` → remplacer
+* `Ctrl + Z` → annuler
+* `Ctrl + Y` → rétablir
+* `Ctrl + C` → copier
+* `Ctrl + X` → couper
+* `Ctrl + V` → coller
+* `Ctrl + W` → fermer le fichier/onglet si les onglets existent
+
+---
+
+# 36. Ce qu'il ne faut PAS faire
+
+Ne transforme pas Noto en :
+
+* VS Code
+* Notion
+* Word
+* Photoshop
+* Excel
+* gestionnaire de fichiers complet
+* navigateur web
+* suite collaborative
+
+N'ajoute pas de fonctionnalités uniquement parce qu'elles sont techniquement possibles.
+
+Chaque fonctionnalité doit répondre à la question :
+
+> Est-ce que cela rend Noto meilleur pour consulter ou modifier rapidement un fichier ?
+
+Si la réponse est non, ne pas l'ajouter.
+
+---
+
+# 37. Qualité finale
+
+Avant de considérer la V1 comme terminée, vérifier :
+
+* aucune fonctionnalité majeure cassée
+* aucun écran vide sans explication
+* aucune erreur console importante
+* aucune dépendance inutile
+* interface cohérente
+* responsive aux différentes tailles de fenêtre
+* thème clair fonctionnel
+* thème sombre fonctionnel
+* fichiers Markdown fonctionnels
+* fichiers texte fonctionnels
+* code fonctionnel
+* images fonctionnelles
+* PDF fonctionnel
+* CSV fonctionnel
+* HTML fonctionnel
+* drag & drop fonctionnel
+* sauvegarde fonctionnelle
+* raccourcis fonctionnels
+* packaging Windows fonctionnel
+* intégration Windows fonctionnelle
+* README complet
+* screenshots présents
+* repository propre
+
+---
+
+# 38. Méthode de développement
+
+Ne cherche pas à tout construire d'un seul bloc.
+
+Construis Noto progressivement :
+
+### Phase 1
+
+Base de l'application + fenêtre + navigation + ouverture de fichiers.
+
+### Phase 2
+
+Viewer texte + Markdown.
+
+### Phase 3
+
+Éditeur Markdown.
+
+### Phase 4
+
+Viewer code + JSON + configuration.
+
+### Phase 5
+
+Viewer images.
+
+### Phase 6
+
+Viewer PDF.
+
+### Phase 7
+
+Viewer CSV.
+
+### Phase 8
+
+Viewer HTML.
+
+### Phase 9
+
+Thèmes + paramètres + fichiers récents.
+
+### Phase 10
+
+Drag & drop + intégration Windows.
+
+### Phase 11
+
+Tests + optimisation.
+
+### Phase 12
+
+Packaging Windows + GitHub Actions.
+
+### Phase 13
+
+README + documentation + screenshots + finition.
+
+---
+
+# 39. Règle importante pour l'agent
+
+Tu dois réellement **construire le projet**, pas simplement produire une maquette.
+
+Le résultat final doit être une application fonctionnelle que l'on peut :
+
+1. cloner depuis GitHub
+2. installer les dépendances
+3. lancer en développement
+4. compiler
+5. installer sur Windows
+6. utiliser quotidiennement
+
+À chaque étape, privilégie une implémentation simple et fiable plutôt qu'une fonctionnalité impressionnante mais fragile.
+
+Quand une décision technique n'est pas imposée dans ce document, choisis la solution la plus simple, maintenable et adaptée à Noto.
+
+---
+
+# 40. État final attendu
+
+À la fin de la V1, je dois avoir :
+
+**Noto**
+
+Une application Windows locale, rapide et moderne capable de :
+
+**Ouvrir → afficher → éventuellement modifier → sauvegarder**
+
+une grande variété de fichiers courants.
+
+Le logiciel doit rester extrêmement simple à comprendre dès la première ouverture.
+
+Le repository GitHub public doit être aussi propre que l'application elle-même.
