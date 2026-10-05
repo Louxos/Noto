@@ -1,0 +1,62 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Noto",
+  "version": "0.1.0",
+  "identifier": "dev.noto.viewer",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Noto",
+        "width": 1440,
+        "height": 940,
+        "minWidth": 820,
+        "minHeight": 580,
+        "center": true,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' asset: http://asset.localhost blob: data:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src ipc: http://ipc.localhost http://localhost:1420 ws://localhost:1420; worker-src 'self' blob:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self';"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis", "msi"],
+    "category": "Utility",
+    "shortDescription": "Lecteur local de fichiers",
+    "longDescription": "Ouvrez, consultez et modifiez rapidement vos fichiers courants avec Noto.",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "displayLanguageSelector": false,
+        "languages": ["French", "English"],
+        "installerIcon": "icons/icon.ico"
+      },
+      "wix": {
+        "language": "fr-FR"
+      }
+    },
+    "fileAssociations": [
+      { "ext": ["md", "markdown"], "name": "Document Markdown", "description": "Document Markdown", "role": "Viewer", "mimeType": "text/markdown" },
+      { "ext": ["txt", "text", "log", "ini", "env", "toml", "conf", "editorconfig", "gitignore", "gitattributes"], "name": "Fichier texte", "description": "Fichier texte", "role": "Viewer", "mimeType": "text/plain" },
+      { "ext": ["js", "ts", "jsx", "tsx", "css", "scss", "json", "xml", "yaml", "yml", "py", "java", "c", "cpp", "h", "hpp", "cs", "php", "sql", "sh", "bat", "cmd", "ps1"], "name": "Fichier de code", "description": "Fichier source ou de configuration", "role": "Editor", "mimeType": "text/plain" },
+      { "ext": ["html", "htm"], "name": "Document HTML", "description": "Document HTML", "role": "Viewer", "mimeType": "text/html" },
+      { "ext": ["pdf"], "name": "Document PDF", "description": "Document PDF", "role": "Viewer", "mimeType": "application/pdf" },
+      { "ext": ["png", "jpg", "jpeg", "gif", "webp", "bmp", "svg", "ico", "tif", "tiff"], "name": "Image", "description": "Fichier image", "role": "Viewer", "mimeType": "image/*" },
+      { "ext": ["csv"], "name": "Fichier CSV", "description": "Fichier de données CSV", "role": "Viewer", "mimeType": "text/csv" }
+    ]
+  },
+  "plugins": {}
+}

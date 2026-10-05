@@ -1,0 +1,41 @@
+{
+  "name": "noto",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Un lecteur de fichiers local, simple et soigné.",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 1420 --strictPort",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "test": "vitest run --environment node",
+    "check": "tsc -b && vitest run",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.12.1",
+    "@tauri-apps/plugin-dialog": "^2.8.1",
+    "@tauri-apps/plugin-fs": "^2.6.0",
+    "highlight.js": "^11.11.1",
+    "lucide-react": "^0.468.0",
+    "pdfjs-dist": "4.10.38",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-markdown": "^9.0.3",
+    "rehype-highlight": "^7.0.2",
+    "remark-gfm": "^4.0.1",
+    "utif": "^3.1.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.8.4",
+    "@types/react": "^18.3.30",
+    "@types/react-dom": "^18.3.7",
+    "@types/utif": "^3.0.6",
+    "@vitejs/plugin-react": "^4.7.0",
+    "typescript": "^5.9.3",
+    "vite": "^6.4.3",
+    "vitest": "^5.0.3"
+  }
+}

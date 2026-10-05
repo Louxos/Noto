@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="232" height="56" viewBox="0 0 232 56" role="img" aria-label="Noto">
+  <rect x="2" y="2" width="52" height="52" rx="15" fill="#eeeeff"/>
+  <path d="M15 42V14h7l18 19V14h7v28h-7L22 22v20z" fill="#292b3a"/>
+  <circle cx="43" cy="42" r="2.5" fill="#7772d8"/>
+  <text x="68" y="41" fill="#292b3a" font-family="Inter,Segoe UI,sans-serif" font-size="34" font-weight="650" letter-spacing="-1.8">noto</text>
+</svg>

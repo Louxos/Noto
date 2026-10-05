@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Aperçu HTML isolé</title>
+  <style>
+    body { font: 16px system-ui, sans-serif; max-width: 680px; margin: 48px auto; color: #292b3a; }
+    h1 { color: #7772d8; }
+    .card { padding: 20px; border: 1px solid #e9e9ef; border-radius: 12px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Un aperçu isolé</h1>
+    <p>Le contenu HTML est rendu sans exécuter de script ni charger de ressource distante.</p>
+  </div>
+  <script>document.body.dataset.scriptExecuted = 'true';</script>
+</body>
+</html>

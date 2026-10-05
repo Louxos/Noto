@@ -1,0 +1,18 @@
+[package]
+name = "noto"
+version = "0.1.0"
+description = "Lecteur de fichiers local Noto"
+authors = ["Noto contributors"]
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
