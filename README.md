@@ -12,7 +12,7 @@
 
 **Noto** est un lecteur de fichiers Windows minimaliste. Il ouvre rapidement les documents courants dans une interface lisible, avec une édition simple quand elle est utile. Les fichiers restent sur votre appareil : pas de compte, de cloud ni de télémétrie.
 
-> Version de travail : **0.1.0**. Cette première version fournit l’interface fonctionnelle, les viewers principaux et la configuration de packaging Windows. Le binaire installable est produit par la CI Windows lors d’une release taguée.
+> Version de travail : **0.1.0**. Cette première version fournit l’interface fonctionnelle, les viewers principaux et la configuration de packaging Windows. Les installateurs seront produits par la CI Windows lors d’une release taguée ; aucune release binaire n’est publiée à ce jour.
 
 ## Fonctionnalités
 
@@ -44,13 +44,17 @@ Les captures de l’application seront ajoutées dans [`screenshots/`](screensho
 
 ## Installation et développement
 
+Le guide complet, y compris les prérequis Windows, l’installation de la release et la génération des installateurs, est dans [`INSTALLATION.md`](INSTALLATION.md).
+
 ### Prérequis
 
 - Node.js 22 et npm
 - Pour le shell Windows : Rust stable, les outils C++ de Visual Studio et le SDK Windows nécessaires à Tauri 2
 
+La V1 est actuellement sur la branche de travail ci-dessous. Après sa fusion dans `main`, le paramètre `--branch` pourra être retiré.
+
 ```bash
-git clone https://github.com/Louxos/Noto.git
+git clone --branch arena/01a10cf9-noto https://github.com/Louxos/Noto.git
 cd Noto
 npm ci
 npm run dev
