@@ -12,7 +12,7 @@
 
 **Noto** est un lecteur de fichiers Windows minimaliste. Il ouvre rapidement les documents courants dans une interface lisible, avec une édition simple quand elle est utile. Les fichiers restent sur votre appareil : pas de compte, de cloud ni de télémétrie.
 
-> Version de travail : **0.1.0**. Cette première version fournit l’interface fonctionnelle, les viewers principaux et la configuration de packaging Windows. Les installateurs seront produits par la CI Windows lors d’une release taguée ; aucune release binaire n’est publiée à ce jour.
+> Version de travail : **0.1.0**. La page [Releases](https://github.com/Louxos/Noto/releases) est encore vide. Un installateur Windows de test (`.exe`/`.msi`) est produit par GitHub Actions sur la branche de travail ; il est disponible comme artefact temporaire dans les [exécutions du workflow](https://github.com/Louxos/Noto/actions/workflows/release.yml). Voir [`INSTALLATION.md`](INSTALLATION.md) pour le télécharger. Les releases stables seront publiées après validation.
 
 ## Fonctionnalités
 
@@ -44,7 +44,7 @@ Les captures de l’application seront ajoutées dans [`screenshots/`](screensho
 
 ## Installation et développement
 
-Le guide complet, y compris les prérequis Windows, l’installation de la release et la génération des installateurs, est dans [`INSTALLATION.md`](INSTALLATION.md).
+Le guide complet, y compris la récupération de l’artefact CI Windows (car aucune release officielle n’est encore publiée), les prérequis et la génération locale des installateurs, est dans [`INSTALLATION.md`](INSTALLATION.md).
 
 ### Prérequis
 
@@ -78,7 +78,7 @@ npm run tauri:build # installateurs Windows NSIS (.exe) et MSI
 
 Les associations de formats déclarées dans l’installateur rendent Noto disponible dans **Ouvrir avec** ; Noto ne remplace pas l’application par défaut choisie par l’utilisateur. L’installateur NSIS s’installe pour l’utilisateur courant et ajoute une entrée au menu Démarrer.
 
-Les builds Windows sont également exécutés par GitHub Actions. Pour publier les installateurs, créez un tag `v*` après vérification ; le workflow `Release Windows` construit et attache les fichiers `.exe` et `.msi` à la release.
+Les builds Windows sont exécutés par GitHub Actions sur les branches `arena/**` ; l’archive `noto-windows-installers` est disponible dans l’exécution associée pendant 30 jours. Pour publier une release stable, créez un tag `v*` après vérification : le workflow Windows attache alors les fichiers `.exe` et `.msi` à la page Releases.
 
 ## Raccourcis
 
