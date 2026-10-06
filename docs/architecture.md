@@ -4,13 +4,15 @@ Noto est une application locale composée d’une interface React/Vite et d’un
 
 ## Couches
 
-- **`src/App.tsx`** orchestre les fichiers ouverts, les onglets, l’historique, la recherche, l’édition et les paramètres.
+- **`src/App.tsx`** orchestre les fichiers ouverts, les onglets, les groupes locaux, l’historique, les menus, la palette de commandes, la recherche et l’édition.
+- **`src/components/WorkspaceTools.tsx`** fournit les menus accessibles, la palette filtrable, l’aide des raccourcis et l’interface de gestion des groupes.
 - **`src/components/`** contient les viewers dédiés. Chaque viewer reçoit des données en mémoire et ne lit pas lui-même le système de fichiers.
 - **`src/lib/fileTypes.ts`** classe les extensions et fournit les libellés/langages.
 - **`src/lib/files.ts`** adapte les dialogues Tauri ou les File API du navigateur, limite les aperçus texte volumineux et centralise l’enregistrement.
 - **`src/lib/csv.ts`** parse le CSV en respectant les guillemets, les guillemets doublés et les retours de ligne embarqués.
 - **`src/lib/security.ts`** prépare une politique restrictive pour les aperçus HTML isolés.
-- **`src/lib/preferences.ts`** stocke les réglages et l’historique dans le stockage local du profil.
+- **`src/lib/preferences.ts`** stocke les réglages, l’ordre/visibilité de la barre d’outils, les récents et le thème dans le stockage local du profil.
+- **`src/lib/groups.ts`** persiste des groupes de fichiers (nom, couleur et métadonnées de chemin) sans copier, déplacer ou modifier les fichiers.
 - **`src-tauri/`** fournit le shell desktop, les permissions minimales, l’ouverture par ligne de commande et la configuration d’installateur/associations.
 
 ## Flux d’ouverture

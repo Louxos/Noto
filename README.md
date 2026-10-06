@@ -22,7 +22,9 @@
 - PDF avec navigation par page, zoom et ajustement à la largeur.
 - Images PNG, JPEG, GIF animé, WebP, BMP, SVG, ICO et TIFF, avec zoom et rotation.
 - CSV présenté en tableau, avec détection des séparateurs usuels et des champs entre guillemets.
-- Onglets, glisser-déposer, fichiers récents locaux, thèmes clair et sombre, préférences et raccourcis clavier.
+- Onglets, glisser-déposer, fichiers récents et groupes locaux de fichiers (création, couleurs, renommage, ajout/retrait et suppression du groupe sans déplacer les originaux).
+- Menus **Fichier / Édition / Affichage / Aide**, palette de commandes, raccourcis étendus et paramètres pour masquer/réordonner la barre d’outils.
+- Personnalisation du thème, de la couleur d’accent, de la taille du texte et du mode compact de la barre latérale.
 - Ouverture et sauvegarde locale. Dans le navigateur, l’accès aux fichiers est accordé par le sélecteur système ; lorsqu’il n’est pas disponible, l’enregistrement produit une copie téléchargée.
 
 ### Formats pris en charge
@@ -85,19 +87,29 @@ Les builds Windows sont exécutés par GitHub Actions sur les branches `arena/**
 | Raccourci | Action |
 | --- | --- |
 | `Ctrl + O` | Ouvrir un ou plusieurs fichiers |
-| `Ctrl + S` | Enregistrer |
-| `Ctrl + Maj + S` | Enregistrer sous |
-| `Ctrl + F` | Rechercher |
-| `Ctrl + H` | Rechercher et remplacer |
+| `Ctrl + S` / `Ctrl + Maj + S` | Enregistrer / enregistrer sous |
+| `Ctrl + F` / `Ctrl + H` | Rechercher / rechercher et remplacer |
+| `Ctrl + E` | Basculer entre lecture et édition |
 | `Ctrl + W` | Fermer le fichier actif |
+| `Ctrl + Tab` / `Ctrl + Maj + Tab` | Onglet suivant / précédent |
+| `Ctrl + 1` à `Ctrl + 9` | Activer un onglet par sa position |
+| `Ctrl + Maj + N` | Créer un groupe de fichiers |
+| `Ctrl + Maj + G` | Classer le fichier actif dans un groupe |
+| `F2` | Renommer le groupe affiché |
+| `Ctrl + Maj + P` | Ouvrir la palette de commandes |
+| `Ctrl + ,` | Ouvrir les paramètres |
 | `Ctrl + Z` / `Ctrl + Y` | Annuler / rétablir dans l’éditeur |
+
+## Feuille de route
+
+Les ajouts recommandés sont classés par niveau d’urgence — sécurité et fiabilité avant la sortie stable, prochaines améliorations, fonctions utiles puis options facultatives — dans [`ROADMAP.md`](ROADMAP.md). Les groupes locaux et la personnalisation de la barre d’outils font partie de cette version de travail.
 
 ## Architecture
 
 ```text
 src/
 ├── components/       # viewers PDF, CSV, image, Markdown et éditeur texte
-├── lib/              # ouverture locale, types, CSV, préférences et sécurité HTML
+├── lib/              # ouverture locale, groupes, préférences, formats et sécurité HTML
 ├── App.tsx           # navigation, onglets, historique et actions
 └── styles.css        # thèmes et interface
 src-tauri/            # shell léger Tauri 2, permissions et packaging Windows
@@ -112,7 +124,7 @@ Des fichiers de démonstration sont disponibles dans [`examples/`](examples/) : 
 - L’ouverture est locale ; aucun contenu de fichier n’est téléversé.
 - L’aperçu HTML est sandboxé, sans script, formulaire, plugin ni accès réseau. Le Markdown ne rend pas de HTML brut.
 - Les permissions du shell sont limitées aux dialogues de sélection et à la lecture/écriture des fichiers choisis.
-- Les fichiers récents et préférences sont stockés localement dans le profil de l’application.
+- Les fichiers récents, groupes et préférences sont stockés localement dans le profil de l’application ; les groupes ne conservent que les noms et chemins, jamais une copie du contenu.
 
 Pour signaler une vulnérabilité, consultez [`SECURITY.md`](SECURITY.md).
 

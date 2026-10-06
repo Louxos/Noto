@@ -2,20 +2,22 @@ import { useCallback, useEffect, useRef, useState, lazy, Suspense, type DragEven
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { getCurrentWebview } from '@tauri-apps/api/webview';
 import {
-  BookOpenText, Check, ChevronDown, CircleHelp, Clock3, Code2, File, FileCode2, FileImage,
-  FileText, FileType2, FileUp, Globe2, Image as ImageIcon,
-  LayoutGrid, LoaderCircle, Maximize2, Moon, MoreHorizontal, PanelLeft,
-  Pencil, Plus, RotateCcw, Search, Settings2, ShieldCheck, Sun, Table2, TextCursorInput,
-  X, Save, Replace, Sparkles,
+  ArrowDown, ArrowUp, BookOpenText, Check, ChevronDown, CircleHelp, Clock3, Code2, Command,
+  File, FileCode2, FileImage, FileText, FileType2, FileUp, FolderPlus, Globe2,
+  Image as ImageIcon, Keyboard, LayoutGrid, LoaderCircle, Maximize2, Moon, MoreHorizontal,
+  PanelLeft, Pencil, Plus, RotateCcw, Search, Settings2, ShieldCheck, Sun, Table2,
+  TextCursorInput, X, Save, Replace, Sparkles, Trash2,
 } from 'lucide-react';
 import { CodeViewer } from './components/CodeViewer';
 import { CsvViewer } from './components/CsvViewer';
 import { HtmlViewer } from './components/HtmlViewer';
 import { TextEditor } from './components/TextEditor';
+import { AppMenuBar, CommandPalette, GroupDialog, GroupScreen, ShortcutsDialog, type CommandOption, type MenuDefinition } from './components/WorkspaceTools';
 import { formatBytes, loadBrowserFile, openDesktopFiles, pickBrowserFiles, readDesktopPath, saveDocument } from './lib/files';
 import { getFormatLabel } from './lib/fileTypes';
 import { formatJsonForDisplay } from './lib/textFormat';
-import { loadPreferences, loadRecentFiles, savePreferences, saveRecentFiles, upsertRecent, type Preferences, type RecentFile } from './lib/preferences';
+import { createGroup, addGroupFile, deleteGroup, loadGroups, removeGroupFile, renameGroup, saveGroups, toggleGroupFile, type FileGroup, type GroupColor } from './lib/groups';
+import { loadPreferences, loadRecentFiles, savePreferences, saveRecentFiles, upsertRecent, TOOLBAR_ACTIONS, type Preferences, type RecentFile, type ToolbarAction } from './lib/preferences';
 import type { BrowserFileHandle, OpenDocument } from './types';
 import './styles.css';
 
@@ -57,6 +59,17 @@ function kindIcon(kind: string, size = 16): ReactNode {
   return <Icon size={size} strokeWidth={1.8} />;
 }
 
+function recentFromDocument(document: OpenDocument): RecentFile {
+  return {
+    id: `${document.source}:${document.path}`,
+    name: document.name,
+    path: document.path,
+    kind: document.kind,
+    lastOpened: Date.now(),
+    source: document.source,
+  };
+}
+
 function OpenDialogButton({ onClick, compact = false }: { onClick: () => void; compact?: boolean }) {
   return (
     <button className={compact ? 'open-side-button' : 'primary-button'} type="button" onClick={onClick}>
@@ -70,9 +83,15 @@ function OpenDialogButton({ onClick, compact = false }: { onClick: () => void; c
 export default function App() {
   const [documents, setDocuments] = useState<OpenDocument[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [page, setPage] = useState<'home' | 'file' | 'recents'>('home');
+  const [page, setPage] = useState<'home' | 'file' | 'recents' | 'group'>('home');
   const [preferences, setPreferences] = useState<Preferences>(() => loadPreferences());
   const [recents, setRecents] = useState<RecentFile[]>(() => loadRecentFiles());
+  const [groups, setGroups] = useState<FileGroup[]>(() => loadGroups());
+  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
+  const [groupDialog, setGroupDialog] = useState<{ groupId: string | null } | null>(null);
+  const [groupPickerOpen, setGroupPickerOpen] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editorMode, setEditorMode] = useState<'source' | 'split' | 'preview'>('split');
   const [htmlMode, setHtmlMode] = useState<'code' | 'preview'>('preview');
@@ -98,6 +117,8 @@ export default function App() {
     setDocuments(next);
   }, []);
   const activeDoc = documents.find((document) => document.id === activeId) ?? null;
+  const currentGroup = groups.find((group) => group.id === activeGroupId) ?? null;
+  const activeFileKey = activeDoc ? `${activeDoc.source}:${activeDoc.path}` : '';
   const dirty = Boolean(activeDoc && activeDoc.content !== activeDoc.savedContent);
   const canReadText = Boolean(activeDoc && (activeDoc.kind !== 'unknown' || textFallbackIds.has(activeDoc.id)));
   const canEdit = Boolean(activeDoc && canReadText && !activeDoc.truncated && ['markdown', 'text', 'code', 'html', 'csv', 'unknown'].includes(activeDoc.kind));
@@ -105,11 +126,25 @@ export default function App() {
   useEffect(() => {
     savePreferences(preferences);
     document.documentElement.dataset.theme = preferences.theme;
+    document.documentElement.dataset.accent = preferences.accent;
   }, [preferences]);
 
   useEffect(() => {
     saveRecentFiles(recents);
   }, [recents]);
+
+  useEffect(() => {
+    saveGroups(groups);
+  }, [groups]);
+
+  useEffect(() => {
+    if (!groupPickerOpen) return;
+    const closeOnOutside = (event: PointerEvent) => {
+      if (event.target instanceof Element && !event.target.closest('.group-picker-root')) setGroupPickerOpen(false);
+    };
+    document.addEventListener('pointerdown', closeOnOutside);
+    return () => document.removeEventListener('pointerdown', closeOnOutside);
+  }, [groupPickerOpen]);
 
   useEffect(() => {
     if (!toast) return;
@@ -127,14 +162,7 @@ export default function App() {
   }, []);
 
   const rememberDocument = useCallback((document: OpenDocument) => {
-    const recent: RecentFile = {
-      id: `${document.source}:${document.path}`,
-      name: document.name,
-      path: document.path,
-      kind: document.kind,
-      lastOpened: Date.now(),
-      source: document.source,
-    };
+    const recent = recentFromDocument(document);
     setRecents((current) => upsertRecent(current, recent));
     if (document.handle) browserHandles.current.set(recent.id, document.handle);
   }, []);
@@ -155,6 +183,9 @@ export default function App() {
       rememberDocument(item);
     }
     commitDocuments(next);
+    if (page === 'group' && activeGroupId) {
+      setGroups((current) => items.reduce((updated, item) => addGroupFile(updated, activeGroupId, recentFromDocument(item)), current));
+    }
     setActiveId(openedIds[openedIds.length - 1] ?? null);
     setPage('file');
     setIsEditing(false);
@@ -162,7 +193,7 @@ export default function App() {
     setEditorMode('split');
     setSearchOpen(false);
     setQuery('');
-  }, [commitDocuments, rememberDocument]);
+  }, [activeGroupId, commitDocuments, page, rememberDocument]);
 
   const openTauriPath = useCallback(async (path: string) => {
     setLoading(true);
@@ -381,17 +412,125 @@ export default function App() {
     setEditorMode('source');
   }, [activeDoc, notify, query, replacement, updateContent]);
 
+  const openGroupDialog = (groupId: string | null = null) => setGroupDialog({ groupId });
+
+  function saveGroupDialog(name: string, color: GroupColor) {
+    if (!groupDialog) return;
+    if (groupDialog.groupId) {
+      setGroups((current) => renameGroup(current, groupDialog.groupId!, name, color));
+      notify('Groupe modifié.');
+    } else {
+      if (groups.length >= 30) { notify('Vous pouvez créer jusqu’à 30 groupes.', 'error'); return; }
+      const created = createGroup(name, color);
+      if (!created) return;
+      setGroups((current) => [created, ...current]);
+      setActiveGroupId(created.id);
+      setActiveId(null);
+      setPage('group');
+      notify(`Groupe « ${created.name} » créé.`);
+    }
+    setGroupDialog(null);
+  }
+
+  function deleteCurrentGroup() {
+    if (!currentGroup) return;
+    if (!window.confirm(`Supprimer le groupe « ${currentGroup.name} » ?\n\nLes fichiers d’origine ne seront pas supprimés.`)) return;
+    setGroups((current) => deleteGroup(current, currentGroup.id));
+    setActiveGroupId(null);
+    setPage('home');
+    setActiveId(null);
+    notify('Groupe supprimé. Les fichiers originaux sont conservés.');
+  }
+
+  function toggleCurrentFileInGroup(groupId: string) {
+    if (!activeDoc) return;
+    const recent = recentFromDocument(activeDoc);
+    const currentlyGrouped = groups.find((group) => group.id === groupId)?.files.some((file) => file.id === recent.id) ?? false;
+    setGroups((current) => toggleGroupFile(current, groupId, recent));
+    notify(currentlyGrouped ? 'Fichier retiré du groupe.' : 'Fichier ajouté au groupe.');
+  }
+
+  function moveToolbarAction(action: ToolbarAction, direction: -1 | 1) {
+    setPreferences((current) => {
+      const order = [...current.toolbarOrder];
+      const index = order.indexOf(action);
+      const nextIndex = index + direction;
+      if (index < 0 || nextIndex < 0 || nextIndex >= order.length) return current;
+      [order[index], order[nextIndex]] = [order[nextIndex], order[index]];
+      return { ...current, toolbarOrder: order };
+    });
+  }
+
+  function toggleToolbarAction(action: ToolbarAction) {
+    setPreferences((current) => {
+      const hidden = current.hiddenToolbarActions.includes(action)
+        ? current.hiddenToolbarActions.filter((item) => item !== action)
+        : [...current.hiddenToolbarActions, action];
+      return { ...current, hiddenToolbarActions: hidden };
+    });
+  }
+
+  const toggleEditMode = useCallback(() => {
+    if (!activeDoc || !canEdit) return;
+    setIsEditing((value) => !value);
+    setEditorMode(activeDoc.kind === 'markdown' ? 'split' : 'source');
+  }, [activeDoc, canEdit]);
+
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if (!(event.ctrlKey || event.metaKey)) {
-        if (event.key === 'Escape') {
-          if (settingsOpen) setSettingsOpen(false);
-          else if (searchOpen) setSearchOpen(false);
+      if (event.key === 'Escape') {
+        if (commandPaletteOpen) setCommandPaletteOpen(false);
+        else if (groupDialog) setGroupDialog(null);
+        else if (shortcutsOpen) setShortcutsOpen(false);
+        else if (settingsOpen) setSettingsOpen(false);
+        else if (groupPickerOpen) setGroupPickerOpen(false);
+        else if (searchOpen) setSearchOpen(false);
+        return;
+      }
+
+      const key = event.key.toLowerCase();
+      const modifier = event.ctrlKey || event.metaKey;
+      if (!modifier) {
+        const target = event.target;
+        const isTyping = target instanceof HTMLElement && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName));
+        if (event.key === 'F2' && page === 'group' && currentGroup && !groupDialog && !isTyping) {
+          event.preventDefault();
+          setGroupDialog({ groupId: currentGroup.id });
         }
         return;
       }
-      const key = event.key.toLowerCase();
-      if (key === 'o') {
+
+      if (key === 'tab' && documents.length > 1) {
+        event.preventDefault();
+        const currentIndex = documents.findIndex((document) => document.id === activeId);
+        const delta = event.shiftKey ? -1 : 1;
+        const nextIndex = (currentIndex + delta + documents.length) % documents.length;
+        setActiveId(documents[nextIndex].id);
+        setPage('file');
+        setIsEditing(false);
+      } else if (/^[1-9]$/.test(key) && documents.length > 0) {
+        event.preventDefault();
+        const index = key === '9' ? documents.length - 1 : Number(key) - 1;
+        if (documents[index]) {
+          setActiveId(documents[index].id);
+          setPage('file');
+          setIsEditing(false);
+        }
+      } else if (key === 'p' && event.shiftKey) {
+        event.preventDefault();
+        setCommandPaletteOpen(true);
+      } else if (key === 'n' && event.shiftKey) {
+        event.preventDefault();
+        setGroupDialog({ groupId: null });
+      } else if (key === 'g' && event.shiftKey) {
+        event.preventDefault();
+        if (activeDoc) setGroupPickerOpen(true);
+        else if (currentGroup) setPage('group');
+        else setGroupDialog({ groupId: null });
+      } else if (key === 'e' && canEdit) {
+        event.preventDefault();
+        toggleEditMode();
+      } else if (key === 'o') {
         event.preventDefault();
         void handleOpen();
       } else if (key === 's') {
@@ -405,6 +544,9 @@ export default function App() {
         event.preventDefault();
         setSearchOpen(true);
         setReplaceOpen(true);
+      } else if ((key === ',' || event.code === 'Comma')) {
+        event.preventDefault();
+        setSettingsOpen(true);
       } else if (key === 'w' && activeId) {
         event.preventDefault();
         closeDocument(activeId);
@@ -412,7 +554,7 @@ export default function App() {
     }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [activeId, closeDocument, handleOpen, handleSave, searchOpen, settingsOpen]);
+  }, [activeDoc, activeId, canEdit, closeDocument, commandPaletteOpen, currentGroup, documents, groupDialog, groupPickerOpen, handleOpen, handleSave, page, searchOpen, settingsOpen, shortcutsOpen, toggleEditMode]);
 
   function updatePreference<K extends keyof Preferences>(key: K, value: Preferences[K]) {
     setPreferences((current) => ({ ...current, [key]: value }));
@@ -437,10 +579,73 @@ export default function App() {
     void openDroppedFiles(Array.from(event.dataTransfer.files ?? []));
   }
 
-  const isHome = page === 'home';
+  const toolbarActions: Record<ToolbarAction, ReactNode> = {
+    search: canReadText && <button className="icon-action" type="button" title="Rechercher (Ctrl+F)" aria-label="Rechercher" onClick={() => { setSearchOpen(true); setReplaceOpen(false); }}><Search size={17} /></button>,
+    edit: canEdit && !activeDoc?.truncated && <button className={`edit-action ${isEditing ? 'editing' : ''}`} type="button" title={isEditing ? 'Terminer la modification (Ctrl+E)' : 'Modifier ce fichier (Ctrl+E)'} onClick={toggleEditMode}>{isEditing ? <Check size={16} /> : <Pencil size={15} />}<span>{isEditing ? 'Terminer' : 'Éditer'}</span></button>,
+    save: canEdit && !activeDoc?.truncated && <button className="save-action" type="button" title="Enregistrer (Ctrl+S)" disabled={!dirty} onClick={() => void handleSave()}><Save size={15} /><span>Enregistrer</span></button>,
+    group: activeDoc && <div className="group-picker-root">
+      <button className={`icon-action group-toolbar-action ${groups.some((group) => group.files.some((file) => file.id === activeFileKey)) ? 'has-group' : ''}`} type="button" title="Classer dans un groupe (Ctrl+Maj+G)" aria-label="Classer dans un groupe" aria-expanded={groupPickerOpen} onClick={() => setGroupPickerOpen((open) => !open)}><FolderPlus size={16} /><span>Classer</span></button>
+      {groupPickerOpen && <div className="group-picker-panel" role="menu" aria-label="Classer le fichier dans un groupe">
+        <div className="group-picker-title">Ranger le fichier dans…</div>
+        {groups.map((group) => {
+          const selected = group.files.some((file) => file.id === activeFileKey);
+          return <button className="group-picker-option" key={group.id} type="button" role="menuitemcheckbox" aria-checked={selected} onClick={() => toggleCurrentFileInGroup(group.id)}><span className={`group-color-dot color-${group.color}`} /><span>{group.name}</span>{selected && <Check size={14} />}</button>;
+        })}
+        {groups.length === 0 && <p className="group-picker-empty">Créez un groupe pour organiser vos fichiers.</p>}
+        <button className="group-picker-create" type="button" onClick={() => { setGroupPickerOpen(false); openGroupDialog(); }}><Plus size={14} />Nouveau groupe</button>
+      </div>}
+    </div>,
+    close: activeDoc && <button className="icon-action close-current" type="button" title="Fermer le fichier (Ctrl+W)" aria-label="Fermer le fichier" onClick={() => closeDocument(activeDoc.id)}><X size={17} /></button>,
+  };
+  const toolbar = preferences.toolbarOrder
+    .filter((action) => !preferences.hiddenToolbarActions.includes(action) && Boolean(toolbarActions[action]))
+    .map((action) => <span className="toolbar-action-slot" key={action}>{toolbarActions[action]}</span>);
+
+  const menuDefinitions: MenuDefinition[] = [
+    { id: 'file', label: 'Fichier', items: [
+      { id: 'open', label: 'Ouvrir un fichier…', shortcut: 'Ctrl+O', icon: <FileUp size={15} />, onSelect: () => void handleOpen() },
+      { id: 'save', label: 'Enregistrer', shortcut: 'Ctrl+S', icon: <Save size={15} />, disabled: !dirty || !canEdit, onSelect: () => void handleSave() },
+      { id: 'save-as', label: 'Enregistrer sous…', shortcut: 'Ctrl+Maj+S', icon: <FileText size={15} />, disabled: !canEdit, onSelect: () => void handleSave(true) },
+      { id: 'close', label: 'Fermer le fichier actif', shortcut: 'Ctrl+W', icon: <X size={15} />, disabled: !activeDoc, dividerBefore: true, onSelect: () => { if (activeId) closeDocument(activeId); } },
+      { id: 'new-group', label: 'Créer un groupe…', shortcut: 'Ctrl+Maj+N', icon: <FolderPlus size={15} />, dividerBefore: true, disabled: groups.length >= 30, onSelect: () => openGroupDialog() },
+      { id: 'rename-group', label: 'Renommer le groupe actuel…', shortcut: 'F2', icon: <Pencil size={15} />, disabled: !currentGroup, onSelect: () => { if (currentGroup) openGroupDialog(currentGroup.id); } },
+      { id: 'delete-group', label: 'Supprimer le groupe actuel…', icon: <Trash2 size={15} />, disabled: !currentGroup, onSelect: deleteCurrentGroup },
+    ] },
+    { id: 'edit', label: 'Édition', items: [
+      { id: 'toggle-edit', label: isEditing ? 'Terminer la modification' : 'Modifier le fichier', shortcut: 'Ctrl+E', icon: <Pencil size={15} />, disabled: !canEdit || Boolean(activeDoc?.truncated), onSelect: toggleEditMode },
+      { id: 'find', label: 'Rechercher dans le fichier…', shortcut: 'Ctrl+F', icon: <Search size={15} />, disabled: !canReadText, onSelect: () => { setSearchOpen(true); setReplaceOpen(false); } },
+      { id: 'replace', label: 'Rechercher et remplacer…', shortcut: 'Ctrl+H', icon: <Replace size={15} />, disabled: !canEdit, onSelect: () => { setSearchOpen(true); setReplaceOpen(true); } },
+      { id: 'classify', label: 'Classer le fichier actif…', shortcut: 'Ctrl+Maj+G', icon: <FolderPlus size={15} />, disabled: !activeDoc, dividerBefore: true, onSelect: () => setGroupPickerOpen(true) },
+    ] },
+    { id: 'view', label: 'Affichage', items: [
+      { id: 'home', label: 'Accueil', icon: <LayoutGrid size={15} />, onSelect: () => { setPage('home'); setActiveId(null); setActiveGroupId(null); } },
+      { id: 'recents', label: 'Fichiers récents', icon: <Clock3 size={15} />, onSelect: () => { setPage('recents'); setActiveId(null); setActiveGroupId(null); } },
+      { id: 'sidebar', label: preferences.sidebarCollapsed ? 'Déployer la barre latérale' : 'Réduire la barre latérale', icon: <MoreHorizontal size={15} />, dividerBefore: true, onSelect: () => updatePreference('sidebarCollapsed', !preferences.sidebarCollapsed) },
+      { id: 'toolbar-density', label: preferences.compactToolbar ? 'Aérer la barre d’outils' : 'Compacter la barre d’outils', icon: <PanelLeft size={15} />, onSelect: () => updatePreference('compactToolbar', !preferences.compactToolbar) },
+      { id: 'theme', label: preferences.theme === 'light' ? 'Activer le thème sombre' : 'Activer le thème clair', icon: preferences.theme === 'light' ? <Moon size={15} /> : <Sun size={15} />, onSelect: () => updatePreference('theme', preferences.theme === 'light' ? 'dark' : 'light') },
+      { id: 'settings', label: 'Paramètres…', shortcut: 'Ctrl+,', icon: <Settings2 size={15} />, dividerBefore: true, onSelect: () => setSettingsOpen(true) },
+    ] },
+    { id: 'help', label: 'Aide', items: [
+      { id: 'palette', label: 'Palette de commandes…', shortcut: 'Ctrl+Maj+P', icon: <Command size={15} />, onSelect: () => setCommandPaletteOpen(true) },
+      { id: 'shortcuts', label: 'Raccourcis clavier', icon: <Keyboard size={15} />, onSelect: () => setShortcutsOpen(true) },
+    ] },
+  ];
+
+  const commands: CommandOption[] = [
+    { id: 'open', label: 'Ouvrir un fichier', detail: 'Parcourir votre appareil', shortcut: 'Ctrl+O', keywords: 'parcourir importer', icon: <FileUp size={16} />, onSelect: () => void handleOpen() },
+    { id: 'save', label: 'Enregistrer', detail: 'Sauvegarder les modifications', shortcut: 'Ctrl+S', keywords: 'sauvegarde fichier', icon: <Save size={16} />, disabled: !dirty || !canEdit, onSelect: () => void handleSave() },
+    { id: 'find', label: 'Rechercher', detail: 'Trouver du texte dans le fichier actif', shortcut: 'Ctrl+F', keywords: 'chercher trouver', icon: <Search size={16} />, disabled: !canReadText, onSelect: () => { setSearchOpen(true); setReplaceOpen(false); } },
+    { id: 'replace', label: 'Rechercher et remplacer', detail: 'Remplacer plusieurs occurrences', shortcut: 'Ctrl+H', keywords: 'édition texte', icon: <Replace size={16} />, disabled: !canEdit, onSelect: () => { setSearchOpen(true); setReplaceOpen(true); } },
+    { id: 'edit', label: isEditing ? 'Terminer la modification' : 'Modifier le fichier', detail: 'Basculer lecture et édition', shortcut: 'Ctrl+E', keywords: 'écrire éditer modifier', icon: <Pencil size={16} />, disabled: !canEdit, onSelect: toggleEditMode },
+    { id: 'group-new', label: 'Créer un groupe', detail: 'Rassembler des fichiers sans les déplacer', shortcut: 'Ctrl+Maj+N', keywords: 'organisation collection dossier', icon: <FolderPlus size={16} />, disabled: groups.length >= 30, onSelect: () => openGroupDialog() },
+    { id: 'group-rename', label: 'Renommer le groupe actuel', detail: currentGroup?.name ?? 'Sélectionnez un groupe d’abord', shortcut: 'F2', keywords: 'nom collection', icon: <Pencil size={16} />, disabled: !currentGroup, onSelect: () => { if (currentGroup) openGroupDialog(currentGroup.id); } },
+    { id: 'theme', label: 'Changer de thème', detail: `Passer au thème ${preferences.theme === 'light' ? 'sombre' : 'clair'}`, keywords: 'personnalisation apparence', icon: preferences.theme === 'light' ? <Moon size={16} /> : <Sun size={16} />, onSelect: () => updatePreference('theme', preferences.theme === 'light' ? 'dark' : 'light') },
+    { id: 'settings', label: 'Ouvrir les paramètres', detail: 'Apparence, barre d’outils et éditeur', shortcut: 'Ctrl+,', keywords: 'options personnaliser', icon: <Settings2 size={16} />, onSelect: () => setSettingsOpen(true) },
+    { id: 'shortcuts', label: 'Afficher les raccourcis clavier', detail: 'Voir toutes les commandes clavier', keywords: 'aide clavier', icon: <Keyboard size={16} />, onSelect: () => setShortcutsOpen(true) },
+  ];
 
   return (
-    <div className={`app-shell theme-${preferences.theme}`} style={{ '--reader-size': `${preferences.textSize}px` } as CSSProperties} onDragEnter={onDragOver} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
+    <div className={`app-shell theme-${preferences.theme} ${preferences.sidebarCollapsed ? 'sidebar-collapsed' : ''} ${preferences.compactToolbar ? 'toolbar-compact' : ''}`} style={{ '--reader-size': `${preferences.textSize}px` } as CSSProperties} onDragEnter={onDragOver} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
       <input ref={inputRef} className="visually-hidden" type="file" multiple onChange={onInputFiles} aria-label="Sélectionner des fichiers" />
       <aside className="sidebar">
         <div className="brand-lockup" onClick={() => { setPage('home'); setActiveId(null); }} role="button" tabIndex={0}>
@@ -452,13 +657,23 @@ export default function App() {
         <div className="sidebar-main-action"><OpenDialogButton onClick={() => void handleOpen()} compact /></div>
 
         <nav className="sidebar-nav" aria-label="Navigation principale">
-          <button className={`nav-item ${page === 'home' ? 'active' : ''}`} type="button" onClick={() => { setPage('home'); setActiveId(null); }}>
+          <button className={`nav-item ${page === 'home' ? 'active' : ''}`} type="button" onClick={() => { setPage('home'); setActiveId(null); setActiveGroupId(null); }}>
             <LayoutGrid size={17} /><span>Accueil</span>
           </button>
-          <button className={`nav-item ${page === 'recents' ? 'active' : ''}`} type="button" onClick={() => { setPage('recents'); setActiveId(null); }}>
+          <button className={`nav-item ${page === 'recents' ? 'active' : ''}`} type="button" onClick={() => { setPage('recents'); setActiveId(null); setActiveGroupId(null); }}>
             <Clock3 size={17} /><span>Récents</span><span className="nav-count">{recents.length || ''}</span>
           </button>
         </nav>
+
+        <section className="sidebar-group-section" aria-label="Groupes de fichiers">
+          <div className="sidebar-group-heading"><span>MES GROUPES</span><button type="button" title="Créer un groupe" aria-label="Créer un groupe" disabled={groups.length >= 30} onClick={() => openGroupDialog()}><Plus size={15} /></button></div>
+          <div className="sidebar-group-list">
+            {groups.map((group) => <button className={`group-nav-item ${page === 'group' && activeGroupId === group.id ? 'active' : ''}`} type="button" key={group.id} title={`${group.name} · ${group.files.length} fichier${group.files.length === 1 ? '' : 's'}`} onClick={() => { setActiveGroupId(group.id); setActiveId(null); setPage('group'); }}>
+              <span className={`group-color-dot color-${group.color}`} /><span className="group-nav-label">{group.name}</span><span className="group-nav-count">{group.files.length}</span>
+            </button>)}
+            {groups.length === 0 && <div className="sidebar-group-empty">Vos groupes apparaîtront ici.</div>}
+          </div>
+        </section>
 
         <div className="sidebar-recents-header">
           <span>RÉCEMMENT OUVERTS</span>
@@ -492,12 +707,14 @@ export default function App() {
             <span className="topbar-icon">{activeDoc && page === 'file' ? kindIcon(activeDoc.kind, 16) : <span className="mini-logo">N</span>}</span>
             <div className="topbar-heading">
               <div className="topbar-name-row">
-                <h1>{page === 'recents' ? 'Récents' : page === 'file' && activeDoc ? activeDoc.name : 'Accueil'}</h1>
+                <h1>{page === 'recents' ? 'Récents' : page === 'group' && currentGroup ? currentGroup.name : page === 'file' && activeDoc ? activeDoc.name : 'Accueil'}</h1>
                 {page === 'file' && activeDoc && activeDoc.content !== activeDoc.savedContent && <span className="unsaved-indicator" title="Modifications non enregistrées" />}
               </div>
-              <span className="topbar-subtitle">{page === 'file' && activeDoc ? `${getFormatLabel(activeDoc.kind)}${activeDoc.path && activeDoc.source === 'desktop' ? ` · ${activeDoc.path}` : ''}` : 'Espace local'}</span>
+              <span className="topbar-subtitle">{page === 'file' && activeDoc ? `${getFormatLabel(activeDoc.kind)}${activeDoc.path && activeDoc.source === 'desktop' ? ` · ${activeDoc.path}` : ''}` : page === 'group' && currentGroup ? `${currentGroup.files.length} fichier${currentGroup.files.length === 1 ? '' : 's'} · Espace local` : 'Espace local'}</span>
             </div>
           </div>
+
+          <AppMenuBar menus={menuDefinitions} onOpenPalette={() => setCommandPaletteOpen(true)} />
 
           <div className="topbar-actions">
             {page === 'file' && activeDoc && <>
@@ -510,14 +727,9 @@ export default function App() {
                 <button className={editorMode === 'split' ? 'selected' : ''} type="button" onClick={() => setEditorMode('split')}><PanelLeft size={14} />Côte à côte</button>
                 <button className={editorMode === 'preview' ? 'selected' : ''} type="button" onClick={() => setEditorMode('preview')}><BookOpenText size={14} />Aperçu</button>
               </div>}
-              {canReadText && <button className="icon-action" type="button" title="Rechercher (Ctrl+F)" aria-label="Rechercher" onClick={() => { setSearchOpen(true); setReplaceOpen(false); }}><Search size={17} /></button>}
-              {canEdit && !activeDoc.truncated && <button className={`edit-action ${isEditing ? 'editing' : ''}`} type="button" onClick={() => { setIsEditing((value) => !value); setEditorMode(activeDoc.kind === 'markdown' ? 'split' : 'source'); }}>
-                {isEditing ? <Check size={16} /> : <Pencil size={15} />}<span>{isEditing ? 'Terminer' : 'Éditer'}</span>
-              </button>}
-              {canEdit && dirty && !activeDoc.truncated && <button className="save-action" type="button" onClick={() => void handleSave()}><Save size={15} /><span>Enregistrer</span></button>}
-              <button className="icon-action close-current" type="button" title="Fermer le fichier (Ctrl+W)" aria-label="Fermer le fichier" onClick={() => closeDocument(activeDoc.id)}><X size={17} /></button>
+              {toolbar}
             </>}
-            {(isHome || page === 'recents') && <button className="icon-action settings-top-action" type="button" title="Paramètres" aria-label="Paramètres" onClick={() => setSettingsOpen(true)}><Settings2 size={17} /></button>}
+            <button className="icon-action settings-top-action" type="button" title="Paramètres (Ctrl+,)" aria-label="Paramètres" onClick={() => setSettingsOpen(true)}><Settings2 size={17} /></button>
           </div>
         </header>
 
@@ -546,6 +758,8 @@ export default function App() {
         <section className="workspace-content">
           {page === 'home' && <HomeScreen recents={recents} onOpen={() => void handleOpen()} onRecent={(recent) => void handleRecent(recent)} onViewAll={() => setPage('recents')} />}
           {page === 'recents' && <RecentScreen recents={recents} onOpen={() => void handleOpen()} onRecent={(recent) => void handleRecent(recent)} onRemove={(id) => setRecents((current) => current.filter((item) => item.id !== id))} />}
+          {page === 'group' && currentGroup && <GroupScreen group={currentGroup} onOpen={() => void handleOpen()} onRecent={(recent) => void handleRecent(recent)} onRemoveFile={(id) => setGroups((current) => removeGroupFile(current, currentGroup.id, id))} onRename={() => setGroupDialog({ groupId: currentGroup.id })} onDelete={deleteCurrentGroup} />}
+          {page === 'group' && !currentGroup && <HomeScreen recents={recents} onOpen={() => void handleOpen()} onRecent={(recent) => void handleRecent(recent)} onViewAll={() => setPage('recents')} />}
           {page === 'file' && activeDoc && <div className={`document-workspace ${activeDoc.kind === 'markdown' ? 'is-markdown' : ''}`}>
             {activeDoc.truncated && <div className="partial-warning"><CircleHelp size={15} /><span>Aperçu partiel — seules les premières lignes sont chargées. L’édition et l’enregistrement sont désactivés.</span></div>}
             {activeDoc.kind === 'unknown' && !canReadText ? <UnsupportedFile document={activeDoc} onOpenText={() => setTextFallbackIds((current) => new Set(current).add(activeDoc.id))} /> : (
@@ -575,7 +789,10 @@ export default function App() {
       {dragging && <div className="drop-overlay" onDragLeave={() => setDragging(false)}><div className="drop-overlay-card"><span className="drop-icon"><FileUp size={25} /></span><strong>Déposez pour ouvrir</strong><span>Markdown, texte, code, PDF, images…</span></div></div>}
       {loading && <div className="loading-overlay"><div className="loading-card"><LoaderCircle size={20} className="spin" /><span>{loadingMessage}</span></div></div>}
       {toast && <div className={`toast toast-${toastKind}`} role="status"><span className="toast-mark">{toastKind === 'success' ? <Check size={14} /> : <CircleHelp size={14} />}</span>{toast}</div>}
-      {settingsOpen && <SettingsModal preferences={preferences} onChange={updatePreference} onClose={() => setSettingsOpen(false)} onClearRecents={() => { setRecents([]); notify('La liste des fichiers récents a été effacée.'); }} />}
+      {settingsOpen && <SettingsModal preferences={preferences} onChange={updatePreference} onClose={() => setSettingsOpen(false)} onClearRecents={() => { setRecents([]); notify('La liste des fichiers récents a été effacée.'); }} onMoveToolbar={moveToolbarAction} onToggleToolbar={toggleToolbarAction} onOpenShortcuts={() => { setSettingsOpen(false); setShortcutsOpen(true); }} />}
+      {groupDialog && <GroupDialog group={groupDialog.groupId ? groups.find((group) => group.id === groupDialog.groupId) : undefined} onClose={() => setGroupDialog(null)} onSave={saveGroupDialog} />}
+      {commandPaletteOpen && <CommandPalette commands={commands} onClose={() => setCommandPaletteOpen(false)} />}
+      {shortcutsOpen && <ShortcutsDialog onClose={() => setShortcutsOpen(false)} />}
     </div>
   );
 }
@@ -695,7 +912,22 @@ function ViewerContent({
   return <UnsupportedFile document={document} onOpenText={() => onChange(document.content)} />;
 }
 
-function SettingsModal({ preferences, onChange, onClose, onClearRecents }: { preferences: Preferences; onChange: <K extends keyof Preferences>(key: K, value: Preferences[K]) => void; onClose: () => void; onClearRecents: () => void }) {
+function SettingsModal({ preferences, onChange, onClose, onClearRecents, onMoveToolbar, onToggleToolbar, onOpenShortcuts }: {
+  preferences: Preferences;
+  onChange: <K extends keyof Preferences>(key: K, value: Preferences[K]) => void;
+  onClose: () => void;
+  onClearRecents: () => void;
+  onMoveToolbar: (action: ToolbarAction, direction: -1 | 1) => void;
+  onToggleToolbar: (action: ToolbarAction) => void;
+  onOpenShortcuts: () => void;
+}) {
+  const toolbarLabels: Record<ToolbarAction, string> = { search: 'Rechercher', edit: 'Éditer', save: 'Enregistrer', group: 'Classer dans un groupe', close: 'Fermer le fichier' };
+  const toolbarIcons: Record<ToolbarAction, ReactNode> = { search: <Search size={14} />, edit: <Pencil size={14} />, save: <Save size={14} />, group: <FolderPlus size={14} />, close: <X size={14} /> };
+  const orderedActions = [...preferences.toolbarOrder, ...TOOLBAR_ACTIONS.filter((action) => !preferences.toolbarOrder.includes(action))];
+  const accents: { value: Preferences['accent']; label: string }[] = [
+    { value: 'violet', label: 'Violet' }, { value: 'blue', label: 'Bleu' }, { value: 'mint', label: 'Menthe' }, { value: 'rose', label: 'Rose' },
+  ];
+
   return <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <section className="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
       <header className="settings-header"><div><span className="settings-icon"><Settings2 size={17} /></span><div><h2 id="settings-title">Paramètres</h2><p>Personnalisez votre espace Noto.</p></div></div><button className="icon-action" type="button" title="Fermer" aria-label="Fermer les paramètres" onClick={onClose}><X size={18} /></button></header>
@@ -705,15 +937,35 @@ function SettingsModal({ preferences, onChange, onClose, onClearRecents }: { pre
             <button className={preferences.theme === 'light' ? 'selected' : ''} type="button" onClick={() => onChange('theme', 'light')}><Sun size={15} />Clair</button>
             <button className={preferences.theme === 'dark' ? 'selected' : ''} type="button" onClick={() => onChange('theme', 'dark')}><Moon size={15} />Sombre</button>
           </div></div>
+          <div className="setting-row"><div className="setting-label"><strong>Couleur d’accent</strong><small>Les repères colorés de l’interface.</small></div><div className="accent-picker" role="radiogroup" aria-label="Couleur d’accent">
+            {accents.map((accent) => <button className={`accent-swatch accent-${accent.value} ${preferences.accent === accent.value ? 'selected' : ''}`} key={accent.value} type="button" role="radio" aria-checked={preferences.accent === accent.value} title={accent.label} aria-label={accent.label} onClick={() => onChange('accent', accent.value)} />)}
+          </div></div>
           <div className="setting-row"><div className="setting-label"><strong>Taille du texte</strong><small>Confort de lecture.</small></div><div className="select-wrap"><select value={preferences.textSize} onChange={(event) => onChange('textSize', Number(event.target.value))}><option value={14}>Compacte</option><option value={16}>Standard</option><option value={18}>Confortable</option><option value={20}>Grande</option></select><ChevronDown size={14} /></div></div>
+        </section>
+        <section className="settings-section"><div className="settings-section-title"><span>ESPACE DE TRAVAIL</span><small>Réglez les panneaux et la barre d’outils.</small></div>
+          <div className="setting-row"><div className="setting-label"><strong>Barre d’outils compacte</strong><small>Masquer les libellés pour gagner de la place.</small></div><button className={`toggle ${preferences.compactToolbar ? 'on' : ''}`} type="button" role="switch" aria-checked={preferences.compactToolbar} onClick={() => onChange('compactToolbar', !preferences.compactToolbar)}><i /></button></div>
+          <div className="setting-row"><div className="setting-label"><strong>Barre latérale compacte</strong><small>Réduire le panneau de navigation.</small></div><button className={`toggle ${preferences.sidebarCollapsed ? 'on' : ''}`} type="button" role="switch" aria-checked={preferences.sidebarCollapsed} onClick={() => onChange('sidebarCollapsed', !preferences.sidebarCollapsed)}><i /></button></div>
+          <div className="toolbar-customization"><div className="toolbar-customization-heading"><div><strong>Commandes de la barre</strong><small>Masquez-les ou réorganisez-les.</small></div><span>ORDRE</span></div>
+            {orderedActions.map((action, index) => {
+              const visible = !preferences.hiddenToolbarActions.includes(action);
+              return <div className={`toolbar-preference-row ${visible ? '' : 'muted'}`} key={action}>
+                <div className="toolbar-order-controls"><button type="button" title="Monter" aria-label={`Monter ${toolbarLabels[action]}`} disabled={index === 0} onClick={() => onMoveToolbar(action, -1)}><ArrowUp size={13} /></button><button type="button" title="Descendre" aria-label={`Descendre ${toolbarLabels[action]}`} disabled={index === orderedActions.length - 1} onClick={() => onMoveToolbar(action, 1)}><ArrowDown size={13} /></button></div>
+                <span className="toolbar-preference-icon">{toolbarIcons[action]}</span><span className="toolbar-preference-name">{toolbarLabels[action]}</span>
+                <button className={`toggle ${visible ? 'on' : ''}`} type="button" role="switch" aria-checked={visible} aria-label={`${visible ? 'Masquer' : 'Afficher'} ${toolbarLabels[action]}`} onClick={() => onToggleToolbar(action)}><i /></button>
+              </div>;
+            })}
+          </div>
         </section>
         <section className="settings-section"><div className="settings-section-title"><span>ÉDITEUR</span><small>Options pour les modifications rapides.</small></div>
           <div className="setting-row"><div className="setting-label"><strong>Police de l’éditeur</strong><small>Taille de la police monospace.</small></div><div className="select-wrap"><select value={preferences.editorSize} onChange={(event) => onChange('editorSize', Number(event.target.value))}><option value={12}>12 px</option><option value={14}>14 px</option><option value={16}>16 px</option><option value={18}>18 px</option><option value={20}>20 px</option></select><ChevronDown size={14} /></div></div>
           <div className="setting-row"><div className="setting-label"><strong>Numéros de lignes</strong><small>Repérez-vous dans le fichier.</small></div><button className={`toggle ${preferences.lineNumbers ? 'on' : ''}`} type="button" role="switch" aria-checked={preferences.lineNumbers} onClick={() => onChange('lineNumbers', !preferences.lineNumbers)}><i /></button></div>
           <div className="setting-row"><div className="setting-label"><strong>Retour à la ligne</strong><small>Renvoyer les longues lignes à la ligne.</small></div><button className={`toggle ${preferences.wordWrap ? 'on' : ''}`} type="button" role="switch" aria-checked={preferences.wordWrap} onClick={() => onChange('wordWrap', !preferences.wordWrap)}><i /></button></div>
         </section>
-        <section className="settings-section settings-general"><div className="settings-section-title"><span>GÉNÉRAL</span></div><div className="setting-row"><div className="setting-label"><strong>Historique local</strong><small>Effacer la liste des fichiers récents.</small></div><button className="subtle-button" type="button" onClick={onClearRecents}><RotateCcw size={14} />Effacer</button></div></section>
-        <div className="settings-privacy"><ShieldCheck size={15} /><span>Aucun compte ni synchronisation. Vos fichiers restent sur votre appareil.</span></div>
+        <section className="settings-section settings-general"><div className="settings-section-title"><span>GÉNÉRAL</span></div>
+          <div className="setting-row"><div className="setting-label"><strong>Historique local</strong><small>Effacer la liste des fichiers récents.</small></div><button className="subtle-button" type="button" onClick={onClearRecents}><RotateCcw size={14} />Effacer</button></div>
+          <div className="setting-row"><div className="setting-label"><strong>Raccourcis clavier</strong><small>Afficher la liste des commandes rapides.</small></div><button className="subtle-button" type="button" onClick={onOpenShortcuts}><Keyboard size={14} />Consulter</button></div>
+        </section>
+        <div className="settings-privacy"><ShieldCheck size={15} /><span>Vos documents et groupes restent sur cet appareil. Noto ne stocke que les chemins et noms dans les groupes.</span></div>
       </div>
       <footer className="settings-footer"><span>Noto <i>·</i> Version 0.1.0</span><button className="secondary-button" type="button" onClick={onClose}>Terminé</button></footer>
     </section>
