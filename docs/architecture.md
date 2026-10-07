@@ -6,8 +6,7 @@ Noto est une application locale composée d’une interface React/Vite et d’un
 
 - `src/App.tsx` orchestre onglets, récents, groupes, menus applicatifs et contextuels, éditeur, recherche, paramètres et opérations de fichiers.
 - `src/components/WorkspaceTools.tsx` regroupe menus, menu contextuel accessible, palette, dialogues de groupes et aide des raccourcis.
-- `src/components/` contient les viewers dédiés ; ils reçoivent un modèle `OpenDocument` et n’ouvrent pas eux-mêmes de chemins. `NotebookScreen.tsx` gère la bibliothèque locale, les sections, les pages et les suppressions ; `NotebookEditor.tsx` fournit les modes riche, Markdown et aperçu.
-- `src/lib/notebookModel.ts` valide la hiérarchie et les chemins du manifeste ; `src/lib/notebooks.ts` enregistre les pages en Markdown et les pièces jointes dans les dossiers choisis.
+- `src/components/` contient les viewers dédiés ; ils reçoivent un modèle `OpenDocument` et n’ouvrent pas eux-mêmes de chemins.
 - `src/lib/fileTypes.ts` classe les extensions, libellés, MIME et langages.
 - `src/lib/files.ts` charge les documents via Tauri ou File API, impose les limites de taille et enregistre le texte éditable.
 - `src/lib/fileOperations.ts` effectue renommage/déplacement uniquement dans le shell desktop, après sélection utilisateur et extension temporaire du scope Tauri.
@@ -26,11 +25,11 @@ Noto est une application locale composée d’une interface React/Vite et d’un
 
 ## Éditeur
 
-`TextEditor` utilise un unique `<textarea>` visible : aucun calque de texte transparent ne peut désaligner le caret du texte affiché. Le code garde la coloration syntaxique dans le viewer de lecture ; l’éditeur priorise la correspondance exacte entre clic, sélection et curseur. Le gutter suit le défilement vertical. Tabulation, indentation et remplacement restaurent explicitement le point d’insertion. Les pages de carnets utilisent `NotebookEditor` (Tiptap + Markdown) et sont écrites comme fichiers `.md` dans leur dossier ; le manifeste local conserve les sections et la hiérarchie sans remplacer le contenu des pages par une base interne.
+`TextEditor` utilise un unique `<textarea>` visible : aucun calque de texte transparent ne peut désaligner le caret du texte affiché. Le code garde la coloration syntaxique dans le viewer de lecture ; l’éditeur priorise la correspondance exacte entre clic, sélection et curseur. Le gutter suit le défilement vertical. Tabulation, indentation et remplacement restaurent explicitement le point d’insertion.
 
 ## Shell et sécurité
 
-Les permissions Tauri activent seulement les dialogues, lecture/écriture, création/suppression, métadonnées et opérations de renommage nécessaires. À l’ouverture, le shell accorde le scope au fichier sélectionné ; pour déplacer, le dossier choisi est accordé au scope non récursif. Pour un carnet, le scope récursif est limité au dossier explicitement choisi par l’utilisateur ; créer un carnet dans un dossier parent ne donne pas à Noto un accès récursif à ses autres fichiers. Les documents HTML sont sandboxés et soumis à une CSP sans scripts ni réseau. Le Markdown ne rend pas de HTML brut.
+Les permissions Tauri activent seulement dialogues, lecture/écriture, métadonnées et opérations de renommage nécessaires. À l’ouverture, le shell accorde le scope au fichier sélectionné ; pour déplacer, le dossier choisi est accordé au scope non récursif. Les documents HTML sont sandboxés et soumis à une CSP sans scripts ni réseau. Le Markdown ne rend pas de HTML brut.
 
 L’ouverture d’une archive n’écrit aucun fichier sur disque. Les chemins d’archives ne sont jamais extraits vers le système de fichiers. Macros, scripts et objets actifs ne sont pas lancés. Les menus de fichiers limitent les opérations destructrices aux fichiers desktop sélectionnés ; les groupes restent de simples références.
 

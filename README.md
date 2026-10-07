@@ -18,9 +18,8 @@
 - **Diaporamas :** navigation au clavier et par boutons, mode plein écran, extraction locale du texte et des images courants. Les animations, transitions et mises en page complexes ne sont pas fidèlement reproduites.
 - **Bureautique et EPUB :** aperçu en lecture seule, reconstruit à partir du texte intégré ; Noto ne modifie pas le fichier source.
 - **Édition :** Markdown, texte, code, HTML source et CSV ; sélection et curseur natifs, indentation, tabulation, recherche/remplacement, **Enregistrer sous** avec encodage/fins de ligne au choix et récupération locale de brouillons opt-in.
-- **Navigation et organisation :** PDF avec flèches, images avec zoom/rotation, onglets multiples, fichiers récents et groupes locaux qui référencent les originaux.
-- **Carnets locaux :** plusieurs dossiers de carnets, organisés en sections, pages et sous-pages ; édition riche ou Markdown, aperçu, liens vers des fichiers Noto et pièces jointes locales. Les suppressions demandent si les fichiers doivent être conservés.
-- **Clic droit :** menus contextuels Noto dans l’espace de travail, les fichiers, les sections/pages, les textes et les viewers ; actions de copie/recherche, classement, renommage ou déplacement (application de bureau), navigation et zoom selon le contenu.
+- **Navigation et organisation :** PDF avec flèches, images avec zoom/rotation, onglets, fichiers récents et groupes locaux qui référencent les originaux.
+- **Clic droit :** menu contextuel Noto dans l’espace de travail, les fichiers, les textes et les viewers ; actions de copie/recherche, classement, renommage ou déplacement (application de bureau), navigation et zoom selon le contenu.
 - **Personnalisation :** thèmes, couleur d’accent, tailles de texte, numéros de lignes, retour à la ligne et commandes réorganisables.
 - **Installateur Windows :** NSIS et MSI aux couleurs Noto ; le parcours NSIS propose la licence, les dossiers d’installation/menu Démarrer, puis les options raccourci Bureau et lancement.
 
@@ -63,7 +62,6 @@ npm run tauri:build # installateurs Windows (à compiler sous Windows)
 
 - [Index de la documentation](docs/README.md)
 - [Guide utilisateur et formats](docs/user-guide.md)
-- [Carnets locaux](docs/notebooks.md)
 - [Installation Windows](docs/installation.md)
 - [Architecture et sécurité](docs/architecture.md), [politique de sécurité](docs/security.md)
 - [Ajouter un viewer](docs/adding-a-viewer.md), [construire sous Windows](docs/build-windows.md)

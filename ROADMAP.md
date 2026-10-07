@@ -13,7 +13,6 @@ Cette feuille ne garde que les travaux **non terminés** ou les validations enco
 
 ## Prioritaire — P1
 
-- [ ] **Carnets locaux — validation native** : compiler le shell Tauri sur Windows, puis tester création/ouverture de plusieurs dossiers, restauration après redémarrage, hiérarchie sections/pages/sous-pages, édition riche et Markdown, autosauvegarde, liens/pièces jointes, refus d’accès et suppressions avec conservation ou suppression explicite des fichiers.
 - [ ] Mesurer les seuils réalistes pour les fichiers volumineux et ajouter, là où c’est utile, la lecture progressive ou la virtualisation.
 - [ ] Vérifier après redémarrage la persistance des groupes, réglages, récents et brouillons ; tester aussi stockage plein, mode privé et stockage indisponible.
 - [ ] Ajouter des tests d’intégration clavier pour l’éditeur, les menus, la palette, les groupes et les réglages. Vérifier en particulier qu’un clic place correctement le caret/la sélection et que la saisie normale fonctionne.
