@@ -1,6 +1,7 @@
 import type { FileKind } from './lib/fileTypes';
 
 export interface BrowserFileHandle {
+  readonly name?: string;
   getFile(): Promise<File>;
   createWritable(): Promise<{ write(data: string | Uint8Array | Blob): Promise<void>; close(): Promise<void> }>;
 }
@@ -16,7 +17,9 @@ export interface OpenDocument {
   bytes?: Uint8Array;
   mimeType: string;
   size: number;
+  modifiedAt?: number;
   truncated: boolean;
+  pinned?: boolean;
   source: 'browser' | 'desktop';
   handle?: BrowserFileHandle;
 }

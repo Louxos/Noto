@@ -1,17 +1,18 @@
 # Ajouter un viewer
 
-1. Ajoutez ou vérifiez l’extension dans `getFileKind` de `src/lib/fileTypes.ts`.
-2. Définissez le type MIME si le viewer crée une URL de Blob.
-3. Ajoutez la lecture adaptée dans `loadBrowserFile` / `readDesktopPath` : texte en `content`, binaire en `bytes`.
-4. Créez un composant dans `src/components/`. Il reçoit `OpenDocument` et ne doit pas ouvrir de chemin lui-même.
-5. Branchez le composant dans `ViewerContent` (`src/App.tsx`). Chargez paresseusement les dépendances lourdes.
-6. Ajoutez les extensions aux dialogues Windows si un filtre est utilisé, à `bundle.fileAssociations` et à la liste des formats du README.
-7. Ajoutez des tests unitaires au parseur ou au détecteur, puis exécutez `npm run check` et `npm run build`.
+1. Ajoutez l’extension dans `src/lib/fileTypes.ts` et écrivez un test de classification.
+2. Définissez le MIME si le viewer crée une URL Blob ; vérifiez également le chemin d’ouverture navigateur/desktop dans `src/lib/files.ts`.
+3. Créez le composant dans `src/components/`. Il reçoit `OpenDocument` et ne lit jamais directement un chemin système.
+4. Branchez-le dans `ViewerContent` (`src/App.tsx`) et chargez paresseusement les dépendances lourdes.
+5. Ajoutez ses actions au menu contextuel du viewer, en réutilisant `ContextMenu` et les actions fichier communes si nécessaire.
+6. Pour les archives, ne les extrayez pas sur disque : sélectionnez uniquement les entrées requises, vérifiez les chemins, plafonnez les tailles décompressées et traitez le XML/texte comme une entrée non fiable.
+7. Actualisez les associations Tauri dans `src-tauri/tauri.conf.json`, puis la liste des formats dans `README.md` et `docs/user-guide.md`.
+8. Ajoutez des tests au parseur/détecteur, puis exécutez `npm run check` et `npm run build`.
 
 ## Sécurité et performances
 
-- Traitez les octets des fichiers comme des entrées non fiables.
 - N’exécutez pas le contenu d’un fichier et ne faites pas de requêtes réseau implicites.
-- Créez puis révoquez les `blob:` URLs dans un effet React.
+- Créez puis révoquez les URL `blob:` dans un effet React.
+- Pour les formats compressés, résistez aux bombes de décompression et refusez les fichiers surdimensionnés.
 - Pour les fichiers volumineux, avertissez l’utilisateur avant de décoder ou de créer des milliers d’éléments DOM.
 - Les erreurs du viewer doivent être expliquées en français, sans laisser la zone vide.

@@ -78,6 +78,14 @@ export function createGroup(name: string, color: GroupColor = 'violet', id = cre
   return { id, name: normalized, color, files: [], createdAt: Date.now() };
 }
 
+export function duplicateGroup(groups: FileGroup[], id: string): FileGroup[] {
+  if (groups.length >= MAX_GROUPS) return groups;
+  const source = groups.find((group) => group.id === id);
+  if (!source) return groups;
+  const copy = createGroup(`${source.name} (copie)`, source.color);
+  return copy ? [{ ...copy, files: [...source.files] }, ...groups] : groups;
+}
+
 export function renameGroup(groups: FileGroup[], id: string, name: string, color?: GroupColor): FileGroup[] {
   const normalized = name.trim().slice(0, MAX_GROUP_NAME);
   if (!normalized) return groups;
@@ -109,8 +117,13 @@ export function toggleGroupFile(groups: FileGroup[], groupId: string, file: Rece
 }
 
 export function removeGroupFile(groups: FileGroup[], groupId: string, fileId: string): FileGroup[] {
+  return removeGroupFiles(groups, groupId, [fileId]);
+}
+
+export function removeGroupFiles(groups: FileGroup[], groupId: string, fileIds: string[]): FileGroup[] {
+  const removals = new Set(fileIds);
   return groups.map((group) => group.id === groupId
-    ? { ...group, files: group.files.filter((file) => file.id !== fileId) }
+    ? { ...group, files: group.files.filter((file) => !removals.has(file.id)) }
     : group);
 }
 

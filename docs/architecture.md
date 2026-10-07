@@ -1,31 +1,42 @@
 # Architecture de Noto
 
-Noto est une application locale composée d’une interface React/Vite et d’un shell Windows Tauri 2. L’interface peut aussi être lancée dans un navigateur pour le développement et la prévisualisation ; les accès système restent derrière les API de sélection de fichiers.
+Noto est une application locale composée d’une interface React/Vite et d’un shell Tauri 2. L’interface peut aussi être lancée dans un navigateur ; les accès système restent derrière les sélecteurs explicites.
 
 ## Couches
 
-- **`src/App.tsx`** orchestre les fichiers ouverts, les onglets, les groupes locaux, l’historique, les menus, la palette de commandes, la recherche et l’édition.
-- **`src/components/WorkspaceTools.tsx`** fournit les menus accessibles, la palette filtrable, l’aide des raccourcis et l’interface de gestion des groupes.
-- **`src/components/`** contient les viewers dédiés. Chaque viewer reçoit des données en mémoire et ne lit pas lui-même le système de fichiers.
-- **`src/lib/fileTypes.ts`** classe les extensions et fournit les libellés/langages.
-- **`src/lib/files.ts`** adapte les dialogues Tauri ou les File API du navigateur, limite les aperçus texte volumineux et centralise l’enregistrement.
-- **`src/lib/csv.ts`** parse le CSV en respectant les guillemets, les guillemets doublés et les retours de ligne embarqués.
-- **`src/lib/security.ts`** prépare une politique restrictive pour les aperçus HTML isolés.
-- **`src/lib/preferences.ts`** stocke les réglages, l’ordre/visibilité de la barre d’outils, les récents et le thème dans le stockage local du profil.
-- **`src/lib/groups.ts`** persiste des groupes de fichiers (nom, couleur et métadonnées de chemin) sans copier, déplacer ou modifier les fichiers.
-- **`src-tauri/`** fournit le shell desktop, les permissions minimales, l’ouverture par ligne de commande et la configuration d’installateur/associations.
+- `src/App.tsx` orchestre onglets, récents, groupes, menus applicatifs et contextuels, éditeur, recherche, paramètres et opérations de fichiers.
+- `src/components/WorkspaceTools.tsx` regroupe menus, menu contextuel accessible, palette, dialogues de groupes et aide des raccourcis.
+- `src/components/` contient les viewers dédiés ; ils reçoivent un modèle `OpenDocument` et n’ouvrent pas eux-mêmes de chemins.
+- `src/lib/fileTypes.ts` classe les extensions, libellés, MIME et langages.
+- `src/lib/files.ts` charge les documents via Tauri ou File API, impose les limites de taille et enregistre le texte éditable.
+- `src/lib/fileOperations.ts` effectue renommage/déplacement uniquement dans le shell desktop, après sélection utilisateur et extension temporaire du scope Tauri.
+- `src/lib/archiveReader.ts` extrait les chaînes XML/images des formats PPTX, ODP, DOCX, ODT et EPUB en mémoire avec limites par entrée et totales ; RTF est converti en texte. Aucun élément Office n’est exécuté.
+- `src/lib/csv.ts`, `src/lib/highlighting.ts`, `src/lib/security.ts` et `src/lib/textFormat.ts` centralisent parsing CSV, coloration, règles de sécurité et formatage.
+- `src/lib/preferences.ts`, `src/lib/groups.ts` et `src/lib/session.ts` stockent localement les préférences, références de groupes et, si activée, les chemins de session (sans contenu de document). `src/lib/drafts.ts` conserve séparément les brouillons texte uniquement sur activation explicite, avec rétention et plafonds de taille.
+- `src-tauri/` contient le shell, les commandes d’accès au scope, les permissions et associations Windows.
 
-## Flux d’ouverture
+## Flux d’ouverture et de lecture
 
-1. Un fichier est choisi via une boîte de dialogue, déposé dans la fenêtre ou passé à Noto par Windows.
-2. L’extension sélectionne un viewer ; pour un format inconnu, un échantillon permet de distinguer du texte probable d’un contenu binaire.
-3. Le contenu est lu localement. Les fichiers texte de plus de 8 Mo dans le navigateur sont proposés en aperçu partiel ; les fichiers lourds demandent confirmation.
-4. Le viewer reçoit un modèle `OpenDocument`. Les modifications restent en mémoire jusqu’à la sauvegarde explicite.
+1. L’utilisateur choisit, dépose ou passe un fichier à Noto.
+2. L’extension sélectionne le viewer. Les types inconnus sont distingués du texte probable en inspectant un échantillon.
+3. Le contenu est lu localement en mémoire ; les textes volumineux sont avertis ou tronqués, les binaires volumineux demandent confirmation.
+4. Les archives bureautiques sont filtrées pendant la décompression : seuls les XML et images raster utiles sont lus, avec plafonds de taille. Les diaporamas sont reconstruits de façon simplifiée, les documents bureautiques sont en lecture seule.
+5. L’édition ne s’applique qu’aux familles texte annoncées ; l’enregistrement est explicite et détecte les changements externes lorsque métadonnées système sont disponibles.
+
+## Éditeur
+
+`TextEditor` utilise un unique `<textarea>` visible : aucun calque de texte transparent ne peut désaligner le caret du texte affiché. Le code garde la coloration syntaxique dans le viewer de lecture ; l’éditeur priorise la correspondance exacte entre clic, sélection et curseur. Le gutter suit le défilement vertical. Tabulation, indentation et remplacement restaurent explicitement le point d’insertion.
 
 ## Shell et sécurité
 
-Le shell n’ajoute ni compte ni service réseau. Les permissions Tauri couvrent les dialogues et la lecture/écriture des chemins choisis par l’utilisateur ; les ouvertures par association Windows et par glisser-déposer accordent au plugin FS un scope limité au fichier explicitement fourni. L’aperçu HTML utilise `sandbox=""` et une CSP qui interdit scripts, formulaires, plugins, connexions et ressources distantes. Le parseur Markdown ne traite pas le HTML brut et les images distantes ne sont pas chargées automatiquement.
+Les permissions Tauri activent seulement dialogues, lecture/écriture, métadonnées et opérations de renommage nécessaires. À l’ouverture, le shell accorde le scope au fichier sélectionné ; pour déplacer, le dossier choisi est accordé au scope non récursif. Les documents HTML sont sandboxés et soumis à une CSP sans scripts ni réseau. Le Markdown ne rend pas de HTML brut.
 
-## Tests et vérifications
+L’ouverture d’une archive n’écrit aucun fichier sur disque. Les chemins d’archives ne sont jamais extraits vers le système de fichiers. Macros, scripts et objets actifs ne sont pas lancés. Les menus de fichiers limitent les opérations destructrices aux fichiers desktop sélectionnés ; les groupes restent de simples références.
 
-`npm run check` exécute TypeScript et les tests unitaires des fonctions de parsing, de détection de formats et de sécurité. `npm run build` produit l’interface web. `npm run tauri:build` produit les installateurs Windows sur une machine configurée avec la toolchain Windows/Rust.
+## Développement et vérifications
+
+- `npm run check` : TypeScript et tests unitaires.
+- `npm run build` : bundle web.
+- `npm run tauri:dev` / `npm run tauri:build` : shell et installateurs Windows sur une machine avec la toolchain Tauri.
+
+Les tests couvrent les parseurs, détection des formats, archives/RTF simples, groupes, préférences et sécurité. Les interactions clavier et les builds de packages Windows doivent aussi être validés sur Windows avant publication stable.

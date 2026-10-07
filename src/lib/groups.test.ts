@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addGroupFile, createGroup, deleteGroup, normalizeGroups, removeGroupFile, renameGroup, toggleGroupFile, type FileGroup } from './groups';
+import { addGroupFile, createGroup, deleteGroup, duplicateGroup, normalizeGroups, removeGroupFile, removeGroupFiles, renameGroup, toggleGroupFile, type FileGroup } from './groups';
 import type { RecentFile } from './preferences';
 
 const sampleFile: RecentFile = {
@@ -21,6 +21,15 @@ describe('file groups', () => {
     expect(createGroup('   ', 'blue', 'g2')).toBeNull();
   });
 
+  it('duplicates group metadata without moving or copying file contents', () => {
+    const source = { ...group(), files: [sampleFile] };
+    const duplicated = duplicateGroup([source], source.id);
+    expect(duplicated).toHaveLength(2);
+    expect(duplicated[0].id).not.toBe(source.id);
+    expect(duplicated[0].name).toBe('Projet (copie)');
+    expect(duplicated[0].files).toEqual([sampleFile]);
+  });
+
   it('renames and deletes only the requested group', () => {
     const groups = [group('g1'), group('g2')];
     expect(renameGroup(groups, 'g2', '  Archive  ')[1].name).toBe('Archive');
@@ -33,6 +42,14 @@ describe('file groups', () => {
     expect(first[0].files).toHaveLength(1);
     expect(second[0].files).toHaveLength(0);
     expect(removeGroupFile(first, 'g1', sampleFile.id)[0].files).toHaveLength(0);
+  });
+
+  it('removes several selected memberships without deleting the originals', () => {
+    const secondFile = { ...sampleFile, id: 'desktop:C:/notes/second.md', name: 'second.md' };
+    const groups = [{ ...group(), files: [sampleFile, secondFile] }];
+    const updated = removeGroupFiles(groups, 'g1', [sampleFile.id, secondFile.id]);
+    expect(updated[0].files).toEqual([]);
+    expect(groups[0].files).toHaveLength(2);
   });
 
   it('adds files idempotently when opening several files into a group', () => {

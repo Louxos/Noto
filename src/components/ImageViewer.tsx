@@ -3,6 +3,7 @@ import { RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, ImageOff } from 'lucid
 import * as UTIF from 'utif';
 import type { OpenDocument } from '../types';
 import { formatBytes } from '../lib/files';
+import { ContextMenu, type MenuEntry } from './WorkspaceTools';
 
 function makeTiffPreview(bytes: Uint8Array): string {
   const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
@@ -19,13 +20,14 @@ function makeTiffPreview(bytes: Uint8Array): string {
   return canvas.toDataURL('image/png');
 }
 
-export function ImageViewer({ document }: { document: OpenDocument }) {
+export function ImageViewer({ document, fileContextItems }: { document: OpenDocument; fileContextItems: MenuEntry[] }) {
   const [zoom, setZoom] = useState(1);
   const [fit, setFit] = useState(true);
   const [rotation, setRotation] = useState(0);
   const [source, setSource] = useState<string>();
   const [error, setError] = useState('');
   const [naturalSize, setNaturalSize] = useState({ width: 0, height: 0 });
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const isTiff = document.extension === 'tif' || document.extension === 'tiff';
 
   useEffect(() => {
@@ -54,9 +56,21 @@ export function ImageViewer({ document }: { document: OpenDocument }) {
   }, [document, isTiff]);
 
   const dimensions = `${naturalSize.width && naturalSize.height ? `${naturalSize.width} × ${naturalSize.height} px · ` : ''}${formatBytes(document.size)}`;
+  const imageContextItems: MenuEntry[] = [
+    ...fileContextItems,
+    { id: 'rotate-image-left', label: 'Pivoter à gauche', icon: <RotateCcw size={15} />, dividerBefore: true, onSelect: () => setRotation((value) => value - 90) },
+    { id: 'rotate-image-right', label: 'Pivoter à droite', icon: <RotateCw size={15} />, onSelect: () => setRotation((value) => value + 90) },
+    { id: 'fit-image', label: 'Ajuster à la fenêtre', icon: <Maximize2 size={15} />, onSelect: () => { setFit(true); setZoom(1); } },
+    { id: 'zoom-image-in', label: 'Agrandir', icon: <ZoomIn size={15} />, onSelect: () => { setFit(false); setZoom((value) => Math.min(4, value + 0.1)); } },
+    { id: 'zoom-image-out', label: 'Réduire', icon: <ZoomOut size={15} />, onSelect: () => { setFit(false); setZoom((value) => Math.max(0.2, value - 0.1)); } },
+  ];
 
   return (
-    <div className="image-viewer">
+    <div className="image-viewer" onContextMenu={(event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setContextMenu({ x: event.clientX, y: event.clientY });
+    }}>
       <div className="viewer-tools image-tools">
         <div className="tool-group">
           <button className="tool-button" type="button" aria-label="Réduire le zoom" title="Réduire" onClick={() => { setFit(false); setZoom((value) => Math.max(0.2, value - 0.1)); }}><ZoomOut size={16} /></button>
@@ -86,6 +100,7 @@ export function ImageViewer({ document }: { document: OpenDocument }) {
           />
         ) : <div className="viewer-empty">Chargement de l’image…</div>}
       </div>
+      {contextMenu && <ContextMenu position={contextMenu} items={imageContextItems} onClose={() => setContextMenu(null)} />}
     </div>
   );
 }

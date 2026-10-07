@@ -3,6 +3,7 @@ import { getDocument, GlobalWorkerOptions, type PDFDocumentProxy, type RenderTas
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { ChevronLeft, ChevronRight, Minus, Plus, ZoomIn } from 'lucide-react';
 import type { OpenDocument } from '../types';
+import { ContextMenu, type MenuEntry } from './WorkspaceTools';
 
 GlobalWorkerOptions.workerSrc = workerUrl;
 
@@ -12,7 +13,7 @@ interface PdfSearchState { query: string; pages: number[]; occurrences: number; 
 
 const EMPTY_SEARCH: PdfSearchState = { query: '', pages: [], occurrences: 0, searching: false };
 
-export function PdfViewer({ document, searchQuery, searchRequest }: { document: OpenDocument; searchQuery: string; searchRequest: SearchRequest | null }) {
+export function PdfViewer({ document, searchQuery, searchRequest, fileContextItems }: { document: OpenDocument; searchQuery: string; searchRequest: SearchRequest | null; fileContextItems: MenuEntry[] }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const handledRequestId = useRef(0);
@@ -25,6 +26,7 @@ export function PdfViewer({ document, searchQuery, searchRequest }: { document: 
   const [error, setError] = useState('');
   const [searchState, setSearchState] = useState<PdfSearchState>(EMPTY_SEARCH);
   const [stageSize, setStageSize] = useState({ width: 960, height: 680 });
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     setPdf(null);
@@ -149,9 +151,34 @@ export function PdfViewer({ document, searchQuery, searchRequest }: { document: 
     setPageNumber(searchState.pages[nextIndex]);
   }, [pageNumber, searchQuery, searchRequest, searchState]);
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target;
+      if (target instanceof HTMLElement && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))) return;
+      if (event.key === 'ArrowRight' || event.key === 'PageDown') {
+        event.preventDefault();
+        setPageNumber((current) => Math.min(pageCount || 1, current + 1));
+      } else if (event.key === 'ArrowLeft' || event.key === 'PageUp') {
+        event.preventDefault();
+        setPageNumber((current) => Math.max(1, current - 1));
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [pageCount]);
+
   function setPage(value: number) {
     setPageNumber(Math.max(1, Math.min(pageCount || 1, value)));
   }
+
+  const pdfContextItems: MenuEntry[] = [
+    ...fileContextItems,
+    { id: 'previous-page', label: 'Page précédente', shortcut: '←', disabled: pageNumber <= 1, onSelect: () => setPage(pageNumber - 1) },
+    { id: 'next-page', label: 'Page suivante', shortcut: '→', disabled: pageNumber >= pageCount, onSelect: () => setPage(pageNumber + 1) },
+    { id: 'zoom-in', label: 'Augmenter le zoom', icon: <Plus size={15} />, dividerBefore: true, onSelect: () => { setFitMode('actual'); setZoom((value) => Math.min(3, value + 0.1)); } },
+    { id: 'zoom-out', label: 'Réduire le zoom', icon: <Minus size={15} />, onSelect: () => { setFitMode('actual'); setZoom((value) => Math.max(0.4, value - 0.1)); } },
+    { id: 'fit-width', label: 'Ajuster à la largeur', icon: <ZoomIn size={15} />, onSelect: () => { setFitMode('width'); setZoom(1); } },
+  ];
 
   const searchLabel = searchQuery.trim()
     ? searchState.query !== searchQuery.trim() || searchState.searching
@@ -162,7 +189,11 @@ export function PdfViewer({ document, searchQuery, searchRequest }: { document: 
     : '';
 
   return (
-    <div className="pdf-viewer">
+    <div className="pdf-viewer" onContextMenu={(event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setContextMenu({ x: event.clientX, y: event.clientY });
+    }}>
       <div className="viewer-tools pdf-tools">
         <div className="tool-group">
           <button className="tool-button" type="button" title="Page précédente" aria-label="Page précédente" disabled={pageNumber <= 1} onClick={() => setPage(pageNumber - 1)}><ChevronLeft size={17} /></button>
@@ -195,6 +226,7 @@ export function PdfViewer({ document, searchQuery, searchRequest }: { document: 
           <div className="pdf-paper-wrap"><canvas ref={canvasRef} className="pdf-canvas" /></div>
         )}
       </div>
+      {contextMenu && <ContextMenu position={contextMenu} items={pdfContextItems} onClose={() => setContextMenu(null)} />}
     </div>
   );
 }

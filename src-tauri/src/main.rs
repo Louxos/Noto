@@ -21,11 +21,22 @@ fn allow_file_access(app: tauri::AppHandle, path: String) -> Result<(), String> 
         .map_err(|error| error.to_string())
 }
 
+#[tauri::command]
+fn allow_directory_access(app: tauri::AppHandle, path: String) -> Result<(), String> {
+    let directory = std::path::PathBuf::from(path);
+    if !directory.is_dir() {
+        return Err("Le dossier de destination n’existe pas ou n’est pas accessible.".to_string());
+    }
+    app.fs_scope()
+        .allow_directory(&directory, false)
+        .map_err(|error| error.to_string())
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
-        .invoke_handler(tauri::generate_handler![startup_paths, allow_file_access])
+        .invoke_handler(tauri::generate_handler![startup_paths, allow_file_access, allow_directory_access])
         .run(tauri::generate_context!())
         .expect("Noto n’a pas pu démarrer.");
 }

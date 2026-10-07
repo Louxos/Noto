@@ -1,5 +1,6 @@
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { getExtension, getFileKind, isProbablyText, decodeText, mimeTypeFor, type FileKind } from './fileTypes';
+import { encodeTextForSave, type LineEndingChoice, type TextEncoding } from './saveFormat';
 import type { BrowserFileHandle, OpenDocument } from '../types';
 
 export const MAX_TEXT_PREVIEW_BYTES = 8 * 1024 * 1024;
@@ -49,6 +50,7 @@ function documentRecord(input: {
   bytes?: Uint8Array;
   mimeType?: string;
   size: number;
+  modifiedAt?: number;
   source: 'browser' | 'desktop';
   handle?: BrowserFileHandle;
   truncated?: boolean;
@@ -65,6 +67,7 @@ function documentRecord(input: {
     bytes: input.bytes,
     mimeType: input.mimeType ?? mimeTypeFor(input.name),
     size: input.size,
+    modifiedAt: input.modifiedAt,
     truncated: input.truncated ?? false,
     source: input.source,
     handle: input.handle,
@@ -91,6 +94,7 @@ export async function loadBrowserFile(file: File, handle?: BrowserFileHandle): P
       content,
       mimeType: file.type || mimeTypeFor(name),
       size: file.size,
+      modifiedAt: file.lastModified,
       source: 'browser',
       handle,
       truncated,
@@ -111,6 +115,7 @@ export async function loadBrowserFile(file: File, handle?: BrowserFileHandle): P
         content: decodeText(bytes),
         mimeType: file.type || mimeTypeFor(name),
         size: file.size,
+        modifiedAt: file.lastModified,
         source: 'browser',
         handle,
         truncated,
@@ -126,6 +131,7 @@ export async function loadBrowserFile(file: File, handle?: BrowserFileHandle): P
     bytes,
     mimeType: file.type || mimeTypeFor(name),
     size: file.size,
+    modifiedAt: file.lastModified,
     source: 'browser',
     handle,
   });
@@ -179,6 +185,7 @@ export async function openDesktopFiles(): Promise<OpenDocument[]> {
         bytes: isText ? undefined : bytes,
         mimeType: mimeTypeFor(name),
         size: fileInfo.size,
+        modifiedAt: fileInfo.mtime?.getTime() ?? undefined,
         source: 'desktop',
         truncated,
       }));
@@ -213,54 +220,80 @@ export async function readDesktopPath(path: string): Promise<OpenDocument> {
     bytes: isText ? undefined : bytes,
     mimeType: mimeTypeFor(name),
     size: fileInfo.size,
+    modifiedAt: fileInfo.mtime?.getTime() ?? undefined,
     source: 'desktop',
     truncated,
   });
 }
 
-export async function saveDocument(document: OpenDocument, content: string, saveAs = false): Promise<OpenDocument> {
+export interface SaveAsOptions {
+  encoding: TextEncoding;
+  lineEnding: LineEndingChoice;
+}
+
+function keepOriginalExtension(path: string, originalName: string): string {
+  const extension = getExtension(originalName);
+  if (!extension) return path;
+  const separator = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
+  const directory = path.slice(0, separator + 1);
+  const baseName = path.slice(separator + 1);
+  if (getExtension(baseName) === extension) return path;
+  const dot = baseName.lastIndexOf('.');
+  const stem = dot > 0 ? baseName.slice(0, dot) : baseName;
+  return `${directory}${stem}.${extension}`;
+}
+
+export async function saveDocument(document: OpenDocument, content: string, saveAs = false, options: SaveAsOptions = { encoding: 'utf-8', lineEnding: 'preserve' }): Promise<OpenDocument> {
   if (document.source === 'desktop' && !saveAs) {
     const { writeTextFile } = await import('@tauri-apps/plugin-fs');
     await writeTextFile(document.path, content);
-    return { ...document, content, savedContent: content, size: new TextEncoder().encode(content).length };
+    return { ...document, content, savedContent: content, size: new TextEncoder().encode(content).length, modifiedAt: Date.now() };
   }
 
   if (document.source === 'browser' && document.handle && !saveAs) {
     const writer = await document.handle.createWritable();
     await writer.write(content);
     await writer.close();
-    return { ...document, content, savedContent: content, size: new TextEncoder().encode(content).length };
+    return { ...document, content, savedContent: content, size: new TextEncoder().encode(content).length, modifiedAt: Date.now() };
   }
 
+  const outputBytes = encodeTextForSave(content, options.encoding, options.lineEnding);
   if (isTauri()) {
     const { save } = await import('@tauri-apps/plugin-dialog');
-    const { writeTextFile } = await import('@tauri-apps/plugin-fs');
-    const path = await save({ defaultPath: document.name });
-    if (!path) throw new Error('Enregistrement annulé.');
-    await writeTextFile(path, content);
-    return { ...document, name: pathName(path), path, source: 'desktop', content, savedContent: content, size: new TextEncoder().encode(content).length };
+    const { writeFile } = await import('@tauri-apps/plugin-fs');
+    const selectedPath = await save({ defaultPath: document.name });
+    if (!selectedPath) throw new Error('Enregistrement annulé.');
+    const path = keepOriginalExtension(selectedPath, document.name);
+    await writeFile(path, outputBytes);
+    return { ...document, name: pathName(path), path, source: 'desktop', content, savedContent: content, size: outputBytes.length, modifiedAt: Date.now() };
   }
 
   const pickerWindow = window as BrowserPickerWindow;
   if (pickerWindow.showSaveFilePicker) {
     try {
       const handle = await pickerWindow.showSaveFilePicker({ suggestedName: document.name });
+      const outputName = handle.name || document.name;
+      if (document.extension && getExtension(outputName) !== document.extension.toLowerCase()) {
+        throw new Error(`Conservez l’extension .${document.extension} pour ce fichier.`);
+      }
       const writer = await handle.createWritable();
-      await writer.write(content);
+      await writer.write(outputBytes);
       await writer.close();
-      return { ...document, path: document.name, source: 'browser', handle, content, savedContent: content, size: new TextEncoder().encode(content).length };
+      return { ...document, name: outputName, path: outputName, source: 'browser', handle, content, savedContent: content, size: outputBytes.length, modifiedAt: Date.now() };
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') throw new Error('Enregistrement annulé.');
       throw error;
     }
   }
 
-  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  const downloadBytes = new ArrayBuffer(outputBytes.byteLength);
+  new Uint8Array(downloadBytes).set(outputBytes);
+  const blob = new Blob([downloadBytes], { type: `text/plain;charset=${options.encoding}` });
   const url = URL.createObjectURL(blob);
   const anchor = window.document.createElement('a');
   anchor.href = url;
   anchor.download = document.name;
   anchor.click();
   window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
-  return { ...document, content, savedContent: content, size: new TextEncoder().encode(content).length };
+  return { ...document, content, savedContent: content, size: outputBytes.length, modifiedAt: Date.now() };
 }

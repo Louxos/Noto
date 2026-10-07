@@ -7,9 +7,10 @@ interface CodeViewerProps {
   lineNumbers: boolean;
   wordWrap: boolean;
   fontSize: number;
+  validationMessage?: string;
 }
 
-export function CodeViewer({ content, extension, lineNumbers, wordWrap, fontSize }: CodeViewerProps) {
+export function CodeViewer({ content, extension, lineNumbers, wordWrap, fontSize, validationMessage }: CodeViewerProps) {
   const language = languageForExtension(extension);
   const { html: highlighted, simplified } = highlightCode(content, extension);
   const lineCount = Math.max(1, content.split('\n').length);
@@ -18,6 +19,7 @@ export function CodeViewer({ content, extension, lineNumbers, wordWrap, fontSize
   return (
     <div className={`code-viewport ${wordWrap ? 'is-wrapped' : ''}`}>
       {simplified && <div className="code-performance-hint">Coloration simplifiée pour préserver la fluidité sur ce fichier volumineux.</div>}
+      {validationMessage && <div className="json-validation" role="alert">{validationMessage}</div>}
       <div className="code-shell" style={{ fontSize }}>
         {showLineNumbers && (
           <div className="code-gutter" aria-hidden="true">

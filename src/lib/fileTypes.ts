@@ -1,19 +1,28 @@
-export type FileKind = 'markdown' | 'text' | 'code' | 'html' | 'csv' | 'pdf' | 'image' | 'unknown';
+export type FileKind = 'markdown' | 'text' | 'code' | 'html' | 'csv' | 'pdf' | 'image' | 'presentation' | 'document' | 'ebook' | 'unknown';
 
 const markdownExtensions = new Set(['md', 'markdown', 'mdown', 'mkd']);
 const codeExtensions = new Set([
-  'js', 'mjs', 'cjs', 'ts', 'jsx', 'tsx', 'html', 'htm', 'css', 'scss', 'json', 'xml',
-  'yaml', 'yml', 'py', 'java', 'c', 'cc', 'cpp', 'h', 'hpp', 'cs', 'php', 'sql', 'sh',
-  'bash', 'bat', 'cmd', 'ps1', 'ini', 'env', 'toml', 'conf', 'config', 'editorconfig',
-  'gitignore', 'gitattributes', 'properties', 'rs', 'go', 'rb', 'swift', 'kt', 'vue', 'svelte',
+  'js', 'mjs', 'cjs', 'ts', 'jsx', 'tsx', 'html', 'htm', 'css', 'scss', 'sass', 'less', 'json', 'jsonc', 'json5', 'xml',
+  'yaml', 'yml', 'py', 'pyw', 'java', 'c', 'cc', 'cpp', 'cxx', 'h', 'hh', 'hpp', 'hxx', 'cs', 'php', 'sql', 'sh',
+  'bash', 'zsh', 'fish', 'bat', 'cmd', 'ps1', 'psm1', 'psd1', 'ini', 'env', 'toml', 'conf', 'config', 'editorconfig',
+  'gitignore', 'gitattributes', 'properties', 'rs', 'go', 'rb', 'swift', 'kt', 'kts', 'vue', 'svelte', 'astro', 'r', 'lua',
+  'pl', 'scala', 'dart', 'ex', 'exs', 'erl', 'hs', 'elm', 'clj', 'cljs', 'groovy', 'gradle', 'vb', 'vbs', 'fs', 'fsx',
+  'proto', 'graphql', 'gql', 'dockerfile', 'makefile', 'mk', 'cmake', 'tf', 'hcl', 'nix', 'sol', 'pkl', 'lock',
+  'sln', 'csproj', 'fsproj', 'vbproj', 'ipynb', 'bashrc', 'zshrc', 'gemfile', 'rakefile', 'procfile', 'justfile', 'caddyfile',
 ]);
-const textExtensions = new Set(['txt', 'text', 'log', 'readme', 'license', 'diff', 'patch']);
-const imageExtensions = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'ico', 'tif', 'tiff']);
+const textExtensions = new Set(['txt', 'text', 'log', 'readme', 'license', 'diff', 'patch', 'tex', 'rst', 'adoc', 'asciidoc']);
+const imageExtensions = new Set(['png', 'apng', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'ico', 'tif', 'tiff', 'avif']);
+const presentationExtensions = new Set(['pptx', 'odp']);
+const officeExtensions = new Set(['docx', 'odt', 'rtf']);
+const ebookExtensions = new Set(['epub']);
 
 export function getExtension(name: string): string {
   const normalized = name.replaceAll('\\', '/').split('/').pop() ?? name;
   const dot = normalized.lastIndexOf('.');
-  if (dot < 0) return normalized.toLowerCase() === 'dockerfile' ? 'dockerfile' : '';
+  if (dot < 0) {
+    const extensionless = normalized.toLowerCase();
+    return ['dockerfile', 'makefile', 'gemfile', 'rakefile', 'procfile', 'justfile', 'caddyfile'].includes(extensionless) ? extensionless : '';
+  }
   return normalized.slice(dot + 1).toLowerCase();
 }
 
@@ -22,8 +31,11 @@ export function getFileKind(name: string): FileKind {
   if (markdownExtensions.has(extension)) return 'markdown';
   if (textExtensions.has(extension)) return 'text';
   if (extension === 'pdf') return 'pdf';
-  if (extension === 'csv') return 'csv';
+  if (extension === 'csv' || extension === 'tsv') return 'csv';
   if (imageExtensions.has(extension)) return 'image';
+  if (presentationExtensions.has(extension)) return 'presentation';
+  if (officeExtensions.has(extension)) return 'document';
+  if (ebookExtensions.has(extension)) return 'ebook';
   if (extension === 'html' || extension === 'htm') return 'html';
   if (codeExtensions.has(extension)) return 'code';
   return 'unknown';
@@ -38,6 +50,9 @@ export function getFormatLabel(kind: FileKind): string {
     csv: 'Tableur CSV',
     pdf: 'Document PDF',
     image: 'Image',
+    presentation: 'Présentation',
+    document: 'Document bureautique',
+    ebook: 'Livre numérique',
     unknown: 'Format inconnu',
   };
   return labels[kind];
@@ -48,8 +63,12 @@ export function mimeTypeFor(name: string): string {
   const known: Record<string, string> = {
     pdf: 'application/pdf', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg',
     gif: 'image/gif', webp: 'image/webp', bmp: 'image/bmp', svg: 'image/svg+xml',
-    ico: 'image/x-icon', tif: 'image/tiff', tiff: 'image/tiff', html: 'text/html', htm: 'text/html',
-    csv: 'text/csv', json: 'application/json', md: 'text/markdown', txt: 'text/plain',
+    ico: 'image/x-icon', tif: 'image/tiff', tiff: 'image/tiff', apng: 'image/apng', html: 'text/html', htm: 'text/html',
+    csv: 'text/csv', tsv: 'text/tab-separated-values', json: 'application/json', md: 'text/markdown', txt: 'text/plain',
+    pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    odp: 'application/vnd.oasis.opendocument.presentation',
+    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    odt: 'application/vnd.oasis.opendocument.text', rtf: 'application/rtf', epub: 'application/epub+zip', avif: 'image/avif',
   };
   return known[extension] ?? 'application/octet-stream';
 }

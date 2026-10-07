@@ -10,6 +10,13 @@ describe('file type helpers', () => {
     expect(getFileKind('report.pdf')).toBe('pdf');
     expect(getFileKind('page.html')).toBe('html');
     expect(getFileKind('archive.unknown')).toBe('unknown');
+    expect(getFileKind('deck.pptx')).toBe('presentation');
+    expect(getFileKind('slides.odp')).toBe('presentation');
+    expect(getFileKind('report.docx')).toBe('document');
+    expect(getFileKind('notes.rtf')).toBe('document');
+    expect(getFileKind('book.epub')).toBe('ebook');
+    expect(getFileKind('sheet.tsv')).toBe('csv');
+    expect(getFileKind('photo.avif')).toBe('image');
   });
 
   it('handles dotfiles and Windows paths', () => {
