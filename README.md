@@ -10,7 +10,7 @@
 
 **Noto** est un lecteur et un éditeur de fichiers local, développé avec React et Tauri 2. Pas de compte, de cloud ni de télémétrie : les documents restent sur votre appareil.
 
-> **Installation Windows — état vérifié le 7 octobre 2026 :** aucune release officielle n’est publiée sur la page [Releases](https://github.com/Louxos/Noto/releases). Pour un build de test, choisissez le workflow **Windows installers** (et non **CI**) et son artefact `noto-windows-installers` ; le dernier succès vérifié est [l’exécution 37618743461](https://github.com/Louxos/Noto/actions/runs/37618743461), issu du commit `22c83db`. Cet artefact inclut l’installateur aux couleurs Noto, n’est pas signé et est conservé 30 jours. Consultez le [guide d’installation](docs/installation.md) pour savoir quel fichier lancer.
+> **Installation Windows — état vérifié le 7 octobre 2026 :** aucune release officielle n’est publiée sur la page [Releases](https://github.com/Louxos/Noto/releases). Pour un build de test, choisissez le workflow **Windows installers** (et non **CI**) et son artefact `noto-windows-installers` dans les [exécutions GitHub Actions](https://github.com/Louxos/Noto/actions/workflows/release.yml). Le workflow produit les installateurs aux couleurs Noto ; ils ne sont pas signés et les artefacts sont conservés 30 jours. Consultez le [guide d’installation](docs/installation.md) pour savoir quel fichier lancer.
 
 ## Fonctionnalités
 

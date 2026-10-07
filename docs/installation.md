@@ -2,7 +2,7 @@
 
 Ce guide explique comment installer Noto sur Windows, récupérer un build de test depuis GitHub Actions, ou construire l’application depuis le dépôt. **Vous n’avez pas besoin de Node.js, Rust ni Visual Studio pour installer un binaire déjà construit.**
 
-> **État vérifié le 7 octobre 2026 :** la page [Releases](https://github.com/Louxos/Noto/releases) est vide, donc il n’y a pas encore de release officielle. Pour le build de test, utilisez le workflow GitHub Actions **Windows installers** : il produit l’artefact `noto-windows-installers`. Le workflow **CI** ne produit pas d’installateur ; il vérifie seulement le front-end. Le dernier succès Windows vérifié est [l’exécution 37618743461](https://github.com/Louxos/Noto/actions/runs/37618743461), commit `22c83db`. Il contient l’installateur aux couleurs Noto ; l’artefact n’est pas signé et est conservé 30 jours.
+> **État vérifié le 7 octobre 2026 :** la page [Releases](https://github.com/Louxos/Noto/releases) est vide, donc il n’y a pas encore de release officielle. Pour le build de test, utilisez le workflow GitHub Actions **Windows installers** : il produit l’artefact `noto-windows-installers`. Le workflow **CI** ne produit pas d’installateur ; il vérifie seulement le front-end. Les exécutions récentes et leur artefact sont listés sur la page [Windows installers](https://github.com/Louxos/Noto/actions/workflows/release.yml). Les installateurs sont aux couleurs Noto, ne sont pas signés et les artefacts sont conservés 30 jours.
 
 ## 1. Installer Noto — utilisateur Windows
 
@@ -14,7 +14,7 @@ Ce guide explique comment installer Noto sur Windows, récupérer un build de te
 
 ### Télécharger et lancer le build de test
 
-1. Ouvrez les [exécutions du workflow **Windows installers**](https://github.com/Louxos/Noto/actions/workflows/release.yml) — pas celles de **CI** — et choisissez le succès le plus récent sur la branche `arena/01a10cf9-noto` (au 7 octobre 2026 : exécution `37618743461`).
+1. Ouvrez les [exécutions du workflow **Windows installers**](https://github.com/Louxos/Noto/actions/workflows/release.yml) — pas celles de **CI** — et choisissez le succès le plus récent sur la branche `arena/01a10cf9-noto`.
 2. Dans la section **Artifacts** de cette exécution, téléchargez `noto-windows-installers`, puis décompressez l’archive ZIP.
 3. Lancez le fichier `.exe` NSIS (recommandé pour le parcours Noto complet) et suivez l’assistant. Il présente la licence MIT, vous laisse choisir le dossier d’installation et le dossier du menu Démarrer, puis propose un raccourci Bureau et le lancement de Noto. Il est configuré pour l’utilisateur courant et ne devrait pas demander de droits administrateur. Le `.msi` est une alternative avec les mêmes visuels Noto.
 4. Lancez **Noto** depuis le menu Démarrer.

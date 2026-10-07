@@ -4,7 +4,7 @@ Cette feuille ne garde que les travaux **non terminés** ou les validations enco
 
 ## Obligatoire avant une version stable — P0
 
-- [ ] **Valider l’installateur Windows à jour** : l’exécution [Windows installers 37618743461](https://github.com/Louxos/Noto/actions/runs/37618743461) a produit les bundles NSIS et MSI. Les installer, mettre à jour et désinstaller sous Windows 10/11 ; vérifier WebView2, l’apparence Noto et les options de l’assistant, le glisser-déposer, « Ouvrir avec » et l’absence de changement involontaire d’application par défaut.
+- [ ] **Valider l’installateur Windows à jour** : un artefact NSIS/MSI récent est disponible dans les [exécutions Windows installers](https://github.com/Louxos/Noto/actions/workflows/release.yml). L’installer, le mettre à jour et le désinstaller sous Windows 10/11 ; vérifier WebView2, l’apparence Noto et les options de l’assistant, le glisser-déposer, « Ouvrir avec » et l’absence de changement involontaire d’application par défaut.
 - [ ] **Fiabilité de l’édition** : tester l’annulation/rétablissement avec sélection de lignes et gros documents ; définir et tester le comportement de récupération pour les brouillons qui dépassent les limites actuelles ; en cas de modification externe, proposer un parcours sûr pour comparer, recharger ou conserver la version éditée.
 - [ ] **Revue sécurité Windows** : tester le scope des permissions fichiers, les refus d’accès et les chemins inhabituels ; ajouter des tests de non-régression pour les archives Office/EPUB malformées ou hostiles et pour les encodages rares.
 - [ ] **Accessibilité** : vérifier la navigation clavier complète, les noms accessibles, le contraste, les lecteurs d’écran et les états de focus dans les écrans principaux, menus, viewers et dialogues.
