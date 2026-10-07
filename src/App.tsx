@@ -13,6 +13,7 @@ import { CsvViewer } from './components/CsvViewer';
 import { HtmlViewer } from './components/HtmlViewer';
 import { TextEditor } from './components/TextEditor';
 import { SmartGroupScreen } from './components/SmartGroupScreen';
+
 import { AppMenuBar, CommandPalette, ContextMenu, GoToLineDialog, GroupAssignmentDialog, GroupDialog, GroupScreen, RenameFileDialog, SaveAsDialog, ShortcutsDialog, type CommandOption, type MenuDefinition, type MenuEntry } from './components/WorkspaceTools';
 import { formatBytes, loadBrowserFile, openDesktopFiles, pickBrowserFiles, readDesktopPath, saveDocument, type SaveAsOptions } from './lib/files';
 import { moveDesktopFile, pathFileName, renameDesktopFile } from './lib/fileOperations';
@@ -33,6 +34,7 @@ const ImageViewer = lazy(() => import('./components/ImageViewer').then((module) 
 const PdfViewer = lazy(() => import('./components/PdfViewer').then((module) => ({ default: module.PdfViewer })));
 const PresentationViewer = lazy(() => import('./components/PresentationViewer').then((module) => ({ default: module.PresentationViewer })));
 const OfficeDocumentViewer = lazy(() => import('./components/OfficeDocumentViewer').then((module) => ({ default: module.OfficeDocumentViewer })));
+const NotebookScreen = lazy(() => import('./components/NotebookScreen').then((module) => ({ default: module.NotebookScreen })));
 
 const formatIcons: Record<string, typeof FileText> = {
   markdown: BookOpenText,
@@ -88,7 +90,7 @@ function OpenDialogButton({ onClick, compact = false }: { onClick: () => void; c
 export default function App() {
   const [documents, setDocuments] = useState<OpenDocument[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [page, setPage] = useState<'home' | 'file' | 'recents' | 'group' | 'smart-group'>('home');
+  const [page, setPage] = useState<'home' | 'file' | 'recents' | 'group' | 'smart-group' | 'notebooks'>('home');
   const [preferences, setPreferences] = useState<Preferences>(() => loadPreferences());
   const [recents, setRecents] = useState<RecentFile[]>(() => loadRecentFiles(preferences.recentLimit));
   const [groups, setGroups] = useState<FileGroup[]>(() => loadGroups());
@@ -1108,6 +1110,7 @@ export default function App() {
     { id: 'view', label: 'Affichage', items: [
       { id: 'home', label: 'Accueil', icon: <LayoutGrid size={15} />, onSelect: () => { setPage('home'); setActiveId(null); setActiveGroupId(null); setActiveSmartGroup(null); } },
       { id: 'recents', label: 'Fichiers récents', icon: <Clock3 size={15} />, onSelect: () => { setPage('recents'); setActiveId(null); setActiveGroupId(null); setActiveSmartGroup(null); } },
+      { id: 'notebooks', label: 'Carnets', icon: <BookOpenText size={15} />, onSelect: () => { setPage('notebooks'); setActiveGroupId(null); } },
       { id: 'smart-pdf', label: 'PDF ouverts récemment', icon: <FileType2 size={15} />, onSelect: () => openSmartGroup('pdf') },
       { id: 'smart-images', label: 'Images récentes', icon: <FileImage size={15} />, onSelect: () => openSmartGroup('image') },
       { id: 'sidebar', label: preferences.sidebarCollapsed ? 'Déployer la barre latérale' : 'Réduire la barre latérale', icon: <MoreHorizontal size={15} />, dividerBefore: true, onSelect: () => updatePreference('sidebarCollapsed', !preferences.sidebarCollapsed) },
@@ -1123,6 +1126,7 @@ export default function App() {
 
   const commands: CommandOption[] = [
     { id: 'open', label: 'Ouvrir un fichier', detail: 'Parcourir votre appareil', shortcut: 'Ctrl+O', keywords: 'parcourir importer', icon: <FileUp size={16} />, onSelect: () => void handleOpen() },
+    { id: 'notebooks', label: 'Ouvrir les carnets', detail: 'Créer, ouvrir et organiser des pages locales', keywords: 'notes sections pages carnet', icon: <BookOpenText size={16} />, onSelect: () => { setPage('notebooks'); setActiveGroupId(null); } },
     { id: 'save', label: 'Enregistrer', detail: 'Sauvegarder les modifications', shortcut: 'Ctrl+S', keywords: 'sauvegarde fichier', icon: <Save size={16} />, disabled: !dirty || !canEdit, onSelect: () => void handleSave() },
     { id: 'find', label: 'Rechercher', detail: 'Trouver du texte dans le fichier actif', shortcut: 'Ctrl+F', keywords: 'chercher trouver', icon: <Search size={16} />, disabled: !canReadText, onSelect: () => { setSearchOpen(true); setReplaceOpen(false); } },
     { id: 'replace', label: 'Rechercher et remplacer', detail: 'Remplacer plusieurs occurrences', shortcut: 'Ctrl+H', keywords: 'édition texte', icon: <Replace size={16} />, disabled: !canEdit, onSelect: () => { setSearchOpen(true); setReplaceOpen(true); } },
@@ -1160,6 +1164,9 @@ export default function App() {
   function handleAppContextMenu(event: React.MouseEvent<HTMLDivElement>) {
     const target = event.target instanceof Element ? event.target : null;
     if (!target || target.closest('.context-menu-popover')) return;
+    const notebookEditorTarget = target.closest('.notebook-rich-editor, .notebook-markdown-source');
+    const notebookEditor = Boolean(notebookEditorTarget);
+    if (target.closest('.notebook-editor-shell') && !notebookEditor) return;
     event.preventDefault();
 
     const contextTabId = target.closest<HTMLElement>('[data-context-tab-id]')?.dataset.contextTabId;
@@ -1210,7 +1217,7 @@ export default function App() {
       );
     } else if (contextFile) {
       items.push(...fileContextActions(contextFile));
-    } else {
+    } else if (!notebookEditor) {
       items.push(
         { id: 'context-open', label: 'Ouvrir un fichier…', shortcut: 'Ctrl+O', icon: <FileUp size={15} />, onSelect: () => void handleOpen() },
         { id: 'context-new-group', label: 'Créer un groupe…', icon: <FolderPlus size={15} />, dividerBefore: true, disabled: groups.length >= 30, onSelect: () => openGroupDialog() },
@@ -1223,7 +1230,7 @@ export default function App() {
       items.push({ id: 'copy-selection', label: 'Copier la sélection', icon: <Copy size={15} />, dividerBefore: true, onSelect: () => {
         if (navigator.clipboard?.writeText) void navigator.clipboard.writeText(rawSelectedText).catch(() => notify('Impossible d’accéder au presse-papiers.', 'error'));
       } });
-      items.push({ id: 'search-selection', label: `Rechercher « ${selectedText.slice(0, 28)}${selectedText.length > 28 ? '…' : ''} »`, icon: <Search size={15} />, onSelect: () => { setQuery(selectedText); setSearchOpen(true); setReplaceOpen(false); } });
+      if (!notebookEditor) items.push({ id: 'search-selection', label: `Rechercher « ${selectedText.slice(0, 28)}${selectedText.length > 28 ? '…' : ''} »`, icon: <Search size={15} />, onSelect: () => { setQuery(selectedText); setSearchOpen(true); setReplaceOpen(false); } });
       if (textInput && !textInput.readOnly && !textInput.disabled) items.push({ id: 'cut-selection', label: 'Couper', icon: <Scissors size={15} />, onSelect: () => {
         const start = textInput.selectionStart ?? 0;
         const end = textInput.selectionEnd ?? start;
@@ -1252,8 +1259,19 @@ export default function App() {
         }).catch(() => notify('Impossible de lire le presse-papiers.', 'error'));
       } });
       items.push({ id: 'select-all', label: 'Tout sélectionner', shortcut: 'Ctrl+A', onSelect: () => { textInput.focus(); textInput.select(); } });
+    } else if (notebookEditor && notebookEditorTarget) {
+      items.push({ id: 'notebook-select-all', label: 'Tout sélectionner', shortcut: 'Ctrl+A', onSelect: () => {
+        if (!(notebookEditorTarget instanceof HTMLElement)) return;
+        notebookEditorTarget.focus();
+        const selection = window.getSelection();
+        if (!selection) return;
+        const range = document.createRange();
+        range.selectNodeContents(notebookEditorTarget);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      } });
     }
-
+    if (!items.length) return;
     setContextMenu({ position: { x: event.clientX, y: event.clientY }, items });
   }
 
@@ -1275,6 +1293,12 @@ export default function App() {
           </button>
           <button className={`nav-item ${page === 'recents' ? 'active' : ''}`} type="button" onClick={() => { setPage('recents'); setActiveId(null); setActiveGroupId(null); }}>
             <Clock3 size={17} /><span>Récents</span><span className="nav-count">{recents.length || ''}</span>
+          </button>
+          <button className={`nav-item ${page === 'file' ? 'active' : ''}`} type="button" onClick={() => { setActiveGroupId(null); setPage(activeId && documents.some((document) => document.id === activeId) ? 'file' : 'home'); }}>
+            <File size={17} /><span>Fichiers</span><span className="nav-count">{documents.length || ''}</span>
+          </button>
+          <button className={`nav-item ${page === 'notebooks' ? 'active' : ''}`} type="button" onClick={() => { setPage('notebooks'); setActiveGroupId(null); setSearchOpen(false); }}>
+            <BookOpenText size={17} /><span>Carnets</span>
           </button>
         </nav>
 
@@ -1329,13 +1353,13 @@ export default function App() {
       <main className="workspace">
         <header className="topbar">
           <div className="topbar-title">
-            <span className="topbar-icon">{activeDoc && page === 'file' ? kindIcon(activeDoc.kind, 16) : <span className="mini-logo">N</span>}</span>
+            <span className="topbar-icon">{page === 'notebooks' ? <BookOpenText size={16} /> : activeDoc && page === 'file' ? kindIcon(activeDoc.kind, 16) : <span className="mini-logo">N</span>}</span>
             <div className="topbar-heading">
               <div className="topbar-name-row">
-                <h1>{page === 'recents' ? 'Récents' : page === 'smart-group' ? smartGroupTitle : page === 'group' && currentGroup ? currentGroup.name : page === 'file' && activeDoc ? activeDoc.name : 'Accueil'}</h1>
+                <h1>{page === 'notebooks' ? 'Carnets' : page === 'recents' ? 'Récents' : page === 'smart-group' ? smartGroupTitle : page === 'group' && currentGroup ? currentGroup.name : page === 'file' && activeDoc ? activeDoc.name : 'Accueil'}</h1>
                 {page === 'file' && activeDoc && activeDoc.content !== activeDoc.savedContent && <span className="unsaved-indicator" title="Modifications non enregistrées" />}
               </div>
-              <span className="topbar-subtitle">{page === 'file' && activeDoc ? `${getFormatLabel(activeDoc.kind)}${activeDoc.path && activeDoc.source === 'desktop' && !preferences.hidePaths ? ` · ${activeDoc.path}` : ''}` : page === 'group' && currentGroup ? `${currentGroup.files.length} fichier${currentGroup.files.length === 1 ? '' : 's'} · Espace local` : page === 'smart-group' ? `${smartGroupFiles.length} fichier${smartGroupFiles.length === 1 ? '' : 's'} · Collection dynamique locale` : 'Espace local'}</span>
+              <span className="topbar-subtitle">{page === 'notebooks' ? 'Carnets et pages Markdown enregistrés sur votre appareil' : page === 'file' && activeDoc ? `${getFormatLabel(activeDoc.kind)}${activeDoc.path && activeDoc.source === 'desktop' && !preferences.hidePaths ? ` · ${activeDoc.path}` : ''}` : page === 'group' && currentGroup ? `${currentGroup.files.length} fichier${currentGroup.files.length === 1 ? '' : 's'} · Espace local` : page === 'smart-group' ? `${smartGroupFiles.length} fichier${smartGroupFiles.length === 1 ? '' : 's'} · Collection dynamique locale` : 'Espace local'}</span>
             </div>
           </div>
 
@@ -1425,6 +1449,7 @@ export default function App() {
         </div>}
 
         <section className="workspace-content">
+          {page === 'notebooks' && <Suspense fallback={<div className="notebook-loading"><LoaderCircle size={17} className="spin" />Ouverture des carnets…</div>}><NotebookScreen hidePaths={preferences.hidePaths} onOpenFilePath={(path) => { void openTauriPath(path); }} /></Suspense>}
           {page === 'home' && <HomeScreen recents={recents} hidePaths={preferences.hidePaths} onOpen={() => void handleOpen()} onRecent={(recent) => void handleRecent(recent)} onViewAll={() => setPage('recents')} />}
           {page === 'recents' && <RecentScreen recents={recents} hidePaths={preferences.hidePaths} onOpen={() => void handleOpen()} onRecent={(recent) => void handleRecent(recent)} onRemove={(id) => setRecents((current) => current.filter((item) => item.id !== id))} onTogglePin={(recent) => setRecents((current) => current.map((item) => item.id === recent.id ? { ...item, pinned: !item.pinned } : item))} />}
           {page === 'smart-group' && activeSmartGroup && <SmartGroupScreen title={smartGroupTitle} kind={activeSmartGroup} files={smartGroupFiles} hidePaths={preferences.hidePaths} onRecent={(recent) => void handleRecent(recent)} />}

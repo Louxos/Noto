@@ -11,9 +11,13 @@ Noto lit les fichiers localement. L’ouverture ou la sauvegarde d’un document
 - Dans le navigateur, renommer et déplacer l’original sont désactivés : le navigateur ne donne pas une permission portable permettant ces opérations.
 - L’option **Restaurer la session bureau** est désactivée par défaut. Si vous l’activez, Noto conserve localement les chemins, l’ordre des onglets, l’onglet actif et le groupe actif desktop, jamais le contenu ; les chemins sont effacés lorsque l’option est désactivée.
 
+## Carnets locaux
+
+Les carnets complètent les onglets du visualiseur. Dans l’application de bureau, créez un carnet dans un dossier local ou ouvrez un dossier existant ; ses pages et pièces jointes sont de vrais fichiers sur disque. Les pages Markdown peuvent être éditées en mode riche ou source. Les suppressions de pages/sections demandent si les fichiers doivent être gardés ou supprimés. Voir le [guide détaillé des carnets](notebooks.md) pour la structure, les liens et les choix de conservation.
+
 ## Menus contextuels
 
-Un clic droit ouvre un menu Noto sur l’espace de travail, les fichiers, les mots sélectionnés et les viewers. Les actions varient selon le contenu : copier/rechercher une sélection, coller dans l’éditeur, classer ou ouvrir un fichier, naviguer dans un PDF ou un diaporama et contrôler le zoom d’une image. `Échap` ferme un menu ; les flèches haut/bas permettent d’y naviguer.
+Un clic droit ouvre un menu Noto sur l’espace de travail, les fichiers, les mots sélectionnés et les viewers. Dans **Carnets**, il donne aussi accès aux actions sur un carnet, une section ou une page. Les actions varient selon le contenu : copier/rechercher une sélection, coller dans l’éditeur, classer ou ouvrir un fichier, naviguer dans un PDF ou un diaporama et contrôler le zoom d’une image. `Échap` ferme les menus ; les flèches haut/bas permettent de naviguer dans le menu contextuel global. Les actions des menus de carnets sont aussi accessibles au clavier avec `Tab`.
 
 Le presse-papiers reste soumis aux autorisations du navigateur ou du système. Une action indisponible est désactivée plutôt que simulée.
 

@@ -5,6 +5,7 @@ La documentation du dépôt est centralisée ici. Les fichiers racine `INSTALLAT
 ## Utiliser Noto
 
 - [Guide utilisateur, formats pris en charge et limites](user-guide.md)
+- [Carnets locaux : dossiers, Markdown, pièces jointes et suppressions](notebooks.md)
 - [Installation et téléchargement Windows](installation.md) — distingue le workflow CI du workflow Windows installers et précise la disponibilité réelle des artefacts/releases
 
 ## Développer
