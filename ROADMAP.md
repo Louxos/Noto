@@ -4,12 +4,7 @@ Cette feuille ne garde que les travaux **non terminés** ou les validations enco
 
 ## Obligatoire avant une version stable — P0
 
-- [ ] **Valider l’installateur Windows à jour** : un artefact NSIS/MSI récent est disponible dans les [exécutions Windows installers](https://github.com/Louxos/Noto/actions/workflows/release.yml). L’installer, le mettre à jour et le désinstaller sous Windows 10/11 ; vérifier WebView2, l’apparence Noto et les options de l’assistant, le glisser-déposer, « Ouvrir avec » et l’absence de changement involontaire d’application par défaut.
-- [ ] **Fiabilité de l’édition** : tester l’annulation/rétablissement avec sélection de lignes et gros documents ; définir et tester le comportement de récupération pour les brouillons qui dépassent les limites actuelles ; en cas de modification externe, proposer un parcours sûr pour comparer, recharger ou conserver la version éditée.
-- [ ] **Revue sécurité Windows** : tester le scope des permissions fichiers, les refus d’accès et les chemins inhabituels ; ajouter des tests de non-régression pour les archives Office/EPUB malformées ou hostiles et pour les encodages rares.
-- [ ] **Accessibilité** : vérifier la navigation clavier complète, les noms accessibles, le contraste, les lecteurs d’écran et les états de focus dans les écrans principaux, menus, viewers et dialogues.
-- [ ] **Confiance dans la distribution** : publier les sommes SHA-256, expliquer clairement les avertissements SmartScreen et signer les exécutables dès qu’un certificat de signature est disponible.
-- [ ] **Dépannage** : documenter et vérifier les parcours d’erreur pour permission refusée, échec de lecture/écriture, WebView2 absent et annulation d’une opération.
+- [ ] **Intégrité et signature de la distribution** : publier les sommes SHA-256 des installateurs, maintenir une explication claire des avertissements SmartScreen et signer les exécutables dès qu’un certificat de signature est disponible.
 
 ## Prioritaire — P1
 
