@@ -5,7 +5,7 @@ La documentation du dépôt est centralisée ici. Les fichiers racine `INSTALLAT
 ## Utiliser Noto
 
 - [Guide utilisateur, formats pris en charge et limites](user-guide.md)
-- [Installation et téléchargement Windows](installation.md) — explique l’unique workflow Windows installers, ses vérifications, ses artefacts et la disponibilité des releases
+- [Installation et téléchargement Windows](installation.md) — releases avec installateurs directs et sommes SHA-256 ; artefacts Actions temporaires réservés aux builds de test
 
 ## Développer
 

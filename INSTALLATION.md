@@ -2,4 +2,4 @@
 
 The installation guide has moved to [`docs/installation.md`](docs/installation.md).
 
-The repository uses one GitHub Actions workflow, `Windows installers`, for both front-end verification and Windows installer builds. It publishes the `noto-windows-installers` artifact for test builds; check the guide for the latest verified run and build instructions.
+For end users, the recommended download channel is [GitHub Releases](https://github.com/Louxos/Noto/releases/latest): version tags publish the `.exe`, `.msi`, and `SHA256SUMS.txt` as separate assets with generated release notes. The single `Windows installers` workflow also uploads a temporary ZIP artifact for smoke-tested builds; see [`docs/installation.md`](docs/installation.md) for the latest test build and verification instructions.
