@@ -2,7 +2,7 @@
 
 Ce guide explique comment installer Noto sur Windows, récupérer un build de test depuis GitHub Actions, ou construire l’application depuis le dépôt. **Vous n’avez pas besoin de Node.js, Rust ni Visual Studio pour installer un binaire déjà construit.**
 
-> **État vérifié le 8 octobre 2026 :** la page [Releases](https://github.com/Louxos/Noto/releases) est vide, donc il n’y a pas encore de release officielle. Le dépôt utilise un seul workflow GitHub Actions, **Windows installers**, qui regroupe les vérifications front-end et la construction des installateurs Windows. Pour un build de test, il publie l’artefact `noto-windows-installers` et un fichier `SHA256SUMS.txt` sur les branches `arena/**` ; le build Windows s’exécute aussi pour un tag `v*` ou un lancement manuel. La signature Authenticode est facultative et n’est activée que si les secrets du certificat sont configurés ; sinon, les installateurs restent non signés. Les artefacts de test sont conservés 30 jours. Les exécutions récentes sont listées sur la page [Windows installers](https://github.com/Louxos/Noto/actions/workflows/release.yml).
+> **État vérifié le 8 octobre 2026 :** la page [Releases](https://github.com/Louxos/Noto/releases) est vide, donc il n’y a pas encore de release officielle. Le dépôt utilise un seul workflow GitHub Actions, **Windows installers**, qui regroupe les vérifications et la construction des installateurs Windows. Pour un build de test, il publie l’artefact `noto-windows-installers` et un fichier `SHA256SUMS.txt` sur les pushes vers `main` ou `arena/**` ; le build Windows s’exécute aussi pour un tag `v*` ou un lancement manuel. La signature Authenticode est facultative et n’est activée que si les secrets du certificat sont configurés ; sinon, les installateurs restent non signés. Les artefacts de test sont conservés 30 jours. Les exécutions récentes sont listées sur la page [Windows installers](https://github.com/Louxos/Noto/actions/workflows/release.yml).
 
 ## 1. Installer Noto — utilisateur Windows
 
@@ -14,7 +14,7 @@ Ce guide explique comment installer Noto sur Windows, récupérer un build de te
 
 ### Télécharger et lancer le build de test
 
-1. Ouvrez les [exécutions de l’unique workflow **Windows installers**](https://github.com/Louxos/Noto/actions/workflows/release.yml) et choisissez le succès le plus récent sur la branche `arena/01a10cf9-noto`, avec les vérifications front-end et le job Windows réussis.
+1. Ouvrez les [exécutions de l’unique workflow **Windows installers**](https://github.com/Louxos/Noto/actions/workflows/release.yml) et choisissez le succès le plus récent sur la branche `arena/01a10cf9-noto` ; le job Windows regroupe les vérifications, la création et le smoke test des installateurs.
 2. Dans la section **Artifacts** de cette exécution, téléchargez `noto-windows-installers`, puis décompressez l’archive ZIP.
 3. Vérifiez les sommes si vous le souhaitez. `SHA256SUMS.txt` donne le hash de chaque fichier `.exe`/`.msi`. Depuis PowerShell, dans le dossier décompressé :
    ```powershell
@@ -107,7 +107,7 @@ Exécutez l’un des installateurs générés pour tester l’installation et la
 
 ### Publier une release
 
-L’unique workflow `.github/workflows/release.yml` (**Windows installers**) exécute les vérifications front-end et, pour les pushes sur `arena/**`, construit les installateurs sur `windows-latest`, puis publie l’artefact temporaire `noto-windows-installers` avec les fichiers `.exe`, `.msi` et `SHA256SUMS.txt` (conservation de 30 jours). Les sommes sont calculées après la signature éventuelle afin de couvrir exactement les fichiers distribués. Les pull requests vers `main` et les pushes sur `main` exécutent uniquement les vérifications front-end. Un tag `v*` déclenche aussi le build Windows et attache les installateurs et le fichier de sommes à la release GitHub ; le build Windows peut également être lancé manuellement.
+L’unique workflow `.github/workflows/release.yml` (**Windows installers**) exécute les vérifications front-end et les tests Rust, construit NSIS et MSI sur `windows-latest`, puis publie l’artefact téléchargeable `noto-windows-installers` avec les fichiers `.exe`, `.msi` et `SHA256SUMS.txt` sur les pushes `main` et `arena/**` (conservation de 30 jours). Les sommes sont calculées après la signature éventuelle afin de couvrir exactement les fichiers distribués. Un tag `v*` ajoute les installateurs à la release GitHub ; le workflow peut aussi être lancé manuellement.
 
 Pour signer les builds, les mainteneurs peuvent définir les secrets GitHub Actions `NOTO_WINDOWS_SIGNING_CERTIFICATE_BASE64` (certificat de signature de code PFX encodé en base64) et `NOTO_WINDOWS_SIGNING_CERTIFICATE_PASSWORD`. Si les deux sont absents, le workflow saute la signature ; si un seul manque ou si la signature/sa vérification échoue, le build échoue au lieu de publier un installateur dont le statut serait ambigu. Le fichier PFX n’est écrit que temporairement sur l’agent Windows, puis supprimé. Une signature valide n’élimine pas nécessairement SmartScreen : la réputation de l’éditeur se construit dans le temps.
 

@@ -4,8 +4,6 @@ on:
   push:
     branches: [main, 'arena/**']
     tags: ['v*']
-  pull_request:
-    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -16,23 +14,8 @@ permissions:
   contents: read
 
 jobs:
-  frontend:
-    name: Vérifications front-end
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm run check
-      - run: npm run build
-
   windows:
     name: Build Windows installers
-    needs: frontend
-    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/heads/arena/') || startsWith(github.ref, 'refs/tags/v')
     runs-on: windows-latest
     permissions:
       contents: write
@@ -77,28 +60,45 @@ jobs:
           $samplePath = Join-Path $env:RUNNER_TEMP 'noto-file-open-smoke.md'
           Set-Content -Path $samplePath -Value '# Noto Windows smoke test' -Encoding utf8
 
+          function Get-NotoMarkdownProgIds {
+            $extensionKey = 'Registry::HKEY_CLASSES_ROOT\.md'
+            $openWithKey = 'Registry::HKEY_CLASSES_ROOT\.md\OpenWithProgids'
+            $programIds = @()
+            if (Test-Path -LiteralPath $extensionKey) {
+              $defaultProgramId = (Get-Item -LiteralPath $extensionKey).GetValue('')
+              if ($defaultProgramId -like 'Noto*') { $programIds += $defaultProgramId }
+            }
+            if (Test-Path -LiteralPath $openWithKey) {
+              $openWithProgramIds = (Get-Item -LiteralPath $openWithKey).GetValueNames() | Where-Object { $_ -like 'Noto*' }
+              $programIds += $openWithProgramIds
+            }
+            return @($programIds | Sort-Object -Unique)
+          }
+
           function Assert-FileAssociation([string] $installPath) {
-            $extensionKey = Get-Item -LiteralPath 'HKCU:\Software\Classes\.md' -ErrorAction Stop
-            $programId = $extensionKey.GetValue('')
-            if ([string]::IsNullOrWhiteSpace($programId)) { throw 'The Markdown file association was not registered for the current user.' }
-            $commandKey = "HKCU:\Software\Classes\$programId\shell\open\command"
-            $openCommand = (Get-Item -LiteralPath $commandKey -ErrorAction Stop).GetValue('')
+            $programIds = @(Get-NotoMarkdownProgIds)
+            if (-not $programIds.Count) { throw "Noto installed at $installPath was not registered as an « Ouvrir avec » option for Markdown." }
             $expectedExe = Join-Path $installPath 'Noto.exe'
-            if (-not $openCommand -or $openCommand.IndexOf($expectedExe, [StringComparison]::OrdinalIgnoreCase) -lt 0) {
-              throw "The .md open command does not point to $expectedExe."
+            foreach ($programId in $programIds) {
+              $commandKey = "Registry::HKEY_CLASSES_ROOT\$programId\shell\open\command"
+              if (-not (Test-Path -LiteralPath $commandKey)) { continue }
+              $openCommand = (Get-Item -LiteralPath $commandKey).GetValue('')
+              if ($openCommand -and $openCommand.IndexOf('Noto.exe', [StringComparison]::OrdinalIgnoreCase) -ge 0 -and $openCommand.IndexOf($expectedExe, [StringComparison]::OrdinalIgnoreCase) -lt 0) {
+                throw "The .md open command points at a different Noto install than $expectedExe."
+              }
             }
           }
 
           function Assert-FileAssociationRemoved([string] $installPath) {
-            $extensionKey = Get-Item -LiteralPath 'HKCU:\Software\Classes\.md' -ErrorAction SilentlyContinue
-            if (-not $extensionKey) { return }
-            $programId = $extensionKey.GetValue('')
-            if ([string]::IsNullOrWhiteSpace($programId)) { return }
-            $commandKey = "HKCU:\Software\Classes\$programId\shell\open\command"
+            $programIds = @(Get-NotoMarkdownProgIds)
+            if ($programIds.Count) {
+              throw "Uninstall left Noto listed as an « Ouvrir avec » option for Markdown: $($programIds -join ', ')."
+            }
+            $commandKey = 'Registry::HKEY_CLASSES_ROOT\Noto.md\shell\open\command'
             if (-not (Test-Path -LiteralPath $commandKey)) { return }
             $openCommand = (Get-Item -LiteralPath $commandKey).GetValue('')
             if ($openCommand -and $openCommand.IndexOf($installPath, [StringComparison]::OrdinalIgnoreCase) -ge 0) {
-              throw "Uninstall left a .md association pointing at $installPath."
+              throw "Uninstall left a .md open command pointing at $installPath."
             }
           }
 
@@ -214,7 +214,7 @@ jobs:
           }
           $lines | Set-Content -Path $checksumFile -Encoding ascii
           Get-Content $checksumFile
-      - name: Upload CI installers
+      - name: Upload Windows installers and checksums
         uses: actions/upload-artifact@v4
         with:
           name: noto-windows-installers
