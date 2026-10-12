@@ -137,7 +137,12 @@ jobs:
           if (Test-Path $nsisExe) { throw 'NSIS uninstall left Noto.exe behind.' }
           Assert-FileAssociationRemoved
 
-          # NSIS leaves its remembered install directory in HKCU; clear it so the MSI test starts clean.
+          # NSIS is per-user and can leave the .md extension's default ProgID in HKCU after uninstall.
+          # Remove that disposable smoke-test residue so it cannot shadow MSI's per-machine registration in HKCR.
+          $nsisMarkdownExtensionKey = 'HKCU:\Software\Classes\.md'
+          if (Test-Path -LiteralPath $nsisMarkdownExtensionKey) {
+            Remove-Item -LiteralPath $nsisMarkdownExtensionKey -Recurse -Force
+          }
           $installLocationKey = 'HKCU:\Software\Noto\Noto'
           if (Test-Path -LiteralPath $installLocationKey) {
             Remove-Item -LiteralPath $installLocationKey -Recurse -Force
