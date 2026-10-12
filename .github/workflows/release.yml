@@ -60,45 +60,50 @@ jobs:
           $samplePath = Join-Path $env:RUNNER_TEMP 'noto-file-open-smoke.md'
           Set-Content -Path $samplePath -Value '# Noto Windows smoke test' -Encoding utf8
 
-          function Get-NotoMarkdownProgIds {
+          function Get-MarkdownAssociationCommands {
             $extensionKey = 'Registry::HKEY_CLASSES_ROOT\.md'
             $openWithKey = 'Registry::HKEY_CLASSES_ROOT\.md\OpenWithProgids'
             $programIds = @()
             if (Test-Path -LiteralPath $extensionKey) {
               $defaultProgramId = (Get-Item -LiteralPath $extensionKey).GetValue('')
-              if ($defaultProgramId -like 'Noto*') { $programIds += $defaultProgramId }
+              if (-not [string]::IsNullOrWhiteSpace($defaultProgramId)) { $programIds += $defaultProgramId }
             }
             if (Test-Path -LiteralPath $openWithKey) {
-              $openWithProgramIds = (Get-Item -LiteralPath $openWithKey).GetValueNames() | Where-Object { $_ -like 'Noto*' }
-              $programIds += $openWithProgramIds
+              $programIds += (Get-Item -LiteralPath $openWithKey).GetValueNames()
             }
-            return @($programIds | Sort-Object -Unique)
-          }
 
-          function Assert-FileAssociation([string] $installPath) {
-            $programIds = @(Get-NotoMarkdownProgIds)
-            if (-not $programIds.Count) { throw "Noto installed at $installPath was not registered as an « Ouvrir avec » option for Markdown." }
-            $expectedExe = Join-Path $installPath 'Noto.exe'
-            foreach ($programId in $programIds) {
+            foreach ($programId in ($programIds | Sort-Object -Unique)) {
               $commandKey = "Registry::HKEY_CLASSES_ROOT\$programId\shell\open\command"
               if (-not (Test-Path -LiteralPath $commandKey)) { continue }
               $openCommand = (Get-Item -LiteralPath $commandKey).GetValue('')
-              if ($openCommand -and $openCommand.IndexOf('Noto.exe', [StringComparison]::OrdinalIgnoreCase) -ge 0 -and $openCommand.IndexOf($expectedExe, [StringComparison]::OrdinalIgnoreCase) -lt 0) {
-                throw "The .md open command points at a different Noto install than $expectedExe."
+              if (-not [string]::IsNullOrWhiteSpace($openCommand)) {
+                [PSCustomObject]@{ ProgramId = $programId; Command = $openCommand }
               }
             }
           }
 
-          function Assert-FileAssociationRemoved([string] $installPath) {
-            $programIds = @(Get-NotoMarkdownProgIds)
-            if ($programIds.Count) {
-              throw "Uninstall left Noto listed as an « Ouvrir avec » option for Markdown: $($programIds -join ', ')."
+          function Assert-FileAssociation([string] $installPath) {
+            $expectedExe = Join-Path $installPath 'Noto.exe'
+            $notoCommands = @(Get-MarkdownAssociationCommands | Where-Object {
+              $_.Command.IndexOf('Noto.exe', [StringComparison]::OrdinalIgnoreCase) -ge 0
+            })
+            if (-not $notoCommands.Count) {
+              throw "Noto installed at $installPath has no Markdown open command registered in the Windows file classes."
             }
-            $commandKey = 'Registry::HKEY_CLASSES_ROOT\Noto.md\shell\open\command'
-            if (-not (Test-Path -LiteralPath $commandKey)) { return }
-            $openCommand = (Get-Item -LiteralPath $commandKey).GetValue('')
-            if ($openCommand -and $openCommand.IndexOf($installPath, [StringComparison]::OrdinalIgnoreCase) -ge 0) {
-              throw "Uninstall left a .md open command pointing at $installPath."
+            $wrongInstall = @($notoCommands | Where-Object {
+              $_.Command.IndexOf($expectedExe, [StringComparison]::OrdinalIgnoreCase) -lt 0
+            })
+            if ($wrongInstall.Count) {
+              throw "The .md open command for $($wrongInstall.ProgramId -join ', ') points at a different Noto install than $expectedExe."
+            }
+          }
+
+          function Assert-FileAssociationRemoved {
+            $notoCommands = @(Get-MarkdownAssociationCommands | Where-Object {
+              $_.Command.IndexOf('Noto.exe', [StringComparison]::OrdinalIgnoreCase) -ge 0
+            })
+            if ($notoCommands.Count) {
+              throw "Uninstall left Markdown open commands for Noto: $($notoCommands.ProgramId -join ', ')."
             }
           }
 
@@ -130,7 +135,7 @@ jobs:
           if (-not $nsisUninstaller) { throw 'The NSIS uninstaller was not installed.' }
           Start-Process -FilePath $nsisUninstaller.FullName -ArgumentList '/S' -Wait -PassThru | Out-Null
           if (Test-Path $nsisExe) { throw 'NSIS uninstall left Noto.exe behind.' }
-          Assert-FileAssociationRemoved $nsisInstallPath
+          Assert-FileAssociationRemoved
 
           # NSIS leaves its remembered install directory in HKCU; clear it so the MSI test starts clean.
           $installLocationKey = 'HKCU:\Software\Noto\Noto'
@@ -152,7 +157,7 @@ jobs:
           $msiUninstall = Start-Process -FilePath 'msiexec.exe' -ArgumentList $msiArgs -Wait -PassThru
           if ($msiUninstall.ExitCode -notin @(0, 3010)) { throw "MSI uninstall failed with exit code $($msiUninstall.ExitCode)." }
           if (Test-Path $msiExe) { throw 'MSI uninstall left Noto.exe behind.' }
-          Assert-FileAssociationRemoved $msiInstallPath
+          Assert-FileAssociationRemoved
           Remove-Item $samplePath -Force -ErrorAction SilentlyContinue
       - name: Sign Windows installers when a certificate is configured
         shell: pwsh
