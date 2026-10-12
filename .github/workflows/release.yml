@@ -48,6 +48,7 @@ jobs:
           workspaces: './src-tauri -> target'
       - run: npm ci
       - run: npm run check
+      - run: npm run build
       - name: Test native Windows commands
         run: cargo test --manifest-path src-tauri/Cargo.toml
       - run: npm run tauri:build
