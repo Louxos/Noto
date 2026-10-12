@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, ImageOff } from 'lucide-react';
+import { ChevronLeft, ChevronRight, RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, ImageOff } from 'lucide-react';
 import * as UTIF from 'utif';
 import type { OpenDocument } from '../types';
 import { formatBytes } from '../lib/files';
+import { findAdjacentImagePaths } from '../lib/imageNavigation';
 import { ContextMenu, type MenuEntry } from './WorkspaceTools';
 
 function makeTiffPreview(bytes: Uint8Array): string {
@@ -20,7 +21,7 @@ function makeTiffPreview(bytes: Uint8Array): string {
   return canvas.toDataURL('image/png');
 }
 
-export function ImageViewer({ document, fileContextItems }: { document: OpenDocument; fileContextItems: MenuEntry[] }) {
+export function ImageViewer({ document, fileContextItems, onOpenPath }: { document: OpenDocument; fileContextItems: MenuEntry[]; onOpenPath: (path: string) => void }) {
   const [zoom, setZoom] = useState(1);
   const [fit, setFit] = useState(true);
   const [rotation, setRotation] = useState(0);
@@ -28,7 +29,25 @@ export function ImageViewer({ document, fileContextItems }: { document: OpenDocu
   const [error, setError] = useState('');
   const [naturalSize, setNaturalSize] = useState({ width: 0, height: 0 });
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const [adjacentImages, setAdjacentImages] = useState<{ previousPath: string | null; nextPath: string | null }>({ previousPath: null, nextPath: null });
+  const [adjacentImagesLoading, setAdjacentImagesLoading] = useState(false);
   const isTiff = document.extension === 'tif' || document.extension === 'tiff';
+
+  useEffect(() => {
+    setAdjacentImages({ previousPath: null, nextPath: null });
+    setAdjacentImagesLoading(false);
+    if (document.source !== 'desktop' || !document.path) return;
+    let cancelled = false;
+    setAdjacentImagesLoading(true);
+    void findAdjacentImagePaths(document.path).then((neighbors) => {
+      if (!cancelled) setAdjacentImages(neighbors);
+    }).catch(() => {
+      if (!cancelled) setAdjacentImages({ previousPath: null, nextPath: null });
+    }).finally(() => {
+      if (!cancelled) setAdjacentImagesLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [document.id, document.path, document.source]);
 
   useEffect(() => {
     setZoom(1);
@@ -72,6 +91,11 @@ export function ImageViewer({ document, fileContextItems }: { document: OpenDocu
       setContextMenu({ x: event.clientX, y: event.clientY });
     }}>
       <div className="viewer-tools image-tools">
+        <div className="tool-group image-navigation-tools" aria-label="Images voisines du même dossier">
+          <button className="tool-button" type="button" title={adjacentImages.previousPath ? `Image précédente : ${imagePathName(adjacentImages.previousPath)}` : 'Aucune image précédente dans ce dossier'} aria-label={adjacentImages.previousPath ? `Ouvrir l’image précédente ${imagePathName(adjacentImages.previousPath)}` : 'Aucune image précédente'} disabled={!adjacentImages.previousPath || adjacentImagesLoading} onClick={() => { if (adjacentImages.previousPath) onOpenPath(adjacentImages.previousPath); }}><ChevronLeft size={16} /></button>
+          <button className="tool-button" type="button" title={adjacentImages.nextPath ? `Image suivante : ${imagePathName(adjacentImages.nextPath)}` : 'Aucune image suivante dans ce dossier'} aria-label={adjacentImages.nextPath ? `Ouvrir l’image suivante ${imagePathName(adjacentImages.nextPath)}` : 'Aucune image suivante'} disabled={!adjacentImages.nextPath || adjacentImagesLoading} onClick={() => { if (adjacentImages.nextPath) onOpenPath(adjacentImages.nextPath); }}><ChevronRight size={16} /></button>
+          {adjacentImagesLoading && <span className="image-neighbor-loading" aria-live="polite">Images voisines…</span>}
+        </div>
         <div className="tool-group">
           <button className="tool-button" type="button" aria-label="Réduire le zoom" title="Réduire" onClick={() => { setFit(false); setZoom((value) => Math.max(0.2, value - 0.1)); }}><ZoomOut size={16} /></button>
           <button className="zoom-label" type="button" onClick={() => { setFit(false); setZoom(1); }}>{Math.round(zoom * 100)}%</button>
@@ -103,4 +127,8 @@ export function ImageViewer({ document, fileContextItems }: { document: OpenDocu
       {contextMenu && <ContextMenu position={contextMenu} items={imageContextItems} onClose={() => setContextMenu(null)} />}
     </div>
   );
+}
+
+function imagePathName(path: string): string {
+  return path.split(/[\\/]/u).at(-1) || path;
 }

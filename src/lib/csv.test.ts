@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { detectDelimiter, parseCsv } from './csv';
+import { detectDelimiter, parseCsv, serializeCsvRows } from './csv';
 
 describe('parseCsv', () => {
   it('detects common delimiters, including French semicolon files', () => {
@@ -22,6 +22,11 @@ describe('parseCsv', () => {
       ['a', 'b', ''],
       ['1', '', '3'],
     ]);
+  });
+
+  it('serializes selected rows with escaped quotes and embedded delimiters', () => {
+    const exported = serializeCsvRows([['name', 'note'], ['Ada', 'said "hi"; then left'], ['Line 1\nLine 2', 'ok']], ';');
+    expect(parseCsv(exported, ';').rows).toEqual([['name', 'note'], ['Ada', 'said "hi"; then left'], ['Line 1\nLine 2', 'ok']]);
   });
 
   it('returns no rows for an empty file', () => {

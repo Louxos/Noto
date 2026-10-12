@@ -147,7 +147,7 @@ export function AppMenuBar({ menus, onOpenPalette }: { menus: MenuDefinition[]; 
         </div>}
       </div>)}
     </div>
-    <button className="command-trigger" type="button" onClick={onOpenPalette} title="Rechercher une commande (Ctrl+Maj+P)">
+    <button className="command-trigger" type="button" onClick={onOpenPalette} title="Ouverture rapide (Ctrl+P)">
       <Search size={14} /><span>Commandes</span><kbd>Ctrl ⇧ P</kbd>
     </button>
   </nav>;
@@ -349,8 +349,8 @@ export function CommandPalette({ commands, onClose }: { commands: CommandOption[
 
   return <div className="modal-backdrop palette-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <section className="command-palette" role="dialog" aria-modal="true" aria-labelledby="palette-title">
-      <h2 id="palette-title" className="visually-hidden">Rechercher une commande</h2>
-      <div className="palette-search"><Search size={17} /><input ref={inputRef} value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={handleKeyDown} placeholder="Que voulez-vous faire ?" aria-label="Rechercher une commande" /><kbd>Échap</kbd></div>
+      <h2 id="palette-title" className="visually-hidden">Ouverture rapide et commandes</h2>
+      <div className="palette-search"><Search size={17} /><input ref={inputRef} value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={handleKeyDown} placeholder="Rechercher une commande, un onglet ou un fichier récent…" aria-label="Rechercher une commande, un onglet ou un fichier récent" /><kbd>Échap</kbd></div>
       <div className="palette-results" role="listbox" aria-label="Commandes disponibles">
         {filtered.length ? filtered.map((command, index) => <button className={`palette-command ${index === activeIndex ? 'active' : ''}`} type="button" role="option" aria-selected={index === activeIndex} disabled={command.disabled} key={command.id} onMouseEnter={() => setActiveIndex(index)} onClick={() => { onClose(); command.onSelect(); }}>
           <span className="palette-command-icon">{command.icon}</span><span className="palette-command-copy"><strong>{command.label}</strong>{command.detail && <small>{command.detail}</small>}</span>{command.shortcut && <kbd>{command.shortcut}</kbd>}
@@ -366,7 +366,7 @@ const shortcutSections = [
   { title: 'Édition & recherche', rows: [['Basculer lecture / édition', 'Ctrl + E'], ['Rechercher', 'Ctrl + F'], ['Rechercher / remplacer', 'Ctrl + H'], ['Aller à la ligne', 'Ctrl + G'], ['Résultat suivant / précédent', 'F3 / Maj + F3']] },
   { title: 'Organisation', rows: [['Créer un groupe', 'Ctrl + Maj + N'], ['Classer le fichier actif', 'Ctrl + Maj + G'], ['Renommer le groupe affiché', 'F2']] },
   { title: 'Diaporamas & livres', rows: [['Diapositive / chapitre suivant ou précédent', '← / →'], ['Plein écran dans un diaporama', 'F'], ['Quitter le plein écran', 'Échap']] },
-  { title: 'Application', rows: [['Ouvrir la palette de commandes', 'Ctrl + Maj + P'], ['Ouvrir les paramètres', 'Ctrl + ,'], ['Fermer la fenêtre ou le panneau', 'Échap']] },
+  { title: 'Application', rows: [['Ouvrir les commandes, onglets et fichiers récents', 'Ctrl + P'], ['Ouvrir les paramètres', 'Ctrl + ,'], ['Fermer la fenêtre ou le panneau', 'Échap']] },
 ];
 
 export function ShortcutsDialog({ onClose }: { onClose: () => void }) {

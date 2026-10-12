@@ -8,7 +8,7 @@ Ne publiez pas de détail exploitable dans une issue publique. Utilisez le signa
 
 Noto ouvre uniquement des fichiers choisis par l’utilisateur. Il n’y a ni téléversement de documents, ni compte, ni service réseau applicatif. Les documents HTML sont affichés dans un iframe sandboxé avec une CSP qui bloque scripts, formulaires, connexions réseau, plugins et URL de base. Le Markdown n’autorise pas le HTML brut.
 
-Le shell Tauri étend le scope FS au fichier explicitement choisi. Pour un déplacement, seul le dossier de destination choisi par l’utilisateur est ajouté au scope, sans autoriser récursivement son contenu. Les commandes de renommage/déplacement vérifient que la source existe et refusent d’écraser une destination existante.
+Le shell Tauri étend le scope FS au fichier explicitement choisi. Pour un déplacement, seul le dossier de destination choisi par l’utilisateur est ajouté au scope, sans autoriser récursivement son contenu. La recherche locale ne s’exécute qu’après le choix explicite d’un dossier ; le scope récursif accordé pour cette recherche est limité en profondeur, nombre de fichiers, taille par fichier, volume total et résultats. Les dossiers de dépendances et générés sont ignorés. Les commandes de renommage/déplacement vérifient que la source existe et refusent d’écraser une destination existante.
 
 Les archives Office/EPUB restent en mémoire. Le lecteur n’exécute ni macros, ni scripts, ni objets incorporés et limite la taille d’entrée, des XML et des images. Les images raster intégrées sont converties en data URLs ; le SVG n’est pas extrait des archives Office.
 

@@ -2,7 +2,7 @@
 
 Ce guide explique comment installer Noto sur Windows, récupérer un build de test depuis GitHub Actions, ou construire l’application depuis le dépôt. **Vous n’avez pas besoin de Node.js, Rust ni Visual Studio pour installer un binaire déjà construit.**
 
-> **État vérifié le 7 octobre 2026 :** la page [Releases](https://github.com/Louxos/Noto/releases) est vide, donc il n’y a pas encore de release officielle. Pour le build de test, utilisez le workflow GitHub Actions **Windows installers** : il produit l’artefact `noto-windows-installers`. Le workflow **CI** ne produit pas d’installateur ; il vérifie seulement le front-end. Les exécutions récentes et leur artefact sont listés sur la page [Windows installers](https://github.com/Louxos/Noto/actions/workflows/release.yml). Les installateurs sont aux couleurs Noto, ne sont pas signés et les artefacts sont conservés 30 jours.
+> **État vérifié le 8 octobre 2026 :** la page [Releases](https://github.com/Louxos/Noto/releases) est vide, donc il n’y a pas encore de release officielle. Le dépôt utilise un seul workflow GitHub Actions, **Windows installers**, qui regroupe les vérifications front-end et la construction des installateurs Windows. Pour un build de test, il publie l’artefact `noto-windows-installers` et un fichier `SHA256SUMS.txt` sur les branches `arena/**` ; le build Windows s’exécute aussi pour un tag `v*` ou un lancement manuel. La signature Authenticode est facultative et n’est activée que si les secrets du certificat sont configurés ; sinon, les installateurs restent non signés. Les artefacts de test sont conservés 30 jours. Les exécutions récentes sont listées sur la page [Windows installers](https://github.com/Louxos/Noto/actions/workflows/release.yml).
 
 ## 1. Installer Noto — utilisateur Windows
 
@@ -14,13 +14,27 @@ Ce guide explique comment installer Noto sur Windows, récupérer un build de te
 
 ### Télécharger et lancer le build de test
 
-1. Ouvrez les [exécutions du workflow **Windows installers**](https://github.com/Louxos/Noto/actions/workflows/release.yml) — pas celles de **CI** — et choisissez le succès le plus récent sur la branche `arena/01a10cf9-noto`.
+1. Ouvrez les [exécutions de l’unique workflow **Windows installers**](https://github.com/Louxos/Noto/actions/workflows/release.yml) et choisissez le succès le plus récent sur la branche `arena/01a10cf9-noto`, avec les vérifications front-end et le job Windows réussis.
 2. Dans la section **Artifacts** de cette exécution, téléchargez `noto-windows-installers`, puis décompressez l’archive ZIP.
-3. Lancez le fichier `.exe` NSIS (recommandé pour le parcours Noto complet) et suivez l’assistant. Il présente la licence MIT, vous laisse choisir le dossier d’installation et le dossier du menu Démarrer, puis propose un raccourci Bureau et le lancement de Noto. Il est configuré pour l’utilisateur courant et ne devrait pas demander de droits administrateur. Le `.msi` est une alternative avec les mêmes visuels Noto.
-4. Lancez **Noto** depuis le menu Démarrer.
-5. Pour supprimer Noto, utilisez **Paramètres Windows → Applications → Applications installées**, ou l’entrée de désinstallation de Noto dans le menu Démarrer.
+3. Vérifiez les sommes si vous le souhaitez. `SHA256SUMS.txt` donne le hash de chaque fichier `.exe`/`.msi`. Depuis PowerShell, dans le dossier décompressé :
+   ```powershell
+   $root = (Get-Location).Path
+   Get-Content .\SHA256SUMS.txt | ForEach-Object {
+     if ($_ -notmatch '^([0-9a-fA-F]{64})  (.+)$') { throw "Ligne de somme invalide : $_" }
+     $expected = $Matches[1].ToLowerInvariant()
+     $name = $Matches[2]
+     $file = Get-ChildItem -Path $root -Recurse -File | Where-Object { $_.Name -eq $name } | Select-Object -First 1
+     if (-not $file) { throw "Fichier absent : $name" }
+     $actual = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+     if ($actual -ne $expected) { throw "Somme SHA-256 incorrecte : $name" }
+     Write-Host "OK $name"
+   }
+   ```
+4. Lancez le fichier `.exe` NSIS (recommandé pour le parcours Noto complet) et suivez l’assistant. Il présente la licence MIT, vous laisse choisir le dossier d’installation et le dossier du menu Démarrer, puis propose un raccourci Bureau et le lancement de Noto. Il est configuré pour l’utilisateur courant et ne devrait pas demander de droits administrateur. Le `.msi` est une alternative avec les mêmes visuels Noto.
+5. Lancez **Noto** depuis le menu Démarrer.
+6. Pour supprimer Noto, utilisez **Paramètres Windows → Applications → Applications installées**, ou l’entrée de désinstallation de Noto dans le menu Démarrer.
 
-Cet artefact est un build de test de la branche de travail, pas une release stable. Il expire après 30 jours et les exécutables ne sont pas signés numériquement. Si Windows affiche un avertissement SmartScreen, vérifiez que le téléchargement vient bien du dépôt officiel `Louxos/Noto` avant de décider de l’exécuter. Les versions stables seront publiées sur la page [Releases](https://github.com/Louxos/Noto/releases) après validation.
+Cet artefact est un build de test de la branche de travail, pas une release stable. Il peut rester non signé si aucun certificat des mainteneurs n’est configuré ; SmartScreen peut aussi avertir pour une application signée dont la réputation est encore faible. Vérifiez que le téléchargement vient bien du dépôt officiel `Louxos/Noto` et comparez la somme SHA-256 avant de décider de l’exécuter. Les versions stables seront publiées sur la page [Releases](https://github.com/Louxos/Noto/releases) après validation.
 
 ### Ouvrir des fichiers avec Noto
 
@@ -93,7 +107,11 @@ Exécutez l’un des installateurs générés pour tester l’installation et la
 
 ### Publier une release
 
-Le workflow `.github/workflows/release.yml` (**Windows installers**) construit les installateurs sur `windows-latest` à chaque push sur une branche `arena/**` et publie un artefact temporaire `noto-windows-installers` dans l’exécution GitHub Actions (conservation de 30 jours). Le workflow `.github/workflows/ci.yml` (**CI**) ne compile pas les installateurs. Lorsqu’un tag `v*` est poussé, **Windows installers** attache aussi les fichiers `.exe` et `.msi` à une release GitHub. Avant une release, mettez à jour la version de façon cohérente dans :
+L’unique workflow `.github/workflows/release.yml` (**Windows installers**) exécute les vérifications front-end et, pour les pushes sur `arena/**`, construit les installateurs sur `windows-latest`, puis publie l’artefact temporaire `noto-windows-installers` avec les fichiers `.exe`, `.msi` et `SHA256SUMS.txt` (conservation de 30 jours). Les sommes sont calculées après la signature éventuelle afin de couvrir exactement les fichiers distribués. Les pull requests vers `main` et les pushes sur `main` exécutent uniquement les vérifications front-end. Un tag `v*` déclenche aussi le build Windows et attache les installateurs et le fichier de sommes à la release GitHub ; le build Windows peut également être lancé manuellement.
+
+Pour signer les builds, les mainteneurs peuvent définir les secrets GitHub Actions `NOTO_WINDOWS_SIGNING_CERTIFICATE_BASE64` (certificat de signature de code PFX encodé en base64) et `NOTO_WINDOWS_SIGNING_CERTIFICATE_PASSWORD`. Si les deux sont absents, le workflow saute la signature ; si un seul manque ou si la signature/sa vérification échoue, le build échoue au lieu de publier un installateur dont le statut serait ambigu. Le fichier PFX n’est écrit que temporairement sur l’agent Windows, puis supprimé. Une signature valide n’élimine pas nécessairement SmartScreen : la réputation de l’éditeur se construit dans le temps.
+
+Avant une release, mettez à jour la version de façon cohérente dans :
 
 - `package.json`
 - `src-tauri/tauri.conf.json`
@@ -107,7 +125,7 @@ git tag v0.2.0
 git push origin v0.2.0
 ```
 
-Après le succès du workflow, les fichiers `.exe` et `.msi` sont attachés à la release GitHub.
+Après le succès du workflow, les fichiers `.exe`, `.msi` et `SHA256SUMS.txt` sont attachés à la release GitHub.
 
 ## Dépannage
 
@@ -118,4 +136,4 @@ Après le succès du workflow, les fichiers `.exe` et `.msi` sont attachés à l
 | Erreur WebView2 au démarrage | Installez le WebView2 Evergreen Runtime depuis le site officiel de Microsoft, puis relancez Noto. |
 | Échec MSI autour de `light.exe` | Activez la fonctionnalité Windows facultative **VBScript**, puis relancez le build. |
 | `npm ci` échoue | Vérifiez Node.js 22, l’accès réseau au registre npm et que `package-lock.json` n’a pas été modifié sans `package.json`. |
-| Windows signale que l’éditeur est inconnu | Les builds actuels ne sont pas signés. Vérifiez que le téléchargement vient du dépôt officiel, depuis une exécution GitHub Actions ou une release. |
+| SmartScreen avertit ou l’éditeur est inconnu | Vérifiez la provenance officielle, validez le hash avec `SHA256SUMS.txt`, puis contrôlez si le build a été signé. Une signature n’assure pas immédiatement une réputation SmartScreen établie. |

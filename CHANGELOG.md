@@ -2,9 +2,16 @@
 
 Les changements notables sont consignés ici, selon une version simplifiée de Keep a Changelog.
 
-## [Non publié] — 2026-10-07
+## [Non publié] — 2026-10-08
 
 ### Ajouté
+- Écran de démarrage Noto léger, cohérent avec la charte de l’application, avec indicateur de progression, prise en charge des préférences d’apparence et message après une attente prolongée.
+- Workflow Windows : génération de sommes SHA-256 pour les installateurs et signature Authenticode conditionnelle lorsque le certificat des mainteneurs est configuré.
+- Guide de première ouverture, rappelable depuis le menu Aide, avec raccourcis, formats, épinglage de dossiers locaux et accès aux associations Windows.
+- Recherche plein texte locale à la demande dans un dossier explicitement choisi, avec emplacements épinglés, progression, annulation et plafonds de sécurité.
+- Comparaison côte à côte de fichiers texte/code ouverts, avec lignes ajoutées, supprimées ou modifiées et défilement synchronisé ; comparaison en lecture seule.
+- Navigation PDF enrichie : sommaire, miniatures, signets locaux, reprise à la dernière page et panneau de texte sélectionnable/copier.
+- Ouverture des fichiers transmis par Windows dans la fenêtre Noto existante, et accès explicite aux paramètres Windows d’applications par défaut.
 - Menus contextuels Noto dans l’espace de travail, les fichiers et les viewers : copie/recherche de sélection, classement, chemin, renommage/déplacement desktop, commandes PDF/présentation/image.
 - Lecture des présentations `.pptx`/`.odp` avec navigation clavier, boutons et plein écran ; extraction locale limitée du texte et des images raster.
 - Lecture seule des `.docx`, `.odt`, `.rtf` et `.epub`, avec navigation par chapitre EPUB.

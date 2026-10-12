@@ -30,6 +30,13 @@ export function detectDelimiter(text: string): string {
   return ranked[0]?.count ? ranked[0].delimiter : ',';
 }
 
+export function serializeCsvRows(rows: string[][], delimiter = ','): string {
+  return rows.map((row) => row.map((field) => {
+    if (!field.includes(delimiter) && !field.includes('"') && !/[\r\n]/u.test(field)) return field;
+    return `"${field.replace(/"/g, '""')}"`;
+  }).join(delimiter)).join('\r\n');
+}
+
 export function parseCsv(text: string, delimiter = detectDelimiter(text)): ParsedCsv {
   if (text.length === 0) return { rows: [], delimiter, columns: 0 };
 

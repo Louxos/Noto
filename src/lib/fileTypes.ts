@@ -86,19 +86,62 @@ export function isProbablyText(bytes: Uint8Array): boolean {
   return suspicious / sample.length < 0.04;
 }
 
-export function decodeText(bytes: Uint8Array): string {
-  let content: string;
-  if (bytes[0] === 0xff && bytes[1] === 0xfe) {
-    content = new TextDecoder('utf-16le').decode(bytes.subarray(2));
-  } else if (bytes[0] === 0xfe && bytes[1] === 0xff) {
-    content = new TextDecoder('utf-16be').decode(bytes.subarray(2));
-  } else {
-    try {
-      content = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
-    } catch {
-      // Windows ANSI text is commonly Windows-1252.
-      content = new TextDecoder('windows-1252').decode(bytes);
+export type DocumentTextEncoding = 'utf-8' | 'utf-16le' | 'utf-16be' | 'windows-1252';
+
+export function detectTextEncoding(bytes: Uint8Array, allowIncompleteUtf8Tail = false): DocumentTextEncoding {
+  if (bytes[0] === 0xff && bytes[1] === 0xfe) return 'utf-16le';
+  if (bytes[0] === 0xfe && bytes[1] === 0xff) return 'utf-16be';
+  try {
+    new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    return 'utf-8';
+  } catch {
+    const completeLength = completeTextByteLength(bytes, 'utf-8');
+    if (allowIncompleteUtf8Tail && completeLength < bytes.length) {
+      try {
+        new TextDecoder('utf-8', { fatal: true }).decode(bytes.subarray(0, completeLength));
+        return 'utf-8';
+      } catch { /* Invalid bytes before the trailing partial character indicate a legacy encoding. */ }
     }
+    // Windows ANSI text is commonly Windows-1252.
+    return 'windows-1252';
+  }
+}
+
+export function completeTextByteLength(bytes: Uint8Array, encoding: DocumentTextEncoding): number {
+  if (encoding === 'utf-8') return utf8CompletePrefixLength(bytes);
+  if (!encoding.startsWith('utf-16')) return bytes.length;
+  let length = bytes.length - (bytes.length % 2);
+  if (length >= 2) {
+    const last = length - 2;
+    const codeUnit = encoding === 'utf-16le'
+      ? bytes[last] | (bytes[last + 1] << 8)
+      : (bytes[last] << 8) | bytes[last + 1];
+    if (codeUnit >= 0xd800 && codeUnit <= 0xdbff) length -= 2;
+  }
+  return length;
+}
+
+function utf8CompletePrefixLength(bytes: Uint8Array): number {
+  let leadIndex = bytes.length - 1;
+  let continuationBytes = 0;
+  while (leadIndex >= 0 && (bytes[leadIndex] & 0xc0) === 0x80 && continuationBytes < 3) {
+    continuationBytes += 1;
+    leadIndex -= 1;
+  }
+  if (leadIndex < 0) return bytes.length;
+  const lead = bytes[leadIndex];
+  const expectedBytes = lead <= 0x7f ? 1 : lead >= 0xc2 && lead <= 0xdf ? 2 : lead >= 0xe0 && lead <= 0xef ? 3 : lead >= 0xf0 && lead <= 0xf4 ? 4 : 1;
+  return expectedBytes > bytes.length - leadIndex ? leadIndex : bytes.length;
+}
+
+export function decodeText(bytes: Uint8Array, encoding = detectTextEncoding(bytes)): string {
+  let content: string;
+  if (encoding === 'utf-16le') {
+    content = new TextDecoder('utf-16le').decode(bytes[0] === 0xff && bytes[1] === 0xfe ? bytes.subarray(2) : bytes);
+  } else if (encoding === 'utf-16be') {
+    content = new TextDecoder('utf-16be').decode(bytes[0] === 0xfe && bytes[1] === 0xff ? bytes.subarray(2) : bytes);
+  } else {
+    content = new TextDecoder(encoding).decode(bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf ? bytes.subarray(3) : bytes);
   }
   return content.charCodeAt(0) === 0xfeff ? content.slice(1) : content;
 }

@@ -50,6 +50,17 @@ export function loadDesktopSession(): SavedSessionFile[] {
   return loadDesktopSessionState().files;
 }
 
+export async function reopenSessionFiles(files: SavedSessionFile[], readPath: (path: string) => Promise<OpenDocument>): Promise<{ documents: OpenDocument[]; unavailable: SavedSessionFile[] }> {
+  const results = await Promise.all(files.map(async (file) => {
+    try { return { file, document: await readPath(file.path) }; }
+    catch { return { file, document: null }; }
+  }));
+  return {
+    documents: results.flatMap((result) => result.document ? [result.document] : []),
+    unavailable: results.filter((result) => !result.document).map((result) => result.file),
+  };
+}
+
 export function saveDesktopSession(documents: OpenDocument[], context: { activeId?: string | null; activeGroupId?: string | null; page?: SavedSessionPage } = {}): void {
   try {
     const desktopDocuments = documents.filter((document) => document.source === 'desktop').slice(0, MAX_SESSION_FILES);

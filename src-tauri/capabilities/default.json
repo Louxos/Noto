@@ -8,6 +8,8 @@
     "dialog:allow-open",
     "dialog:allow-save",
     "fs:allow-read-file",
+    "fs:allow-open",
+    "fs:allow-read-dir",
     "fs:allow-read-text-file",
     "fs:allow-write-file",
     "fs:allow-write-text-file",

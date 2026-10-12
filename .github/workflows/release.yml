@@ -2,13 +2,37 @@ name: Windows installers
 
 on:
   push:
-    branches: [arena/**]
+    branches: [main, 'arena/**']
     tags: ['v*']
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
+  frontend:
+    name: Vérifications front-end
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm run build
+
   windows:
     name: Build Windows installers
+    needs: frontend
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/heads/arena/') || startsWith(github.ref, 'refs/tags/v')
     runs-on: windows-latest
     permissions:
       contents: write
@@ -23,7 +47,148 @@ jobs:
         with:
           workspaces: './src-tauri -> target'
       - run: npm ci
+      - run: npm run check
+      - name: Test native Windows commands
+        run: cargo test --manifest-path src-tauri/Cargo.toml
       - run: npm run tauri:build
+      - name: Smoke-test Windows install, file opening, associations and uninstall
+        shell: pwsh
+        run: |
+          $bundleRoot = 'src-tauri/target/release/bundle'
+          $samplePath = Join-Path $env:RUNNER_TEMP 'noto-file-open-smoke.md'
+          Set-Content -Path $samplePath -Value '# Noto Windows smoke test' -Encoding utf8
+
+          function Assert-FileAssociation([string] $installPath) {
+            $extensionKey = Get-Item -LiteralPath 'HKCU:\Software\Classes\.md' -ErrorAction Stop
+            $programId = $extensionKey.GetValue('')
+            if ([string]::IsNullOrWhiteSpace($programId)) { throw 'The Markdown file association was not registered for the current user.' }
+            $commandKey = "HKCU:\Software\Classes\$programId\shell\open\command"
+            $openCommand = (Get-Item -LiteralPath $commandKey -ErrorAction Stop).GetValue('')
+            $expectedExe = Join-Path $installPath 'Noto.exe'
+            if (-not $openCommand -or $openCommand.IndexOf($expectedExe, [StringComparison]::OrdinalIgnoreCase) -lt 0) {
+              throw "The .md open command does not point to $expectedExe."
+            }
+          }
+
+          function Assert-FileAssociationRemoved([string] $installPath) {
+            $extensionKey = Get-Item -LiteralPath 'HKCU:\Software\Classes\.md' -ErrorAction SilentlyContinue
+            if (-not $extensionKey) { return }
+            $programId = $extensionKey.GetValue('')
+            if ([string]::IsNullOrWhiteSpace($programId)) { return }
+            $commandKey = "HKCU:\Software\Classes\$programId\shell\open\command"
+            if (-not (Test-Path -LiteralPath $commandKey)) { return }
+            $openCommand = (Get-Item -LiteralPath $commandKey).GetValue('')
+            if ($openCommand -and $openCommand.IndexOf($installPath, [StringComparison]::OrdinalIgnoreCase) -ge 0) {
+              throw "Uninstall left a .md association pointing at $installPath."
+            }
+          }
+
+          function Assert-FileLaunch([string] $appPath, [string] $filePath) {
+            $argument = '"' + $filePath + '"'
+            $app = Start-Process -FilePath $appPath -ArgumentList $argument -PassThru
+            try {
+              Start-Sleep -Seconds 8
+              $running = Get-CimInstance Win32_Process -Filter "ProcessId = $($app.Id)" -ErrorAction SilentlyContinue
+              if (-not $running) { throw "Noto did not remain running after opening $filePath." }
+              if (-not $running.CommandLine -or $running.CommandLine.IndexOf($filePath, [StringComparison]::OrdinalIgnoreCase) -lt 0) {
+                throw 'The sample file path was not passed to the Noto process.'
+              }
+            } finally {
+              Stop-Process -Id $app.Id -Force -ErrorAction SilentlyContinue
+              Start-Sleep -Seconds 2
+            }
+          }
+
+          $nsisInstaller = Get-ChildItem (Join-Path $bundleRoot 'nsis') -Filter '*.exe' -File | Sort-Object Name | Select-Object -First 1
+          if (-not $nsisInstaller) { throw 'The NSIS installer was not produced.' }
+          $nsisInstallPath = Join-Path $env:RUNNER_TEMP 'noto-nsis-smoke'
+          Start-Process -FilePath $nsisInstaller.FullName -ArgumentList @('/S', "/D=$nsisInstallPath") -Wait -PassThru | Out-Null
+          $nsisExe = Join-Path $nsisInstallPath 'Noto.exe'
+          if (-not (Test-Path $nsisExe)) { throw "NSIS did not install Noto.exe into $nsisInstallPath." }
+          Assert-FileAssociation $nsisInstallPath
+          Assert-FileLaunch $nsisExe $samplePath
+          $nsisUninstaller = Get-ChildItem -Path $nsisInstallPath -Filter 'unins*.exe' -File | Select-Object -First 1
+          if (-not $nsisUninstaller) { throw 'The NSIS uninstaller was not installed.' }
+          Start-Process -FilePath $nsisUninstaller.FullName -ArgumentList '/S' -Wait -PassThru | Out-Null
+          if (Test-Path $nsisExe) { throw 'NSIS uninstall left Noto.exe behind.' }
+          Assert-FileAssociationRemoved $nsisInstallPath
+
+          $msiInstaller = Get-ChildItem (Join-Path $bundleRoot 'msi') -Filter '*.msi' -File | Sort-Object Name | Select-Object -First 1
+          if (-not $msiInstaller) { throw 'The MSI installer was not produced.' }
+          $msiInstallPath = Join-Path $env:RUNNER_TEMP 'noto-msi-smoke'
+          $msiArgs = "/i `"$($msiInstaller.FullName)`" /qn /norestart INSTALLDIR=`"$msiInstallPath`""
+          $msiInstall = Start-Process -FilePath 'msiexec.exe' -ArgumentList $msiArgs -Wait -PassThru
+          if ($msiInstall.ExitCode -notin @(0, 3010)) { throw "MSI install failed with exit code $($msiInstall.ExitCode)." }
+          $msiExe = Join-Path $msiInstallPath 'Noto.exe'
+          if (-not (Test-Path $msiExe)) { throw "MSI did not install Noto.exe into $msiInstallPath." }
+          Assert-FileAssociation $msiInstallPath
+          Assert-FileLaunch $msiExe $samplePath
+          $msiArgs = "/x `"$($msiInstaller.FullName)`" /qn /norestart"
+          $msiUninstall = Start-Process -FilePath 'msiexec.exe' -ArgumentList $msiArgs -Wait -PassThru
+          if ($msiUninstall.ExitCode -notin @(0, 3010)) { throw "MSI uninstall failed with exit code $($msiUninstall.ExitCode)." }
+          if (Test-Path $msiExe) { throw 'MSI uninstall left Noto.exe behind.' }
+          Assert-FileAssociationRemoved $msiInstallPath
+          Remove-Item $samplePath -Force -ErrorAction SilentlyContinue
+      - name: Sign Windows installers when a certificate is configured
+        shell: pwsh
+        env:
+          NOTO_WINDOWS_SIGNING_CERTIFICATE_BASE64: ${{ secrets.NOTO_WINDOWS_SIGNING_CERTIFICATE_BASE64 }}
+          NOTO_WINDOWS_SIGNING_CERTIFICATE_PASSWORD: ${{ secrets.NOTO_WINDOWS_SIGNING_CERTIFICATE_PASSWORD }}
+        run: |
+          $hasCertificate = -not [string]::IsNullOrWhiteSpace($env:NOTO_WINDOWS_SIGNING_CERTIFICATE_BASE64)
+          $hasPassword = -not [string]::IsNullOrWhiteSpace($env:NOTO_WINDOWS_SIGNING_CERTIFICATE_PASSWORD)
+          if (-not $hasCertificate -and -not $hasPassword) {
+            Write-Host 'Code-signing secrets are not configured; installers will remain unsigned.'
+            exit 0
+          }
+          if (-not $hasCertificate -or -not $hasPassword) {
+            throw 'Configure both NOTO_WINDOWS_SIGNING_CERTIFICATE_BASE64 and NOTO_WINDOWS_SIGNING_CERTIFICATE_PASSWORD.'
+          }
+
+          $programFilesX86 = [Environment]::GetFolderPath('ProgramFilesX86')
+          $kitsRoot = Join-Path $programFilesX86 'Windows Kits\10\bin'
+          $signTool = Get-ChildItem -Path $kitsRoot -Filter signtool.exe -File -Recurse -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -match '\\x64\\signtool\.exe$' } |
+            Sort-Object LastWriteTime -Descending |
+            Select-Object -First 1
+          if (-not $signTool) { throw "signtool.exe was not found under $kitsRoot." }
+
+          $installerRoot = 'src-tauri/target/release/bundle'
+          $installers = @(
+            Get-ChildItem (Join-Path $installerRoot 'nsis') -Filter '*.exe' -File
+            Get-ChildItem (Join-Path $installerRoot 'msi') -Filter '*.msi' -File
+          )
+          if (-not $installers.Count) { throw 'No Windows installer files were found to sign.' }
+
+          $certificatePath = Join-Path $env:RUNNER_TEMP 'noto-code-signing.pfx'
+          try {
+            $certificateBytes = [Convert]::FromBase64String($env:NOTO_WINDOWS_SIGNING_CERTIFICATE_BASE64)
+            [IO.File]::WriteAllBytes($certificatePath, $certificateBytes)
+            foreach ($installer in $installers) {
+              & $signTool.FullName sign /f $certificatePath /p $env:NOTO_WINDOWS_SIGNING_CERTIFICATE_PASSWORD /fd SHA256 /tr 'http://timestamp.digicert.com' /td SHA256 /d 'Noto' $installer.FullName
+              if ($LASTEXITCODE -ne 0) { throw "Authenticode signing failed for $($installer.Name)." }
+              & $signTool.FullName verify /pa $installer.FullName
+              if ($LASTEXITCODE -ne 0) { throw "Authenticode verification failed for $($installer.Name)." }
+            }
+          } finally {
+            Remove-Item $certificatePath -Force -ErrorAction SilentlyContinue
+          }
+      - name: Generate SHA-256 checksums
+        shell: pwsh
+        run: |
+          $bundleRoot = 'src-tauri/target/release/bundle'
+          $installers = @(
+            Get-ChildItem (Join-Path $bundleRoot 'nsis') -Filter '*.exe' -File
+            Get-ChildItem (Join-Path $bundleRoot 'msi') -Filter '*.msi' -File
+          ) | Sort-Object Name
+          if (-not $installers.Count) { throw 'No Windows installer files were found to hash.' }
+          $checksumFile = Join-Path $bundleRoot 'SHA256SUMS.txt'
+          $lines = foreach ($installer in $installers) {
+            $hash = (Get-FileHash $installer.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            '{0}  {1}' -f $hash, $installer.Name
+          }
+          $lines | Set-Content -Path $checksumFile -Encoding ascii
+          Get-Content $checksumFile
       - name: Upload CI installers
         uses: actions/upload-artifact@v4
         with:
@@ -31,6 +196,7 @@ jobs:
           path: |
             src-tauri/target/release/bundle/nsis/*.exe
             src-tauri/target/release/bundle/msi/*.msi
+            src-tauri/target/release/bundle/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 30
       - uses: softprops/action-gh-release@v2
@@ -39,3 +205,4 @@ jobs:
           files: |
             src-tauri/target/release/bundle/nsis/*.exe
             src-tauri/target/release/bundle/msi/*.msi
+            src-tauri/target/release/bundle/SHA256SUMS.txt

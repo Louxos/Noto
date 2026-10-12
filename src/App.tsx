@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState, lazy, Suspense, type DragEvent, type ReactNode, type CSSProperties } from 'react';
 import { invoke, isTauri } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import { getCurrentWebview } from '@tauri-apps/api/webview';
 import {
   ArrowDown, ArrowUp, BookOpen, BookOpenText, Check, ChevronDown, CircleHelp, Clock3, Code2, Command,
-  Copy, ClipboardPaste, Download, File, FileCode2, FileImage, FileText, FileType2, FileUp, FolderInput, FolderPlus, Globe2, Presentation, Upload,
+  Copy, ClipboardPaste, Download, File, FileCode2, FileDiff, FileImage, FileText, FileType2, FileUp, FolderInput, FolderPlus, FolderSearch, Globe2, Presentation, Upload,
   Image as ImageIcon, Keyboard, LayoutGrid, LoaderCircle, Maximize2, Moon, MoreHorizontal,
   PanelLeft, Pencil, Plus, RotateCcw, Scissors, Search, Settings2, ShieldCheck, Sun, Table2,
   TextCursorInput, X, Save, Replace, Sparkles, Trash2, Pin,
@@ -12,18 +13,23 @@ import { CodeViewer } from './components/CodeViewer';
 import { CsvViewer } from './components/CsvViewer';
 import { HtmlViewer } from './components/HtmlViewer';
 import { TextEditor } from './components/TextEditor';
+import { ProgressiveTextViewer } from './components/ProgressiveTextViewer';
 import { SmartGroupScreen } from './components/SmartGroupScreen';
 import { AppMenuBar, CommandPalette, ContextMenu, GoToLineDialog, GroupAssignmentDialog, GroupDialog, GroupScreen, RenameFileDialog, SaveAsDialog, ShortcutsDialog, type CommandOption, type MenuDefinition, type MenuEntry } from './components/WorkspaceTools';
+import { FolderSearchDialog } from './components/FolderSearchDialog';
+import { TextDiffDialog } from './components/TextDiffDialog';
+import { WelcomeDialog } from './components/WelcomeDialog';
 import { formatBytes, loadBrowserFile, openDesktopFiles, pickBrowserFiles, readDesktopPath, saveDocument, type SaveAsOptions } from './lib/files';
 import { moveDesktopFile, pathFileName, renameDesktopFile } from './lib/fileOperations';
 import { getExtension, getFileKind, getFormatLabel, mimeTypeFor } from './lib/fileTypes';
-import { loadDesktopSessionState, saveDesktopSession, clearDesktopSession } from './lib/session';
+import { loadDesktopSessionState, reopenSessionFiles, saveDesktopSession, clearDesktopSession } from './lib/session';
 import { createLocalBackup, parseLocalBackup } from './lib/backup';
 import { clearLocalDrafts, draftId, loadLocalDrafts, removeLocalDraft, saveLocalDraft } from './lib/drafts';
 import { formatJsonForDisplay, validateJson } from './lib/textFormat';
 import { createSearchRegExp, searchText, type SearchOptions, type TextSearchMatch } from './lib/search';
 import { reorderTabs, tabsWithoutOthers, togglePinnedTab } from './lib/tabs';
 import { createGroup, addGroupFile, deleteGroup, duplicateGroup, loadGroups, removeGroupFile, removeGroupFiles, renameGroup, saveGroups, toggleGroupFile, type FileGroup, type GroupColor } from './lib/groups';
+import { loadPinnedSearchFolders, savePinnedSearchFolders, togglePinnedSearchFolder } from './lib/searchFolders';
 import { defaultPreferences, loadPreferences, loadRecentFiles, savePreferences, saveRecentFiles, upsertRecent, TOOLBAR_ACTIONS, type Preferences, type RecentFile, type ToolbarAction } from './lib/preferences';
 import type { BrowserFileHandle, OpenDocument } from './types';
 import './styles.css';
@@ -62,6 +68,17 @@ function formatRelativeDate(timestamp: number): string {
 function kindIcon(kind: string, size = 16): ReactNode {
   const Icon = formatIcons[kind] ?? File;
   return <Icon size={size} strokeWidth={1.8} />;
+}
+
+const FIRST_RUN_KEY = 'noto.first-run.v1';
+
+function shouldShowFirstRun(): boolean {
+  try { return localStorage.getItem(FIRST_RUN_KEY) !== 'done'; }
+  catch { return false; }
+}
+
+function isComparableDocument(document: OpenDocument): boolean {
+  return !document.truncated && ['markdown', 'text', 'code', 'html', 'csv', 'unknown'].includes(document.kind);
 }
 
 function recentFromDocument(document: OpenDocument): RecentFile {
@@ -119,9 +136,13 @@ export default function App() {
   const [pendingSearchResult, setPendingSearchResult] = useState<(TextSearchMatch & { documentId: string; documentName: string }) | null>(null);
   const [pdfFindRequest, setPdfFindRequest] = useState<{ id: number; backwards: boolean } | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [folderSearchOpen, setFolderSearchOpen] = useState(false);
+  const [textDiffOpen, setTextDiffOpen] = useState(false);
+  const [welcomeOpen, setWelcomeOpen] = useState(() => shouldShowFirstRun());
   const [saveAsDialogOpen, setSaveAsDialogOpen] = useState(false);
   const [saveAsError, setSaveAsError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadingSlow, setLoadingSlow] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('Ouverture du fichier…');
   const [dragging, setDragging] = useState(false);
   const [toast, setToast] = useState('');
@@ -139,7 +160,8 @@ export default function App() {
     setDocuments(next);
   }, []);
   const activeDoc = documents.find((document) => document.id === activeId) ?? null;
-  const activeModalId = commandPaletteOpen ? 'palette' : shortcutsOpen ? 'shortcuts' : saveAsDialogOpen ? 'save-as' : goToLineOpen ? 'go-to-line' : renameTarget ? 'rename-file' : groupAssignmentTarget ? 'group-assignment' : groupDialog ? 'group' : settingsOpen ? 'settings' : null;
+  const comparableDocuments = documents.filter(isComparableDocument);
+  const activeModalId = commandPaletteOpen ? 'palette' : shortcutsOpen ? 'shortcuts' : textDiffOpen ? 'text-diff' : folderSearchOpen ? 'folder-search' : welcomeOpen ? 'welcome' : saveAsDialogOpen ? 'save-as' : goToLineOpen ? 'go-to-line' : renameTarget ? 'rename-file' : groupAssignmentTarget ? 'group-assignment' : groupDialog ? 'group' : settingsOpen ? 'settings' : null;
   const searchResults = useMemo(() => {
     const searchDocuments = searchAllTabs
       ? [...(activeDoc ? [activeDoc] : []), ...documents.filter((document) => document.id !== activeDoc?.id)]
@@ -171,6 +193,11 @@ export default function App() {
   const canEdit = Boolean(activeDoc && canReadText && !activeDoc.truncated && ['markdown', 'text', 'code', 'html', 'csv', 'unknown'].includes(activeDoc.kind));
 
   useEffect(() => {
+    const frame = window.requestAnimationFrame(() => window.dispatchEvent(new Event('noto:boot-ready')));
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+
+  useEffect(() => {
     savePreferences(preferences);
     document.documentElement.dataset.theme = preferences.theme;
     document.documentElement.dataset.accent = preferences.accent;
@@ -199,6 +226,13 @@ export default function App() {
     const timeout = window.setTimeout(() => setToast(''), 3_400);
     return () => window.clearTimeout(timeout);
   }, [toast]);
+
+  useEffect(() => {
+    if (!loading) { setLoadingSlow(false); return; }
+    setLoadingSlow(false);
+    const timeout = window.setTimeout(() => setLoadingSlow(true), 1_800);
+    return () => window.clearTimeout(timeout);
+  }, [loading]);
 
   useEffect(() => {
     if (searchOpen) window.setTimeout(() => searchRef.current?.focus(), 40);
@@ -252,6 +286,46 @@ export default function App() {
     setToastKind(kind);
   }, []);
 
+  function closeWelcome() {
+    try { localStorage.setItem(FIRST_RUN_KEY, 'done'); } catch { /* First-run dismissal is best-effort in private storage. */ }
+    setWelcomeOpen(false);
+  }
+
+  const openWindowsDefaults = useCallback(async () => {
+    if (!isTauri()) {
+      notify('Les associations se gèrent dans les paramètres Windows de l’application de bureau.', 'error');
+      return;
+    }
+    try {
+      await invoke('open_default_apps_settings');
+      notify('Paramètres Windows ouverts. Windows vous laisse choisir les associations de Noto.');
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'Impossible d’ouvrir les paramètres Windows.', 'error');
+    }
+  }, [notify]);
+
+  async function pinWelcomeFolder() {
+    if (!isTauri()) { notify('L’épinglage des dossiers est disponible dans l’application de bureau.', 'error'); return; }
+    try {
+      const { open } = await import('@tauri-apps/plugin-dialog');
+      const selected = await open({ directory: true, multiple: false, title: 'Épingler un dossier de recherche' });
+      const path = typeof selected === 'string' ? selected : Array.isArray(selected) ? selected[0] : null;
+      if (!path) return;
+      const folders = loadPinnedSearchFolders();
+      if (folders.some((folder) => folder.path.toLocaleLowerCase('en-US') === path.toLocaleLowerCase('en-US'))) {
+        notify('Ce dossier est déjà épinglé.');
+        closeWelcome();
+        return;
+      }
+      if (folders.length >= 10) { notify('Vous pouvez épingler jusqu’à 10 dossiers.', 'error'); return; }
+      savePinnedSearchFolders(togglePinnedSearchFolder(folders, path));
+      closeWelcome();
+      notify('Dossier épinglé pour vos recherches locales. Son contenu n’a pas été analysé.');
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'Impossible d’épingler ce dossier.', 'error');
+    }
+  }
+
   useEffect(() => {
     if (!preferences.draftRecoveryEnabled) {
       clearLocalDrafts();
@@ -268,7 +342,7 @@ export default function App() {
       }
     };
     window.addEventListener('pagehide', persistDraftsBeforeClose);
-    const timer = window.setTimeout(() => { 
+    const timer = window.setTimeout(() => {
       let saveError: string | null = null;
       for (const document of documents) {
         if (document.truncated || !['markdown', 'text', 'code', 'html', 'csv', 'unknown'].includes(document.kind)) continue;
@@ -339,15 +413,67 @@ export default function App() {
     setPendingGoToLine(null);
   }, [activeGroupId, commitDocuments, page, preferences.draftRecoveryEnabled, preferences.draftRetentionDays, rememberDocument]);
 
-  const openTauriPath = useCallback(async (path: string) => {
+  const openTauriPath = useCallback(async (path: string, searchTarget?: { line: number | null; query: string }): Promise<boolean | null> => {
     setLoading(true);
     setLoadingMessage('Ouverture du fichier…');
     try {
       const item = await readDesktopPath(path);
       openLoadedDocuments([item]);
+      if (searchTarget?.line) {
+        const opened = documentsRef.current.find((document) => document.source === 'desktop' && document.path === item.path);
+        if (opened) {
+          const match = searchText(opened.content, searchTarget.query.trim(), { caseSensitive: false, wholeWord: false, regex: false }).matches[0];
+          if (match) setPendingSearchResult({ ...match, documentId: opened.id, documentName: opened.name });
+          else setPendingGoToLine({ documentId: opened.id, line: searchTarget.line });
+        }
+      }
+      return true;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Impossible d’ouvrir ce fichier.';
+      if (message === 'Ouverture annulée.') return null;
+      notify(message, 'error');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [notify, openLoadedDocuments]);
+
+  const navigateImageSibling = useCallback(async (path: string) => {
+    setLoading(true);
+    setLoadingMessage('Ouverture de l’image…');
+    try {
+      const item = await readDesktopPath(path);
+      const activeImage = documentsRef.current.find((document) => document.id === activeId && document.kind === 'image');
+      if (!activeImage) {
+        openLoadedDocuments([item]);
+        return;
+      }
+      const replacement = { ...item, id: activeImage.id };
+      commitDocuments(documentsRef.current.map((document) => document.id === activeImage.id ? replacement : document));
+      setActiveId(activeImage.id);
+      setPage('file');
+      setIsEditing(false);
+      rememberDocument(replacement);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Impossible d’ouvrir cette image.';
       if (message !== 'Ouverture annulée.') notify(message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [activeId, commitDocuments, notify, openLoadedDocuments, rememberDocument]);
+
+  const openTauriPaths = useCallback(async (paths: string[]) => {
+    const uniquePaths = [...new Set(paths.filter(Boolean))];
+    if (!uniquePaths.length) return;
+    setLoading(true);
+    setLoadingMessage(uniquePaths.length > 1 ? `Ouverture de ${uniquePaths.length} fichiers…` : 'Ouverture du fichier…');
+    try {
+      const loaded: OpenDocument[] = [];
+      for (const path of uniquePaths) {
+        try { loaded.push(await readDesktopPath(path)); }
+        catch (error) { notify(error instanceof Error ? error.message : `Impossible d’ouvrir « ${pathFileName(path)} ».`, 'error'); }
+      }
+      if (loaded.length) openLoadedDocuments(loaded);
     } finally {
       setLoading(false);
     }
@@ -365,13 +491,12 @@ export default function App() {
     let cancelled = false;
     setLoading(true);
     setLoadingMessage('Restauration de la session précédente…');
-    void Promise.all(savedSession.files.map(async (file) => {
-      try { return await readDesktopPath(file.path); }
-      catch { return null; }
-    })).then((items) => {
+    void reopenSessionFiles(savedSession.files, readDesktopPath).then(({ documents: loaded, unavailable }) => {
       if (cancelled) return;
-      const loaded = items.filter((item): item is OpenDocument => item !== null);
       if (loaded.length) openLoadedDocuments(loaded);
+      if (unavailable.length) notify(unavailable.length === 1
+        ? 'Un fichier de la session n’a pas pu être retrouvé. Vous pourrez le retirer des récents ou l’ouvrir à son nouvel emplacement.'
+        : `${unavailable.length} fichiers de la session n’ont pas pu être retrouvés. Vous pourrez les retirer des récents ou les ouvrir à leur nouvel emplacement.`, 'error');
       const activeFile = loaded.find((item) => item.path === savedSession.activePath) ?? loaded.at(-1);
       if (savedSession.page === 'group' && savedSession.activeGroupId && groups.some((group) => group.id === savedSession.activeGroupId)) {
         setActiveGroupId(savedSession.activeGroupId);
@@ -383,7 +508,7 @@ export default function App() {
       }
     }).finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [groups, openLoadedDocuments, preferences.restoreSession]);
+  }, [groups, notify, openLoadedDocuments, preferences.restoreSession]);
 
   useEffect(() => {
     if (preferences.restoreSession && isTauri()) {
@@ -398,22 +523,26 @@ export default function App() {
   useEffect(() => {
     if (!isTauri()) return;
     let cancelled = false;
-    invoke<string[]>('startup_paths').then(async (paths) => {
-      if (cancelled || !paths.length) return;
-      setLoading(true);
+    let unlisten: (() => void) | undefined;
+    void (async () => {
       try {
-        const loaded: OpenDocument[] = [];
-        for (const path of paths) {
-          try { loaded.push(await readDesktopPath(path)); }
-          catch (error) { notify(error instanceof Error ? error.message : 'Impossible d’ouvrir un fichier.', 'error'); }
-        }
-        if (!cancelled) openLoadedDocuments(loaded);
-      } finally {
-        if (!cancelled) setLoading(false);
+        unlisten = await listen<string[]>('noto-open-files', (event) => {
+          void invoke<string[]>('take_pending_open_files')
+            .then((pending) => openTauriPaths(pending.length ? pending : event.payload))
+            .catch(() => openTauriPaths(event.payload));
+        });
+        if (cancelled) { unlisten(); return; }
+        const [startupPaths, pendingPaths] = await Promise.all([
+          invoke<string[]>('startup_paths').catch(() => []),
+          invoke<string[]>('take_pending_open_files').catch(() => []),
+        ]);
+        if (!cancelled) await openTauriPaths([...startupPaths, ...pendingPaths]);
+      } catch {
+        // Ordinary file opening remains available even if the optional hand-off cannot be initialized.
       }
-    }).catch(() => undefined);
-    return () => { cancelled = true; };
-  }, [notify, openLoadedDocuments]);
+    })();
+    return () => { cancelled = true; unlisten?.(); };
+  }, [openTauriPaths]);
 
   useEffect(() => {
     if (!isTauri()) return;
@@ -510,7 +639,10 @@ export default function App() {
       return;
     }
     if (recent.source === 'desktop' && isTauri()) {
-      await openTauriPath(recent.path);
+      const opened = await openTauriPath(recent.path);
+      if (opened === false && window.confirm(`« ${recent.name} » n’est pas accessible. Le retirer des fichiers récents ?`)) {
+        setRecents((current) => current.filter((file) => file.id !== recent.id));
+      }
       return;
     }
     const handle = browserHandles.current.get(recent.id);
@@ -617,6 +749,12 @@ export default function App() {
     if (!activeId) return;
     commitDocuments(documentsRef.current.map((document) => document.id === activeId ? { ...document, content: value } : document));
   }, [activeId, commitDocuments]);
+
+  const commitProgressiveContent = useCallback((documentId: string, content: string, loadedBytes: number) => {
+    commitDocuments(documentsRef.current.map((document) => document.id === documentId
+      ? { ...document, content, savedContent: content, loadedBytes }
+      : document));
+  }, [commitDocuments]);
 
   const handleSave = useCallback(async (saveAs = false, options?: SaveAsOptions) => {
     if (saveAs && !options) { setSaveAsError(''); setSaveAsDialogOpen(true); return; }
@@ -892,6 +1030,9 @@ export default function App() {
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
         if (commandPaletteOpen) setCommandPaletteOpen(false);
+        else if (textDiffOpen) setTextDiffOpen(false);
+        else if (folderSearchOpen) setFolderSearchOpen(false);
+        else if (welcomeOpen) closeWelcome();
         else if (groupDialog) setGroupDialog(null);
         else if (shortcutsOpen) setShortcutsOpen(false);
         else if (settingsOpen) setSettingsOpen(false);
@@ -935,7 +1076,7 @@ export default function App() {
           setPage('file');
           setIsEditing(false);
         }
-      } else if (key === 'p' && event.shiftKey) {
+      } else if (key === 'p') {
         event.preventDefault();
         setCommandPaletteOpen(true);
       } else if (key === 'n' && event.shiftKey) {
@@ -976,7 +1117,7 @@ export default function App() {
     }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [activeDoc, activeId, canEdit, closeDocument, commandPaletteOpen, currentGroup, documents, findInDocument, goToLineOpen, groupDialog, groupPickerOpen, handleOpen, handleSave, openGoToLine, page, query, saveAsDialogOpen, searchOpen, settingsOpen, shortcutsOpen, toggleEditMode]);
+  }, [activeDoc, activeId, canEdit, closeDocument, closeWelcome, commandPaletteOpen, currentGroup, documents, findInDocument, folderSearchOpen, goToLineOpen, groupDialog, groupPickerOpen, handleOpen, handleSave, openGoToLine, page, query, saveAsDialogOpen, searchOpen, settingsOpen, shortcutsOpen, textDiffOpen, toggleEditMode, welcomeOpen]);
 
   useEffect(() => {
     if (!activeModalId) {
@@ -1091,6 +1232,8 @@ export default function App() {
   const menuDefinitions: MenuDefinition[] = [
     { id: 'file', label: 'Fichier', items: [
       { id: 'open', label: 'Ouvrir un fichier…', shortcut: 'Ctrl+O', icon: <FileUp size={15} />, onSelect: () => void handleOpen() },
+      { id: 'folder-search', label: 'Rechercher dans un dossier…', icon: <FolderSearch size={15} />, dividerBefore: true, disabled: !isTauri(), onSelect: () => setFolderSearchOpen(true) },
+      { id: 'compare-text', label: 'Comparer des fichiers texte…', icon: <FileDiff size={15} />, onSelect: () => setTextDiffOpen(true) },
       { id: 'save', label: 'Enregistrer', shortcut: 'Ctrl+S', icon: <Save size={15} />, disabled: !dirty || !canEdit, onSelect: () => void handleSave() },
       { id: 'save-as', label: 'Enregistrer sous…', shortcut: 'Ctrl+Maj+S', icon: <FileText size={15} />, disabled: !canEdit, onSelect: () => void handleSave(true) },
       { id: 'close', label: 'Fermer le fichier actif', shortcut: 'Ctrl+W', icon: <X size={15} />, disabled: !activeDoc, dividerBefore: true, onSelect: () => { if (activeId) closeDocument(activeId); } },
@@ -1116,13 +1259,16 @@ export default function App() {
       { id: 'settings', label: 'Paramètres…', shortcut: 'Ctrl+,', icon: <Settings2 size={15} />, dividerBefore: true, onSelect: () => setSettingsOpen(true) },
     ] },
     { id: 'help', label: 'Aide', items: [
-      { id: 'palette', label: 'Palette de commandes…', shortcut: 'Ctrl+Maj+P', icon: <Command size={15} />, onSelect: () => setCommandPaletteOpen(true) },
+      { id: 'welcome-guide', label: 'Guide de prise en main', icon: <BookOpenText size={15} />, onSelect: () => setWelcomeOpen(true) },
+      { id: 'palette', label: 'Ouverture rapide…', shortcut: 'Ctrl+P', icon: <Command size={15} />, onSelect: () => setCommandPaletteOpen(true) },
       { id: 'shortcuts', label: 'Raccourcis clavier', icon: <Keyboard size={15} />, onSelect: () => setShortcutsOpen(true) },
     ] },
   ];
 
   const commands: CommandOption[] = [
     { id: 'open', label: 'Ouvrir un fichier', detail: 'Parcourir votre appareil', shortcut: 'Ctrl+O', keywords: 'parcourir importer', icon: <FileUp size={16} />, onSelect: () => void handleOpen() },
+    { id: 'folder-search', label: 'Rechercher dans un dossier', detail: 'Recherche locale à la demande', keywords: 'chercher dossier contenu fichiers', icon: <FolderSearch size={16} />, disabled: !isTauri(), onSelect: () => setFolderSearchOpen(true) },
+    { id: 'compare-text', label: 'Comparer des fichiers texte', detail: 'Afficher les différences de deux onglets', keywords: 'diff comparaison code texte', icon: <FileDiff size={16} />, onSelect: () => setTextDiffOpen(true) },
     { id: 'save', label: 'Enregistrer', detail: 'Sauvegarder les modifications', shortcut: 'Ctrl+S', keywords: 'sauvegarde fichier', icon: <Save size={16} />, disabled: !dirty || !canEdit, onSelect: () => void handleSave() },
     { id: 'find', label: 'Rechercher', detail: 'Trouver du texte dans le fichier actif', shortcut: 'Ctrl+F', keywords: 'chercher trouver', icon: <Search size={16} />, disabled: !canReadText, onSelect: () => { setSearchOpen(true); setReplaceOpen(false); } },
     { id: 'replace', label: 'Rechercher et remplacer', detail: 'Remplacer plusieurs occurrences', shortcut: 'Ctrl+H', keywords: 'édition texte', icon: <Replace size={16} />, disabled: !canEdit, onSelect: () => { setSearchOpen(true); setReplaceOpen(true); } },
@@ -1132,11 +1278,32 @@ export default function App() {
     { id: 'group-rename', label: 'Renommer le groupe actuel', detail: currentGroup?.name ?? 'Sélectionnez un groupe d’abord', shortcut: 'F2', keywords: 'nom collection', icon: <Pencil size={16} />, disabled: !currentGroup, onSelect: () => { if (currentGroup) openGroupDialog(currentGroup.id); } },
     { id: 'theme', label: 'Changer de thème', detail: `Passer au thème ${preferences.theme === 'light' ? 'sombre' : 'clair'}`, keywords: 'personnalisation apparence', icon: preferences.theme === 'light' ? <Moon size={16} /> : <Sun size={16} />, onSelect: () => updatePreference('theme', preferences.theme === 'light' ? 'dark' : 'light') },
     { id: 'settings', label: 'Ouvrir les paramètres', detail: 'Apparence, barre d’outils et éditeur', shortcut: 'Ctrl+,', keywords: 'options personnaliser', icon: <Settings2 size={16} />, onSelect: () => setSettingsOpen(true) },
+    { id: 'welcome-guide', label: 'Afficher le guide de prise en main', detail: 'Revoir les premières étapes de Noto', keywords: 'aide bienvenue premier démarrage', icon: <BookOpenText size={16} />, onSelect: () => setWelcomeOpen(true) },
     { id: 'shortcuts', label: 'Afficher les raccourcis clavier', detail: 'Voir toutes les commandes clavier', keywords: 'aide clavier', icon: <Keyboard size={16} />, onSelect: () => setShortcutsOpen(true) },
   ];
+  const openTabKeys = new Set(documents.map((document) => `${document.source}:${document.path}`));
+  commands.push(
+    ...documents.map((document) => ({
+      id: `open-tab:${document.id}`,
+      label: document.name,
+      detail: preferences.hidePaths ? 'Onglet ouvert' : `Onglet ouvert · ${document.path}`,
+      keywords: `onglet ouvert ${document.name} ${preferences.hidePaths ? '' : document.path}`,
+      icon: kindIcon(document.kind, 16),
+      onSelect: () => { setActiveId(document.id); setPage('file'); setIsEditing(false); },
+    })),
+    ...recents.filter((recent) => !openTabKeys.has(`${recent.source}:${recent.path}`)).map((recent) => ({
+      id: `open-recent:${recent.id}`,
+      label: recent.name,
+      detail: preferences.hidePaths ? 'Fichier récent' : `Fichier récent · ${recent.path}`,
+      keywords: `fichier récent ouvrir ${recent.name} ${preferences.hidePaths ? '' : recent.path}`,
+      icon: kindIcon(recent.kind, 16),
+      onSelect: () => { void handleRecent(recent); },
+    })),
+  );
 
   function fileContextActions(contextFile: RecentFile): MenuEntry[] {
-    const isOpen = documents.some((document) => document.source === contextFile.source && document.path === contextFile.path);
+    const openContextDocument = documents.find((document) => document.source === contextFile.source && document.path === contextFile.path);
+    const isOpen = Boolean(openContextDocument);
     const inCurrentGroup = currentGroup?.files.some((file) => file.id === contextFile.id) ?? false;
     const items: MenuEntry[] = [
       { id: 'open-file', label: 'Ouvrir le fichier', icon: <FileUp size={15} />, onSelect: () => void handleRecent(contextFile) },
@@ -1150,6 +1317,9 @@ export default function App() {
     ];
     if (inCurrentGroup && currentGroup) items.push({ id: 'remove-from-group', label: `Retirer de « ${currentGroup.name} »`, icon: <X size={15} />, dividerBefore: true, onSelect: () => setGroups((current) => removeGroupFile(current, currentGroup.id, contextFile.id)) });
     if (recents.some((file) => file.id === contextFile.id)) items.push({ id: 'remove-recent', label: 'Retirer des fichiers récents', icon: <X size={15} />, dividerBefore: !inCurrentGroup, onSelect: () => setRecents((current) => current.filter((file) => file.id !== contextFile.id)) });
+    if (openContextDocument && comparableDocuments.length > 1 && isComparableDocument(openContextDocument)) {
+      items.push({ id: 'compare-open-files', label: 'Comparer les fichiers ouverts…', icon: <FileDiff size={15} />, dividerBefore: true, onSelect: () => setTextDiffOpen(true) });
+    }
     if (isOpen) items.push({ id: 'close-file', label: 'Fermer le fichier', icon: <X size={15} />, dividerBefore: true, onSelect: () => {
       const openDocument = documentsRef.current.find((document) => document.source === contextFile.source && document.path === contextFile.path);
       if (openDocument) closeDocument(openDocument.id);
@@ -1353,6 +1523,7 @@ export default function App() {
                 <button className={editorMode === 'preview' ? 'selected' : ''} type="button" onClick={() => setEditorMode('preview')}><BookOpenText size={14} />Aperçu</button>
               </div>}
               {toolbar}
+              {comparableDocuments.length > 1 && <button className="secondary-button topbar-compare-button" type="button" title="Comparer les fichiers texte ouverts" onClick={() => setTextDiffOpen(true)}><FileDiff size={14} /><span>Comparer</span></button>}
             </>}
             <button className="icon-action settings-top-action" type="button" title="Paramètres (Ctrl+,)" aria-label="Paramètres" onClick={() => setSettingsOpen(true)}><Settings2 size={17} /></button>
           </div>
@@ -1432,7 +1603,7 @@ export default function App() {
           {page === 'group' && currentGroup && <GroupScreen group={currentGroup} hidePaths={preferences.hidePaths} onOpen={() => void handleOpen()} onOpenAll={() => void openAllGroupFiles(currentGroup)} onRecent={(recent) => void handleRecent(recent)} onRemoveFile={(id) => setGroups((current) => removeGroupFile(current, currentGroup.id, id))} onRemoveFiles={(ids) => setGroups((current) => removeGroupFiles(current, currentGroup.id, ids))} onRename={() => setGroupDialog({ groupId: currentGroup.id })} onDelete={deleteCurrentGroup} />}
           {page === 'group' && !currentGroup && <HomeScreen recents={recents} hidePaths={preferences.hidePaths} onOpen={() => void handleOpen()} onRecent={(recent) => void handleRecent(recent)} onViewAll={() => setPage('recents')} />}
           {page === 'file' && activeDoc && <div className={`document-workspace ${activeDoc.kind === 'markdown' ? 'is-markdown' : ''}`}>
-            {activeDoc.truncated && <div className="partial-warning"><CircleHelp size={15} /><span>Aperçu partiel — seules les premières lignes sont chargées. L’édition et l’enregistrement sont désactivés.</span></div>}
+            {activeDoc.truncated && <div className="partial-warning"><CircleHelp size={15} /><span>Aperçu partiel — le contenu complet reste accessible lorsque le lecteur le permet. L’édition et l’enregistrement sont désactivés.</span></div>}
             {activeDoc.kind === 'unknown' && !canReadText ? <UnsupportedFile document={activeDoc} onOpenText={() => setTextFallbackIds((current) => new Set(current).add(activeDoc.id))} /> : (
               <ViewerContent
                 document={activeDoc}
@@ -1446,6 +1617,8 @@ export default function App() {
                 searchQuery={searchOpen ? query : ''}
                 pdfSearchRequest={pdfFindRequest}
                 fileContextItems={fileContextActions(recentFromDocument(activeDoc))}
+                onOpenPath={navigateImageSibling}
+                onProgressiveContent={commitProgressiveContent}
               />
             )}
           </div>}
@@ -1459,9 +1632,12 @@ export default function App() {
       </main>
 
       {dragging && <div className="drop-overlay" onDragLeave={() => setDragging(false)}><div className="drop-overlay-card"><span className="drop-icon"><FileUp size={25} /></span><strong>Déposez pour ouvrir</strong><span>Texte, code, PDF, présentations, documents et images…</span></div></div>}
-      {loading && <div className="loading-overlay"><div className="loading-card"><LoaderCircle size={20} className="spin" /><span>{loadingMessage}</span></div></div>}
+      {loading && <div className="loading-overlay" aria-busy="true"><div className="loading-card" role="status" aria-live="polite"><LoaderCircle size={20} className="spin" /><div className="loading-copy"><span>{loadingMessage}</span>{loadingSlow && <small>Encore un instant : Noto termine cette opération localement. Aucun contenu n’est transmis.</small>}</div></div></div>}
       {toast && <div className={`toast toast-${toastKind}`} role="status"><span className="toast-mark">{toastKind === 'success' ? <Check size={14} /> : <CircleHelp size={14} />}</span>{toast}</div>}
-      {settingsOpen && <SettingsModal preferences={preferences} onChange={updatePreference} onClose={() => setSettingsOpen(false)} onClearRecents={() => { setRecents([]); notify('La liste des fichiers récents a été effacée.'); }} onResetDefaults={resetPreferences} onClearDrafts={clearDraftRecoveryData} onMoveToolbar={moveToolbarAction} onToggleToolbar={toggleToolbarAction} onOpenShortcuts={() => { setSettingsOpen(false); setShortcutsOpen(true); }} onExportBackup={exportLocalSettings} onImportBackup={(file) => void importLocalSettings(file)} />}
+      {settingsOpen && <SettingsModal preferences={preferences} onChange={updatePreference} onClose={() => setSettingsOpen(false)} onClearRecents={() => { setRecents([]); notify('La liste des fichiers récents a été effacée.'); }} onResetDefaults={resetPreferences} onClearDrafts={clearDraftRecoveryData} onMoveToolbar={moveToolbarAction} onToggleToolbar={toggleToolbarAction} onOpenShortcuts={() => { setSettingsOpen(false); setShortcutsOpen(true); }} onOpenWindowsDefaults={() => void openWindowsDefaults()} onExportBackup={exportLocalSettings} onImportBackup={(file) => void importLocalSettings(file)} />}
+      {folderSearchOpen && <FolderSearchDialog hidePaths={preferences.hidePaths} onOpenFile={(path, line, query) => { setFolderSearchOpen(false); void openTauriPath(path, { line, query }); }} onClose={() => setFolderSearchOpen(false)} />}
+      {textDiffOpen && <TextDiffDialog documents={documents} initialLeftId={activeDoc?.id ?? null} onOpenFile={() => void handleOpen()} onClose={() => setTextDiffOpen(false)} />}
+      {welcomeOpen && <WelcomeDialog onOpenFile={() => { closeWelcome(); void handleOpen(); }} onPinFolder={() => void pinWelcomeFolder()} onIntegrations={() => { closeWelcome(); setSettingsOpen(true); }} onClose={closeWelcome} />}
       {groupDialog && <GroupDialog group={groupDialog.groupId ? groups.find((group) => group.id === groupDialog.groupId) : undefined} onClose={() => setGroupDialog(null)} onSave={saveGroupDialog} />}
       {goToLineOpen && activeDoc && <GoToLineDialog lineCount={activeDoc.content.split('\\n').length} onGo={navigateToLine} onClose={() => setGoToLineOpen(false)} />}
       {saveAsDialogOpen && activeDoc && <SaveAsDialog fileName={activeDoc.name} error={saveAsError} onSave={(options) => void handleSave(true, options)} onClose={() => setSaveAsDialogOpen(false)} />}
@@ -1574,7 +1750,7 @@ function UnsupportedFile({ document, onOpenText }: { document: OpenDocument; onO
 }
 
 function ViewerContent({
-  document, documents, isEditing, editorMode, htmlMode, preferences, onChange, editorRef, searchQuery, pdfSearchRequest, fileContextItems,
+  document, documents, isEditing, editorMode, htmlMode, preferences, onChange, editorRef, searchQuery, pdfSearchRequest, fileContextItems, onOpenPath, onProgressiveContent,
 }: {
   document: OpenDocument;
   documents: OpenDocument[];
@@ -1587,6 +1763,8 @@ function ViewerContent({
   searchQuery: string;
   pdfSearchRequest: { id: number; backwards: boolean } | null;
   fileContextItems: MenuEntry[];
+  onOpenPath: (path: string) => void;
+  onProgressiveContent: (documentId: string, content: string, loadedBytes: number) => void;
 }) {
   const isMarkdown = document.kind === 'markdown';
   const showSource = isEditing && (isMarkdown ? editorMode !== 'preview' : true);
@@ -1605,6 +1783,10 @@ function ViewerContent({
     </div>;
   }
 
+  if (document.truncated && ['markdown', 'text', 'code', 'html', 'unknown'].includes(document.kind)) {
+    return <ProgressiveTextViewer document={document} lineNumbers={preferences.lineNumbers} wordWrap={preferences.wordWrap} fontSize={preferences.textSize} onContentLoaded={onProgressiveContent} />;
+  }
+
   if (document.kind === 'markdown') return <div className="reader-scroll"><Suspense fallback={<div className="viewer-empty">Préparation du rendu…</div>}><MarkdownViewer source={document.content} document={document} documents={documents} /></Suspense></div>;
   if (document.kind === 'code' || document.kind === 'text' || (document.kind === 'unknown' && (document.content.length > 0 || document.size === 0))) {
     const displayContent = document.extension === 'json' ? formatJsonForDisplay(document.content) : document.content;
@@ -1612,18 +1794,18 @@ function ViewerContent({
     const validationMessage = jsonError ? `JSON invalide · ligne ${jsonError.line}, colonne ${jsonError.column} · ${jsonError.message}` : undefined;
     return <CodeViewer content={displayContent} extension={document.extension} lineNumbers={preferences.lineNumbers} wordWrap={preferences.wordWrap} fontSize={preferences.textSize} validationMessage={validationMessage} />;
   }
-  if (document.kind === 'csv') return <CsvViewer content={document.content} />;
+  if (document.kind === 'csv') return <CsvViewer content={document.content} fileName={document.name} />;
   if (document.kind === 'html') return htmlMode === 'preview'
     ? <HtmlViewer source={document.content} mode="preview" />
     : <CodeViewer content={document.content} extension="html" lineNumbers={preferences.lineNumbers} wordWrap={preferences.wordWrap} fontSize={preferences.textSize} />;
   if (document.kind === 'pdf') return <Suspense fallback={<div className="viewer-empty">Chargement du lecteur PDF…</div>}><PdfViewer document={document} searchQuery={searchQuery} searchRequest={pdfSearchRequest} fileContextItems={fileContextItems} /></Suspense>;
-  if (document.kind === 'image') return <Suspense fallback={<div className="viewer-empty">Chargement de l’image…</div>}><ImageViewer document={document} fileContextItems={fileContextItems} /></Suspense>;
+  if (document.kind === 'image') return <Suspense fallback={<div className="viewer-empty">Chargement de l’image…</div>}><ImageViewer document={document} fileContextItems={fileContextItems} onOpenPath={onOpenPath} /></Suspense>;
   if (document.kind === 'presentation') return <Suspense fallback={<div className="viewer-empty">Préparation du diaporama…</div>}><PresentationViewer document={document} fileContextItems={fileContextItems} /></Suspense>;
   if (document.kind === 'document' || document.kind === 'ebook') return <Suspense fallback={<div className="viewer-empty">Préparation du document…</div>}><OfficeDocumentViewer document={document} fileContextItems={fileContextItems} /></Suspense>;
   return <UnsupportedFile document={document} onOpenText={() => onChange(document.content)} />;
 }
 
-function SettingsModal({ preferences, onChange, onClose, onClearRecents, onResetDefaults, onClearDrafts, onMoveToolbar, onToggleToolbar, onOpenShortcuts, onExportBackup, onImportBackup }: {
+export function SettingsModal({ preferences, onChange, onClose, onClearRecents, onResetDefaults, onClearDrafts, onMoveToolbar, onToggleToolbar, onOpenShortcuts, onOpenWindowsDefaults, onExportBackup, onImportBackup }: {
   preferences: Preferences;
   onChange: <K extends keyof Preferences>(key: K, value: Preferences[K]) => void;
   onClose: () => void;
@@ -1633,6 +1815,7 @@ function SettingsModal({ preferences, onChange, onClose, onClearRecents, onReset
   onMoveToolbar: (action: ToolbarAction, direction: -1 | 1) => void;
   onToggleToolbar: (action: ToolbarAction) => void;
   onOpenShortcuts: () => void;
+  onOpenWindowsDefaults: () => void;
   onExportBackup: () => void;
   onImportBackup: (file: File) => void;
 }) {
@@ -1676,6 +1859,11 @@ function SettingsModal({ preferences, onChange, onClose, onClearRecents, onReset
           <div className="setting-row"><div className="setting-label"><strong>Police de l’éditeur</strong><small>Taille de la police monospace.</small></div><div className="select-wrap"><select value={preferences.editorSize} onChange={(event) => onChange('editorSize', Number(event.target.value))}><option value={12}>12 px</option><option value={14}>14 px</option><option value={16}>16 px</option><option value={18}>18 px</option><option value={20}>20 px</option></select><ChevronDown size={14} /></div></div>
           <div className="setting-row"><div className="setting-label"><strong>Numéros de lignes</strong><small>Repérez-vous dans le fichier.</small></div><button className={`toggle ${preferences.lineNumbers ? 'on' : ''}`} type="button" role="switch" aria-checked={preferences.lineNumbers} onClick={() => onChange('lineNumbers', !preferences.lineNumbers)}><i /></button></div>
           <div className="setting-row"><div className="setting-label"><strong>Retour à la ligne</strong><small>Renvoyer les longues lignes à la ligne.</small></div><button className={`toggle ${preferences.wordWrap ? 'on' : ''}`} type="button" role="switch" aria-checked={preferences.wordWrap} onClick={() => onChange('wordWrap', !preferences.wordWrap)}><i /></button></div>
+        </section>
+        <section className="settings-section"><div className="settings-section-title"><span>WINDOWS & ASSOCIATIONS</span><small>Gardez le contrôle des applications par défaut.</small></div>
+          <div className="setting-row windows-defaults-row"><div className="setting-label"><strong>Applications par défaut</strong><small>Noto peut être proposé pour les formats pris en charge. Windows vous laisse choisir, sans remplacer silencieusement vos associations actuelles.</small></div><button className="subtle-button" type="button" disabled={!isTauri()} onClick={onOpenWindowsDefaults}><Globe2 size={14} />Ouvrir les paramètres Windows</button></div>
+          <div className="integration-format-list" aria-label="Formats déclarés par Noto"><span><strong>Texte & code</strong><small>TXT · MD · JSON · JS · CSS · YAML…</small></span><span><strong>Lecture</strong><small>PDF · images · EPUB</small></span><span><strong>Données & documents</strong><small>CSV · TSV · DOCX · ODT · PPTX · ODP</small></span></div>
+          <div className="settings-inline-note"><ShieldCheck size={14} />Noto ne modifie pas les applications par défaut sans votre accord. Les préférences se gèrent dans Windows.</div>
         </section>
         <section className="settings-section settings-general"><div className="settings-section-title"><span>GÉNÉRAL</span></div>
           <div className="setting-row backup-setting-row"><div className="setting-label"><strong>Sauvegarde locale</strong><small>Exporter ou importer groupes et paramètres ; les chemins sont inclus, jamais le contenu des fichiers.</small></div><div className="backup-buttons"><button className="subtle-button" type="button" onClick={onExportBackup}><Download size={13} />Exporter</button><button className="subtle-button" type="button" onClick={() => backupInputRef.current?.click()}><Upload size={13} />Importer</button><input ref={backupInputRef} className="visually-hidden" type="file" accept="application/json,.json" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; if (file) onImportBackup(file); }} aria-label="Choisir une sauvegarde Noto à importer" /></div></div>

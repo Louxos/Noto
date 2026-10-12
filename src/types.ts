@@ -1,4 +1,4 @@
-import type { FileKind } from './lib/fileTypes';
+import type { DocumentTextEncoding, FileKind } from './lib/fileTypes';
 
 export interface BrowserFileHandle {
   readonly name?: string;
@@ -15,6 +15,8 @@ export interface OpenDocument {
   content: string;
   savedContent: string;
   bytes?: Uint8Array;
+  loadedBytes?: number;
+  textEncoding?: DocumentTextEncoding;
   mimeType: string;
   size: number;
   modifiedAt?: number;

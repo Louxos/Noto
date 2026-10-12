@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { decodeText, getExtension, getFileKind, isProbablyText } from './fileTypes';
+import { completeTextByteLength, decodeText, detectTextEncoding, getExtension, getFileKind, isProbablyText } from './fileTypes';
 
 describe('file type helpers', () => {
   it('recognizes supported viewer families', () => {
@@ -22,6 +22,14 @@ describe('file type helpers', () => {
   it('handles dotfiles and Windows paths', () => {
     expect(getExtension('C:\\work\\.gitignore')).toBe('gitignore');
     expect(getFileKind('.env')).toBe('code');
+  });
+
+  it('detects UTF-8 when a progressive preview ends inside a multibyte character', () => {
+    const incomplete = new TextEncoder().encode('Aé').subarray(0, 2);
+    const encoding = detectTextEncoding(incomplete, true);
+    expect(encoding).toBe('utf-8');
+    expect(completeTextByteLength(incomplete, encoding)).toBe(1);
+    expect(decodeText(incomplete.subarray(0, 1), encoding)).toBe('A');
   });
 
   it('sniffs plain text without classifying binary null bytes as text', () => {

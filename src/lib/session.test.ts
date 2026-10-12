@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { clearDesktopSession, loadDesktopSession, loadDesktopSessionState, saveDesktopSession } from './session';
+import { clearDesktopSession, loadDesktopSession, loadDesktopSessionState, reopenSessionFiles, saveDesktopSession } from './session';
 import type { OpenDocument } from '../types';
 
 const storage = new Map<string, string>();
@@ -9,7 +9,14 @@ vi.stubGlobal('localStorage', {
   removeItem: (key: string) => storage.delete(key),
 });
 
-afterEach(() => { storage.clear(); });
+afterEach(() => {
+  storage.clear();
+  vi.stubGlobal('localStorage', {
+    getItem: (key: string) => storage.get(key) ?? null,
+    setItem: (key: string, value: string) => storage.set(key, value),
+    removeItem: (key: string) => storage.delete(key),
+  });
+});
 
 describe('opt-in desktop session paths', () => {
   it('stores paths only and restores a bounded list', () => {
@@ -24,6 +31,31 @@ describe('opt-in desktop session paths', () => {
   it('migrates an older path-list-only session format', () => {
     storage.set('noto.session.v1', JSON.stringify([{ path: '/legacy.md', name: 'legacy.md' }]));
     expect(loadDesktopSessionState()).toMatchObject({ files: [{ path: '/legacy.md', name: 'legacy.md' }], page: 'home', activePath: null });
+  });
+
+  it('restores accessible files and reports moved or deleted session paths', async () => {
+    const files = [
+      { path: '/notes/first.md', name: 'first.md' },
+      { path: '/notes/missing.md', name: 'missing.md' },
+      { path: '/notes/last.md', name: 'last.md' },
+    ];
+    const restored = await reopenSessionFiles(files, async (path) => {
+      if (path.endsWith('missing.md')) throw new Error('missing');
+      return { id: path, path, name: path.split('/').at(-1)!, source: 'desktop' } as OpenDocument;
+    });
+    expect(restored.documents.map((document) => document.path)).toEqual(['/notes/first.md', '/notes/last.md']);
+    expect(restored.unavailable).toEqual([files[1]]);
+  });
+
+  it('treats unavailable or full local storage as a recoverable best-effort failure', () => {
+    vi.stubGlobal('localStorage', {
+      getItem: () => { throw new Error('storage unavailable'); },
+      setItem: () => { throw new Error('quota exceeded'); },
+      removeItem: () => { throw new Error('storage unavailable'); },
+    });
+    expect(() => saveDesktopSession([{ path: '/notes/a.md', name: 'a.md', source: 'desktop' } as OpenDocument])).not.toThrow();
+    expect(loadDesktopSessionState()).toMatchObject({ files: [], activePath: null, activeGroupId: null, page: 'home' });
+    expect(() => clearDesktopSession()).not.toThrow();
   });
 
   it('clears session paths when disabled', () => {

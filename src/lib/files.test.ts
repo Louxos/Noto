@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatBytes, loadBrowserFile, saveDocument } from './files';
+import { decodeTextChunkBuffer, formatBytes, loadBrowserFile, saveDocument } from './files';
 import type { BrowserFileHandle } from '../types';
 
 describe('file utilities', () => {
@@ -7,6 +7,12 @@ describe('file utilities', () => {
     expect(formatBytes(0)).toBe('0 o');
     expect(formatBytes(2_400)).toBe('2,4 Ko');
     expect(formatBytes(2_000_000)).toBe('2 Mo');
+  });
+
+  it('preserves UTF-8 characters that span progressive-read chunk boundaries', () => {
+    const bytes = new TextEncoder().encode('AéB');
+    expect(decodeTextChunkBuffer(bytes, 0, 2, 'utf-8')).toEqual({ content: 'éB', nextOffset: 4 });
+    expect(decodeTextChunkBuffer(bytes.subarray(0, 2), 0, 1, 'utf-8')).toEqual({ content: '', nextOffset: 1 });
   });
 
   it('opens and saves a local text file through an explicitly granted handle', async () => {

@@ -1,11 +1,12 @@
 import { invoke, isTauri } from '@tauri-apps/api/core';
-import { getExtension, getFileKind, isProbablyText, decodeText, mimeTypeFor, type FileKind } from './fileTypes';
+import { getExtension, getFileKind, isProbablyText, decodeText, detectTextEncoding, completeTextByteLength, mimeTypeFor, type DocumentTextEncoding, type FileKind } from './fileTypes';
 import { encodeTextForSave, type LineEndingChoice, type TextEncoding } from './saveFormat';
 import type { BrowserFileHandle, OpenDocument } from '../types';
 
 export const MAX_TEXT_PREVIEW_BYTES = 8 * 1024 * 1024;
 const PARTIAL_TEXT_BYTES = 1 * 1024 * 1024;
 const PARTIAL_TEXT_CHARACTERS = 1_000_000;
+const PROGRESSIVE_TEXT_CHUNK_BYTES = 1 * 1024 * 1024;
 const LARGE_BINARY_BYTES = 50 * 1024 * 1024;
 
 interface BrowserPickerWindow extends Window {
@@ -30,6 +31,64 @@ function confirmLargeFile(name: string, size: number): boolean {
   );
 }
 
+async function readDesktopPrefix(path: string, maximumBytes: number): Promise<Uint8Array> {
+  const { open } = await import('@tauri-apps/plugin-fs');
+  const file = await open(path, { read: true });
+  try {
+    const buffer = new Uint8Array(maximumBytes);
+    let length = 0;
+    while (length < maximumBytes) {
+      const bytesRead = await file.read(buffer.subarray(length));
+      if (bytesRead === null || bytesRead === 0) break;
+      length += bytesRead;
+    }
+    return buffer.slice(0, length);
+  } finally {
+    await file.close();
+  }
+}
+
+export async function readDesktopTextChunk(path: string, offset: number, encoding: DocumentTextEncoding, maximumBytes = PROGRESSIVE_TEXT_CHUNK_BYTES): Promise<{ content: string; nextOffset: number }> {
+  const { open, SeekMode } = await import('@tauri-apps/plugin-fs');
+  const startOffset = Math.max(0, offset - Math.min(4, offset));
+  const file = await open(path, { read: true });
+  try {
+    await file.seek(startOffset, SeekMode.Start);
+    const buffer = new Uint8Array(maximumBytes + offset - startOffset);
+    let length = 0;
+    while (length < buffer.length) {
+      const bytesRead = await file.read(buffer.subarray(length));
+      if (bytesRead === null || bytesRead === 0) break;
+      length += bytesRead;
+    }
+    return decodeTextChunkBuffer(buffer.subarray(0, length), startOffset, offset, encoding);
+  } finally {
+    await file.close();
+  }
+}
+
+export async function readBrowserTextChunk(handle: BrowserFileHandle, offset: number, encoding: DocumentTextEncoding, maximumBytes = PROGRESSIVE_TEXT_CHUNK_BYTES): Promise<{ content: string; nextOffset: number }> {
+  const file = await handle.getFile();
+  const startOffset = Math.max(0, offset - Math.min(4, offset));
+  const buffer = new Uint8Array(await file.slice(startOffset, offset + maximumBytes).arrayBuffer());
+  return decodeTextChunkBuffer(buffer, startOffset, offset, encoding);
+}
+
+export function decodeTextChunkBuffer(buffer: Uint8Array, startOffset: number, offset: number, encoding: DocumentTextEncoding): { content: string; nextOffset: number } {
+  let dataStart = 0;
+  if (encoding === 'utf-8') {
+    while (dataStart < Math.min(offset - startOffset, buffer.length) && (buffer[dataStart] & 0xc0) === 0x80) dataStart += 1;
+  } else if (encoding.startsWith('utf-16') && (startOffset % 2) !== 0) dataStart = 1;
+
+  const safeDataLength = completeTextByteLength(buffer.subarray(dataStart), encoding);
+
+  const data = buffer.subarray(dataStart, dataStart + safeDataLength);
+  const prefixByteLength = Math.max(0, Math.min(data.length, offset - startOffset - dataStart));
+  const prefix = new TextDecoder(encoding).decode(data.subarray(0, prefixByteLength), { stream: true });
+  const text = new TextDecoder(encoding).decode(data);
+  return { content: text.slice(prefix.length), nextOffset: startOffset + dataStart + safeDataLength };
+}
+
 export function formatBytes(bytes: number): string {
   if (bytes < 1_000) return `${bytes} o`;
   const units = ['Ko', 'Mo', 'Go'];
@@ -48,6 +107,8 @@ function documentRecord(input: {
   kind: FileKind;
   content?: string;
   bytes?: Uint8Array;
+  loadedBytes?: number;
+  textEncoding?: DocumentTextEncoding;
   mimeType?: string;
   size: number;
   modifiedAt?: number;
@@ -65,6 +126,8 @@ function documentRecord(input: {
     content,
     savedContent: content,
     bytes: input.bytes,
+    loadedBytes: input.loadedBytes,
+    textEncoding: input.textEncoding,
     mimeType: input.mimeType ?? mimeTypeFor(input.name),
     size: input.size,
     modifiedAt: input.modifiedAt,
@@ -85,13 +148,18 @@ export async function loadBrowserFile(file: File, handle?: BrowserFileHandle): P
   if (isText) {
     if (file.size > MAX_TEXT_PREVIEW_BYTES && !confirmLargeFile(name, file.size)) return null;
     const truncated = file.size > MAX_TEXT_PREVIEW_BYTES;
-    const source = truncated ? file.slice(0, PARTIAL_TEXT_BYTES) : file;
-    const content = decodeText(new Uint8Array(await source.arrayBuffer()));
+    const source = truncated ? file.slice(0, PARTIAL_TEXT_BYTES + 4) : file;
+    const bytes = new Uint8Array(await source.arrayBuffer());
+    const textEncoding = detectTextEncoding(bytes, truncated);
+    const textBytes = bytes.subarray(0, truncated ? completeTextByteLength(bytes, textEncoding) : bytes.length);
+    const content = decodeText(textBytes, textEncoding);
     return documentRecord({
       name,
       path: file.webkitRelativePath || file.name,
       kind: initialKind,
       content,
+      loadedBytes: truncated ? textBytes.length : undefined,
+      textEncoding,
       mimeType: file.type || mimeTypeFor(name),
       size: file.size,
       modifiedAt: file.lastModified,
@@ -106,13 +174,17 @@ export async function loadBrowserFile(file: File, handle?: BrowserFileHandle): P
     if (isProbablyText(sample)) {
       if (file.size > MAX_TEXT_PREVIEW_BYTES && !largeFileConfirmed && !confirmLargeFile(name, file.size)) return null;
       const truncated = file.size > MAX_TEXT_PREVIEW_BYTES;
-      const textSource = truncated ? file.slice(0, PARTIAL_TEXT_BYTES) : file;
+      const textSource = truncated ? file.slice(0, PARTIAL_TEXT_BYTES + 4) : file;
       const bytes = new Uint8Array(await textSource.arrayBuffer());
+      const textEncoding = detectTextEncoding(bytes, truncated);
+      const textBytes = bytes.subarray(0, truncated ? completeTextByteLength(bytes, textEncoding) : bytes.length);
       return documentRecord({
         name,
         path: file.webkitRelativePath || file.name,
         kind: 'unknown',
-        content: decodeText(bytes),
+        content: decodeText(textBytes, textEncoding),
+        loadedBytes: truncated ? textBytes.length : undefined,
+        textEncoding,
         mimeType: file.type || mimeTypeFor(name),
         size: file.size,
         modifiedAt: file.lastModified,
@@ -173,15 +245,30 @@ export async function openDesktopFiles(): Promise<OpenDocument[]> {
       const textKind = ['markdown', 'text', 'code', 'html', 'csv'].includes(kind);
       const warningLimit = kind === 'unknown' || textKind ? MAX_TEXT_PREVIEW_BYTES : LARGE_BINARY_BYTES;
       if (fileInfo.size > warningLimit && !confirmLargeFile(name, fileInfo.size)) continue;
-      const bytes = await readFile(path);
-      const isText = textKind || (kind === 'unknown' && isProbablyText(bytes));
-      const decoded = isText ? decodeText(bytes) : undefined;
-      const truncated = Boolean(decoded && fileInfo.size > MAX_TEXT_PREVIEW_BYTES);
+      let bytes: Uint8Array;
+      let isText = textKind;
+      let truncated = false;
+      if (textKind) {
+        truncated = fileInfo.size > MAX_TEXT_PREVIEW_BYTES;
+        bytes = truncated ? await readDesktopPrefix(path, PARTIAL_TEXT_BYTES + 4) : await readFile(path);
+      } else if (kind === 'unknown') {
+        const sample = await readDesktopPrefix(path, Math.min(8_192, fileInfo.size));
+        isText = isProbablyText(sample);
+        if (isText) {
+          truncated = fileInfo.size > MAX_TEXT_PREVIEW_BYTES;
+          bytes = truncated ? await readDesktopPrefix(path, PARTIAL_TEXT_BYTES + 4) : await readFile(path);
+        } else bytes = await readFile(path);
+      } else bytes = await readFile(path);
+      const textEncoding = isText ? detectTextEncoding(bytes, truncated) : undefined;
+      const loadedTextBytes = textEncoding && truncated ? completeTextByteLength(bytes, textEncoding) : bytes.length;
+      const decoded = textEncoding ? decodeText(bytes.subarray(0, loadedTextBytes), textEncoding) : undefined;
       documents.push(documentRecord({
         name,
         path,
         kind,
         content: decoded && truncated ? decoded.slice(0, PARTIAL_TEXT_CHARACTERS) : decoded,
+        loadedBytes: truncated ? loadedTextBytes : undefined,
+        textEncoding,
         bytes: isText ? undefined : bytes,
         mimeType: mimeTypeFor(name),
         size: fileInfo.size,
@@ -208,15 +295,30 @@ export async function readDesktopPath(path: string): Promise<OpenDocument> {
   if (fileInfo.size > warningLimit && !confirmLargeFile(name, fileInfo.size)) {
     throw new Error('Ouverture annulée.');
   }
-  const bytes = await readFile(path);
-  const isText = textKind || (kind === 'unknown' && isProbablyText(bytes));
-  const decoded = isText ? decodeText(bytes) : undefined;
-  const truncated = Boolean(decoded && fileInfo.size > MAX_TEXT_PREVIEW_BYTES);
+  let bytes: Uint8Array;
+  let isText = textKind;
+  let truncated = false;
+  if (textKind) {
+    truncated = fileInfo.size > MAX_TEXT_PREVIEW_BYTES;
+    bytes = truncated ? await readDesktopPrefix(path, PARTIAL_TEXT_BYTES + 4) : await readFile(path);
+  } else if (kind === 'unknown') {
+    const sample = await readDesktopPrefix(path, Math.min(8_192, fileInfo.size));
+    isText = isProbablyText(sample);
+    if (isText) {
+      truncated = fileInfo.size > MAX_TEXT_PREVIEW_BYTES;
+      bytes = truncated ? await readDesktopPrefix(path, PARTIAL_TEXT_BYTES + 4) : await readFile(path);
+    } else bytes = await readFile(path);
+  } else bytes = await readFile(path);
+  const textEncoding = isText ? detectTextEncoding(bytes, truncated) : undefined;
+  const loadedTextBytes = textEncoding && truncated ? completeTextByteLength(bytes, textEncoding) : bytes.length;
+  const decoded = textEncoding ? decodeText(bytes.subarray(0, loadedTextBytes), textEncoding) : undefined;
   return documentRecord({
     name,
     path,
     kind,
     content: decoded && truncated ? decoded.slice(0, PARTIAL_TEXT_CHARACTERS) : decoded,
+    loadedBytes: truncated ? loadedTextBytes : undefined,
+    textEncoding,
     bytes: isText ? undefined : bytes,
     mimeType: mimeTypeFor(name),
     size: fileInfo.size,
