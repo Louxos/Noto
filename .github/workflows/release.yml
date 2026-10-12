@@ -51,7 +51,19 @@ jobs:
       - run: npm run build
       - name: Test native Windows commands
         run: cargo test --manifest-path src-tauri/Cargo.toml
-      - run: npm run tauri:build
+      - name: Build Windows installers
+        shell: pwsh
+        run: |
+          $logPath = Join-Path $env:RUNNER_TEMP 'noto-tauri-build.log'
+          npm run tauri:build 2>&1 | Tee-Object -FilePath $logPath
+          $buildExitCode = $LASTEXITCODE
+          if ($buildExitCode -ne 0) {
+            Get-Content $logPath -Tail 25 | ForEach-Object {
+              $line = $_ -replace '%', '%25' -replace "`r", '%0D' -replace "`n", '%0A'
+              Write-Output "::error title=Tauri build output::$line"
+            }
+            exit $buildExitCode
+          }
       - name: Smoke-test Windows install, file opening, associations and uninstall
         shell: pwsh
         run: |
