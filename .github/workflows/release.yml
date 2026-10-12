@@ -67,6 +67,12 @@ jobs:
       - name: Smoke-test Windows install, file opening, associations and uninstall
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
+          trap {
+            $message = $_.Exception.Message -replace '%', '%25' -replace "`r", '%0D' -replace "`n", '%0A'
+            Write-Output "::error title=Windows installer smoke test::$message"
+            exit 1
+          }
           $bundleRoot = 'src-tauri/target/release/bundle'
           $samplePath = Join-Path $env:RUNNER_TEMP 'noto-file-open-smoke.md'
           Set-Content -Path $samplePath -Value '# Noto Windows smoke test' -Encoding utf8
