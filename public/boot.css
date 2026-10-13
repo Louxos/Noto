@@ -1,0 +1,208 @@
+#noto-boot-screen {
+  --boot-bg: #f7f8fa;
+  --boot-text: #292b3a;
+  --boot-muted: #8c8e9c;
+  --boot-accent: #7772d8;
+  --boot-accent-soft: #e8e6ff;
+  position: fixed;
+  z-index: 2147483000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: var(--boot-text);
+  background:
+    radial-gradient(ellipse at 50% 39%, rgba(232, 230, 255, .62), transparent 43%),
+    var(--boot-bg);
+  opacity: 1;
+  visibility: visible;
+  transition: opacity .28s ease, visibility .28s ease;
+  -webkit-font-smoothing: antialiased;
+}
+
+:root[data-theme='dark'] #noto-boot-screen {
+  --boot-bg: #1e1f25;
+  --boot-text: #e5e5ee;
+  --boot-muted: #999aa9;
+  --boot-accent: #aaa4ff;
+  --boot-accent-soft: #333147;
+  background:
+    radial-gradient(ellipse at 50% 39%, rgba(95, 83, 160, .22), transparent 43%),
+    var(--boot-bg);
+}
+
+:root[data-accent='blue'] #noto-boot-screen { --boot-accent: #6687c4; --boot-accent-soft: #e9effb; }
+:root[data-accent='mint'] #noto-boot-screen { --boot-accent: #528f82; --boot-accent-soft: #e8f3ef; }
+:root[data-accent='rose'] #noto-boot-screen { --boot-accent: #bb728a; --boot-accent-soft: #f7edf1; }
+:root[data-theme='dark'][data-accent='blue'] #noto-boot-screen { --boot-accent: #9bb8f1; --boot-accent-soft: #2d374a; }
+:root[data-theme='dark'][data-accent='mint'] #noto-boot-screen { --boot-accent: #84c8b7; --boot-accent-soft: #293d39; }
+:root[data-theme='dark'][data-accent='rose'] #noto-boot-screen { --boot-accent: #e0a0b4; --boot-accent-soft: #44313a; }
+
+#noto-boot-screen.is-exiting {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.boot-screen-content {
+  display: flex;
+  width: min(340px, calc(100vw - 48px));
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  transform: translateY(-13px);
+  animation: boot-content-in .48s cubic-bezier(.2, .8, .2, 1) both;
+}
+
+.boot-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 34px;
+}
+
+.boot-brand-mark {
+  position: relative;
+  display: block;
+  width: 47px;
+  height: 47px;
+  flex: 0 0 47px;
+  overflow: hidden;
+  border-radius: 14px;
+  background: #eeeeff;
+  box-shadow: 0 5px 17px rgba(73, 70, 145, .12);
+}
+
+.boot-brand-mark span:first-child,
+.boot-brand-mark span:nth-child(2) {
+  position: absolute;
+  top: 12px;
+  bottom: 11px;
+  display: block;
+  width: 6px;
+  border-radius: 4px;
+  background: #292b3a;
+}
+
+.boot-brand-mark span:first-child { left: 12px; }
+.boot-brand-mark span:nth-child(2) { right: 12px; }
+
+.boot-brand-mark::after {
+  position: absolute;
+  top: 21px;
+  left: 9px;
+  width: 29px;
+  height: 6px;
+  border-radius: 5px;
+  background: #292b3a;
+  content: '';
+  transform: rotate(48deg);
+}
+
+.boot-brand-mark i {
+  position: absolute;
+  z-index: 1;
+  right: 9px;
+  bottom: 8px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #7772d8;
+}
+
+.boot-wordmark {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+
+.boot-wordmark strong {
+  color: var(--boot-text);
+  font: 800 31px/.9 'Manrope', 'Segoe UI', sans-serif;
+  letter-spacing: -2.1px;
+}
+
+.boot-wordmark small {
+  color: var(--boot-muted);
+  font: 700 8px/1.2 'DM Sans', 'Segoe UI', sans-serif;
+  letter-spacing: .16em;
+}
+
+.boot-loader-track {
+  position: relative;
+  width: 172px;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: var(--boot-accent-soft);
+}
+
+.boot-loader-track span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -36%;
+  width: 36%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, transparent, var(--boot-accent), transparent);
+  animation: boot-progress 1.2s ease-in-out infinite;
+}
+
+.boot-status {
+  margin: 16px 0 0;
+  color: var(--boot-text);
+  font: 500 11px/1.5 'DM Sans', 'Segoe UI', sans-serif;
+}
+
+.boot-slow-message {
+  max-width: 300px;
+  margin: 8px 0 0;
+  color: var(--boot-muted);
+  font: 400 9px/1.6 'DM Sans', 'Segoe UI', sans-serif;
+  animation: boot-message-in .3s ease-out both;
+}
+
+.boot-slow-message[hidden] { display: none; }
+
+.boot-local-note {
+  position: absolute;
+  bottom: 29px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--boot-muted);
+  font: 700 8px/1 'DM Sans', 'Segoe UI', sans-serif;
+  letter-spacing: .13em;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+
+.boot-local-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #67a18e;
+  box-shadow: 0 0 0 4px rgba(103, 161, 142, .12);
+}
+
+@keyframes boot-progress {
+  from { transform: translateX(0); }
+  to { transform: translateX(480%); }
+}
+
+@keyframes boot-content-in {
+  from { opacity: 0; transform: translateY(-7px); }
+  to { opacity: 1; transform: translateY(-13px); }
+}
+
+@keyframes boot-message-in {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #noto-boot-screen, .boot-screen-content, .boot-slow-message { animation: none; transition-duration: .01ms; }
+  .boot-loader-track span { animation: none; left: 32%; width: 36%; }
+}

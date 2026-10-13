@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f7f8fa" />
+    <meta name="description" content="Noto — ouvrez, consultez et modifiez vos fichiers en toute simplicité." />
+    <link rel="stylesheet" href="/boot.css" />
+    <title>Noto — Lecteur de fichiers</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <div id="noto-boot-screen" role="status" aria-live="polite" aria-label="Chargement de Noto">
+      <div class="boot-screen-content">
+        <div class="boot-brand" aria-label="Noto">
+          <span class="boot-brand-mark" aria-hidden="true"><span></span><span></span><i></i></span>
+          <span class="boot-wordmark"><strong>noto</strong><small>ESPACE DE FICHIERS LOCAL</small></span>
+        </div>
+        <div class="boot-loader-track" role="presentation"><span></span></div>
+        <p class="boot-status">Préparation de votre espace…</p>
+        <p id="noto-boot-slow-message" class="boot-slow-message" hidden>Le démarrage prend un peu plus de temps que prévu. Vos fichiers restent sur cet appareil.</p>
+      </div>
+      <div class="boot-local-note"><span class="boot-local-dot" aria-hidden="true"></span> VOS FICHIERS RESTENT LOCAUX</div>
+    </div>
+    <script src="/boot.js"></script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

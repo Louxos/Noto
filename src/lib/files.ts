@@ -1,0 +1,401 @@
+import { invoke, isTauri } from '@tauri-apps/api/core';
+import { getExtension, getFileKind, isProbablyText, decodeText, detectTextEncoding, completeTextByteLength, mimeTypeFor, type DocumentTextEncoding, type FileKind } from './fileTypes';
+import { encodeTextForSave, type LineEndingChoice, type TextEncoding } from './saveFormat';
+import type { BrowserFileHandle, OpenDocument } from '../types';
+
+export const MAX_TEXT_PREVIEW_BYTES = 8 * 1024 * 1024;
+const PARTIAL_TEXT_BYTES = 1 * 1024 * 1024;
+const PARTIAL_TEXT_CHARACTERS = 1_000_000;
+const PROGRESSIVE_TEXT_CHUNK_BYTES = 1 * 1024 * 1024;
+const LARGE_BINARY_BYTES = 50 * 1024 * 1024;
+
+interface BrowserPickerWindow extends Window {
+  showOpenFilePicker?: (options?: { multiple?: boolean }) => Promise<Array<BrowserFileHandle & { name: string }>>;
+  showSaveFilePicker?: (options?: { suggestedName?: string }) => Promise<BrowserFileHandle>;
+}
+
+function makeId(): string {
+  return typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function pathName(path: string): string {
+  return path.replaceAll('\\', '/').split('/').pop() || path;
+}
+
+function confirmLargeFile(name: string, size: number): boolean {
+  const sizeLabel = formatBytes(size);
+  return window.confirm(
+    `« ${name} » fait ${sizeLabel}. La lecture d’un fichier volumineux peut ralentir Noto.\n\nVoulez-vous continuer ?`,
+  );
+}
+
+async function readDesktopPrefix(path: string, maximumBytes: number): Promise<Uint8Array> {
+  const { open } = await import('@tauri-apps/plugin-fs');
+  const file = await open(path, { read: true });
+  try {
+    const buffer = new Uint8Array(maximumBytes);
+    let length = 0;
+    while (length < maximumBytes) {
+      const bytesRead = await file.read(buffer.subarray(length));
+      if (bytesRead === null || bytesRead === 0) break;
+      length += bytesRead;
+    }
+    return buffer.slice(0, length);
+  } finally {
+    await file.close();
+  }
+}
+
+export async function readDesktopTextChunk(path: string, offset: number, encoding: DocumentTextEncoding, maximumBytes = PROGRESSIVE_TEXT_CHUNK_BYTES): Promise<{ content: string; nextOffset: number }> {
+  const { open, SeekMode } = await import('@tauri-apps/plugin-fs');
+  const startOffset = Math.max(0, offset - Math.min(4, offset));
+  const file = await open(path, { read: true });
+  try {
+    await file.seek(startOffset, SeekMode.Start);
+    const buffer = new Uint8Array(maximumBytes + offset - startOffset);
+    let length = 0;
+    while (length < buffer.length) {
+      const bytesRead = await file.read(buffer.subarray(length));
+      if (bytesRead === null || bytesRead === 0) break;
+      length += bytesRead;
+    }
+    return decodeTextChunkBuffer(buffer.subarray(0, length), startOffset, offset, encoding);
+  } finally {
+    await file.close();
+  }
+}
+
+export async function readBrowserTextChunk(handle: BrowserFileHandle, offset: number, encoding: DocumentTextEncoding, maximumBytes = PROGRESSIVE_TEXT_CHUNK_BYTES): Promise<{ content: string; nextOffset: number }> {
+  const file = await handle.getFile();
+  const startOffset = Math.max(0, offset - Math.min(4, offset));
+  const buffer = new Uint8Array(await file.slice(startOffset, offset + maximumBytes).arrayBuffer());
+  return decodeTextChunkBuffer(buffer, startOffset, offset, encoding);
+}
+
+export function decodeTextChunkBuffer(buffer: Uint8Array, startOffset: number, offset: number, encoding: DocumentTextEncoding): { content: string; nextOffset: number } {
+  let dataStart = 0;
+  if (encoding === 'utf-8') {
+    while (dataStart < Math.min(offset - startOffset, buffer.length) && (buffer[dataStart] & 0xc0) === 0x80) dataStart += 1;
+  } else if (encoding.startsWith('utf-16') && (startOffset % 2) !== 0) dataStart = 1;
+
+  const safeDataLength = completeTextByteLength(buffer.subarray(dataStart), encoding);
+
+  const data = buffer.subarray(dataStart, dataStart + safeDataLength);
+  const prefixByteLength = Math.max(0, Math.min(data.length, offset - startOffset - dataStart));
+  const prefix = new TextDecoder(encoding).decode(data.subarray(0, prefixByteLength), { stream: true });
+  const text = new TextDecoder(encoding).decode(data);
+  return { content: text.slice(prefix.length), nextOffset: startOffset + dataStart + safeDataLength };
+}
+
+export function formatBytes(bytes: number): string {
+  if (bytes < 1_000) return `${bytes} o`;
+  const units = ['Ko', 'Mo', 'Go'];
+  let value = bytes / 1_000;
+  let unit = 0;
+  while (value >= 1_000 && unit < units.length - 1) {
+    value /= 1_000;
+    unit += 1;
+  }
+  return `${value.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} ${units[unit]}`;
+}
+
+function documentRecord(input: {
+  name: string;
+  path: string;
+  kind: FileKind;
+  content?: string;
+  bytes?: Uint8Array;
+  loadedBytes?: number;
+  textEncoding?: DocumentTextEncoding;
+  mimeType?: string;
+  size: number;
+  modifiedAt?: number;
+  source: 'browser' | 'desktop';
+  handle?: BrowserFileHandle;
+  truncated?: boolean;
+}): OpenDocument {
+  const content = input.content ?? '';
+  return {
+    id: makeId(),
+    name: input.name,
+    path: input.path,
+    extension: getExtension(input.name),
+    kind: input.kind,
+    content,
+    savedContent: content,
+    bytes: input.bytes,
+    loadedBytes: input.loadedBytes,
+    textEncoding: input.textEncoding,
+    mimeType: input.mimeType ?? mimeTypeFor(input.name),
+    size: input.size,
+    modifiedAt: input.modifiedAt,
+    truncated: input.truncated ?? false,
+    source: input.source,
+    handle: input.handle,
+  };
+}
+
+export async function loadBrowserFile(file: File, handle?: BrowserFileHandle): Promise<OpenDocument | null> {
+  const initialKind = getFileKind(file.name);
+  const isText = ['markdown', 'text', 'code', 'html', 'csv'].includes(initialKind);
+  const name = file.name || 'Sans nom';
+  const largeFileConfirmed = initialKind === 'unknown' && file.size > MAX_TEXT_PREVIEW_BYTES;
+  if (largeFileConfirmed && !confirmLargeFile(name, file.size)) return null;
+  if (!isText && initialKind !== 'unknown' && file.size > LARGE_BINARY_BYTES && !confirmLargeFile(name, file.size)) return null;
+
+  if (isText) {
+    if (file.size > MAX_TEXT_PREVIEW_BYTES && !confirmLargeFile(name, file.size)) return null;
+    const truncated = file.size > MAX_TEXT_PREVIEW_BYTES;
+    const source = truncated ? file.slice(0, PARTIAL_TEXT_BYTES + 4) : file;
+    const bytes = new Uint8Array(await source.arrayBuffer());
+    const textEncoding = detectTextEncoding(bytes, truncated);
+    const textBytes = bytes.subarray(0, truncated ? completeTextByteLength(bytes, textEncoding) : bytes.length);
+    const content = decodeText(textBytes, textEncoding);
+    return documentRecord({
+      name,
+      path: file.webkitRelativePath || file.name,
+      kind: initialKind,
+      content,
+      loadedBytes: truncated ? textBytes.length : undefined,
+      textEncoding,
+      mimeType: file.type || mimeTypeFor(name),
+      size: file.size,
+      modifiedAt: file.lastModified,
+      source: 'browser',
+      handle,
+      truncated,
+    });
+  }
+
+  if (initialKind === 'unknown') {
+    const sample = new Uint8Array(await file.slice(0, 8_192).arrayBuffer());
+    if (isProbablyText(sample)) {
+      if (file.size > MAX_TEXT_PREVIEW_BYTES && !largeFileConfirmed && !confirmLargeFile(name, file.size)) return null;
+      const truncated = file.size > MAX_TEXT_PREVIEW_BYTES;
+      const textSource = truncated ? file.slice(0, PARTIAL_TEXT_BYTES + 4) : file;
+      const bytes = new Uint8Array(await textSource.arrayBuffer());
+      const textEncoding = detectTextEncoding(bytes, truncated);
+      const textBytes = bytes.subarray(0, truncated ? completeTextByteLength(bytes, textEncoding) : bytes.length);
+      return documentRecord({
+        name,
+        path: file.webkitRelativePath || file.name,
+        kind: 'unknown',
+        content: decodeText(textBytes, textEncoding),
+        loadedBytes: truncated ? textBytes.length : undefined,
+        textEncoding,
+        mimeType: file.type || mimeTypeFor(name),
+        size: file.size,
+        modifiedAt: file.lastModified,
+        source: 'browser',
+        handle,
+        truncated,
+      });
+    }
+  }
+
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  return documentRecord({
+    name,
+    path: file.webkitRelativePath || file.name,
+    kind: initialKind,
+    bytes,
+    mimeType: file.type || mimeTypeFor(name),
+    size: file.size,
+    modifiedAt: file.lastModified,
+    source: 'browser',
+    handle,
+  });
+}
+
+export async function pickBrowserFiles(): Promise<OpenDocument[] | null> {
+  const pickerWindow = window as BrowserPickerWindow;
+  if (!pickerWindow.showOpenFilePicker) return null;
+  try {
+    const handles = await pickerWindow.showOpenFilePicker({ multiple: true });
+    const documents: OpenDocument[] = [];
+    for (const handle of handles) {
+      const document = await loadBrowserFile(await handle.getFile(), handle);
+      if (document) documents.push(document);
+    }
+    return documents;
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') return [];
+    // Unsupported or blocked file-system pickers fall back to the ordinary input.
+    return null;
+  }
+}
+
+export async function openDesktopFiles(): Promise<OpenDocument[]> {
+  if (!isTauri()) return [];
+  const { open } = await import('@tauri-apps/plugin-dialog');
+  const { readFile, stat } = await import('@tauri-apps/plugin-fs');
+  const selected = await open({ multiple: true });
+  if (!selected) return [];
+
+  const paths = Array.isArray(selected) ? selected : [selected];
+  const documents: OpenDocument[] = [];
+  for (const path of paths) {
+    try {
+      const name = pathName(path);
+      await invoke('allow_file_access', { path });
+      const fileInfo = await stat(path);
+      const kind = getFileKind(name);
+      const textKind = ['markdown', 'text', 'code', 'html', 'csv'].includes(kind);
+      const warningLimit = kind === 'unknown' || textKind ? MAX_TEXT_PREVIEW_BYTES : LARGE_BINARY_BYTES;
+      if (fileInfo.size > warningLimit && !confirmLargeFile(name, fileInfo.size)) continue;
+      let bytes: Uint8Array;
+      let isText = textKind;
+      let truncated = false;
+      if (textKind) {
+        truncated = fileInfo.size > MAX_TEXT_PREVIEW_BYTES;
+        bytes = truncated ? await readDesktopPrefix(path, PARTIAL_TEXT_BYTES + 4) : await readFile(path);
+      } else if (kind === 'unknown') {
+        const sample = await readDesktopPrefix(path, Math.min(8_192, fileInfo.size));
+        isText = isProbablyText(sample);
+        if (isText) {
+          truncated = fileInfo.size > MAX_TEXT_PREVIEW_BYTES;
+          bytes = truncated ? await readDesktopPrefix(path, PARTIAL_TEXT_BYTES + 4) : await readFile(path);
+        } else bytes = await readFile(path);
+      } else bytes = await readFile(path);
+      const textEncoding = isText ? detectTextEncoding(bytes, truncated) : undefined;
+      const loadedTextBytes = textEncoding && truncated ? completeTextByteLength(bytes, textEncoding) : bytes.length;
+      const decoded = textEncoding ? decodeText(bytes.subarray(0, loadedTextBytes), textEncoding) : undefined;
+      documents.push(documentRecord({
+        name,
+        path,
+        kind,
+        content: decoded && truncated ? decoded.slice(0, PARTIAL_TEXT_CHARACTERS) : decoded,
+        loadedBytes: truncated ? loadedTextBytes : undefined,
+        textEncoding,
+        bytes: isText ? undefined : bytes,
+        mimeType: mimeTypeFor(name),
+        size: fileInfo.size,
+        modifiedAt: fileInfo.mtime?.getTime() ?? undefined,
+        source: 'desktop',
+        truncated,
+      }));
+    } catch (error) {
+      console.error(`Impossible de lire ${path}`, error);
+      throw new Error(`Impossible de lire « ${pathName(path)} ». Vérifiez que le fichier est accessible.`);
+    }
+  }
+  return documents;
+}
+
+export async function readDesktopPath(path: string): Promise<OpenDocument> {
+  const { readFile, stat } = await import('@tauri-apps/plugin-fs');
+  await invoke('allow_file_access', { path });
+  const name = pathName(path);
+  const fileInfo = await stat(path);
+  const kind = getFileKind(name);
+  const textKind = ['markdown', 'text', 'code', 'html', 'csv'].includes(kind);
+  const warningLimit = kind === 'unknown' || textKind ? MAX_TEXT_PREVIEW_BYTES : LARGE_BINARY_BYTES;
+  if (fileInfo.size > warningLimit && !confirmLargeFile(name, fileInfo.size)) {
+    throw new Error('Ouverture annulée.');
+  }
+  let bytes: Uint8Array;
+  let isText = textKind;
+  let truncated = false;
+  if (textKind) {
+    truncated = fileInfo.size > MAX_TEXT_PREVIEW_BYTES;
+    bytes = truncated ? await readDesktopPrefix(path, PARTIAL_TEXT_BYTES + 4) : await readFile(path);
+  } else if (kind === 'unknown') {
+    const sample = await readDesktopPrefix(path, Math.min(8_192, fileInfo.size));
+    isText = isProbablyText(sample);
+    if (isText) {
+      truncated = fileInfo.size > MAX_TEXT_PREVIEW_BYTES;
+      bytes = truncated ? await readDesktopPrefix(path, PARTIAL_TEXT_BYTES + 4) : await readFile(path);
+    } else bytes = await readFile(path);
+  } else bytes = await readFile(path);
+  const textEncoding = isText ? detectTextEncoding(bytes, truncated) : undefined;
+  const loadedTextBytes = textEncoding && truncated ? completeTextByteLength(bytes, textEncoding) : bytes.length;
+  const decoded = textEncoding ? decodeText(bytes.subarray(0, loadedTextBytes), textEncoding) : undefined;
+  return documentRecord({
+    name,
+    path,
+    kind,
+    content: decoded && truncated ? decoded.slice(0, PARTIAL_TEXT_CHARACTERS) : decoded,
+    loadedBytes: truncated ? loadedTextBytes : undefined,
+    textEncoding,
+    bytes: isText ? undefined : bytes,
+    mimeType: mimeTypeFor(name),
+    size: fileInfo.size,
+    modifiedAt: fileInfo.mtime?.getTime() ?? undefined,
+    source: 'desktop',
+    truncated,
+  });
+}
+
+export interface SaveAsOptions {
+  encoding: TextEncoding;
+  lineEnding: LineEndingChoice;
+}
+
+function keepOriginalExtension(path: string, originalName: string): string {
+  const extension = getExtension(originalName);
+  if (!extension) return path;
+  const separator = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
+  const directory = path.slice(0, separator + 1);
+  const baseName = path.slice(separator + 1);
+  if (getExtension(baseName) === extension) return path;
+  const dot = baseName.lastIndexOf('.');
+  const stem = dot > 0 ? baseName.slice(0, dot) : baseName;
+  return `${directory}${stem}.${extension}`;
+}
+
+export async function saveDocument(document: OpenDocument, content: string, saveAs = false, options: SaveAsOptions = { encoding: 'utf-8', lineEnding: 'preserve' }): Promise<OpenDocument> {
+  if (document.source === 'desktop' && !saveAs) {
+    const { writeTextFile } = await import('@tauri-apps/plugin-fs');
+    await writeTextFile(document.path, content);
+    return { ...document, content, savedContent: content, size: new TextEncoder().encode(content).length, modifiedAt: Date.now() };
+  }
+
+  if (document.source === 'browser' && document.handle && !saveAs) {
+    const writer = await document.handle.createWritable();
+    await writer.write(content);
+    await writer.close();
+    return { ...document, content, savedContent: content, size: new TextEncoder().encode(content).length, modifiedAt: Date.now() };
+  }
+
+  const outputBytes = encodeTextForSave(content, options.encoding, options.lineEnding);
+  if (isTauri()) {
+    const { save } = await import('@tauri-apps/plugin-dialog');
+    const { writeFile } = await import('@tauri-apps/plugin-fs');
+    const selectedPath = await save({ defaultPath: document.name });
+    if (!selectedPath) throw new Error('Enregistrement annulé.');
+    const path = keepOriginalExtension(selectedPath, document.name);
+    await writeFile(path, outputBytes);
+    return { ...document, name: pathName(path), path, source: 'desktop', content, savedContent: content, size: outputBytes.length, modifiedAt: Date.now() };
+  }
+
+  const pickerWindow = window as BrowserPickerWindow;
+  if (pickerWindow.showSaveFilePicker) {
+    try {
+      const handle = await pickerWindow.showSaveFilePicker({ suggestedName: document.name });
+      const outputName = handle.name || document.name;
+      if (document.extension && getExtension(outputName) !== document.extension.toLowerCase()) {
+        throw new Error(`Conservez l’extension .${document.extension} pour ce fichier.`);
+      }
+      const writer = await handle.createWritable();
+      await writer.write(outputBytes);
+      await writer.close();
+      return { ...document, name: outputName, path: outputName, source: 'browser', handle, content, savedContent: content, size: outputBytes.length, modifiedAt: Date.now() };
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') throw new Error('Enregistrement annulé.');
+      throw error;
+    }
+  }
+
+  const downloadBytes = new ArrayBuffer(outputBytes.byteLength);
+  new Uint8Array(downloadBytes).set(outputBytes);
+  const blob = new Blob([downloadBytes], { type: `text/plain;charset=${options.encoding}` });
+  const url = URL.createObjectURL(blob);
+  const anchor = window.document.createElement('a');
+  anchor.href = url;
+  anchor.download = document.name;
+  anchor.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
+  return { ...document, content, savedContent: content, size: outputBytes.length, modifiedAt: Date.now() };
+}

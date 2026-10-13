@@ -1,1048 +1,1020 @@
-# Noto
+# PROMPT PRINCIPAL — TRANSFORMATION COMPLÈTE DE NOTO EN SUITE DOCUMENTAIRE PROFESSIONNELLE
 
-Développe **Noto**, une application Windows moderne, minimaliste et légère permettant principalement de **visualiser différents types de fichiers**, avec des fonctions d'édition adaptées lorsque cela est pertinent.
+## 1. Mission générale
 
-Noto doit être pensé comme un **viewer universel simple**, pas comme un IDE, un gestionnaire de fichiers ou une suite bureautique.
+Tu travailles sur le dépôt GitHub **`Louxos/Noto`** :
+https://github.com/Louxos/Noto
 
-Le projet sera publié sur un **repository GitHub public**. Le repository doit donc être propre, professionnel, compréhensible et directement présentable à d'autres développeurs.
+**Branche de travail obligatoire :** `arena/01a10cf9-noto`.
 
----
+Si cette branche n’existe plus, vérifie les branches disponibles avant de choisir une autre branche. N’interviens pas silencieusement sur une autre branche.
 
-# 1. Philosophie du projet
+Ta mission est de faire évoluer Noto, actuellement une application de bureau locale développée avec React, TypeScript, Vite et Tauri 2, en une **suite documentaire complète, moderne, polyvalente, cohérente et réellement opérationnelle**.
 
-Noto doit suivre une règle simple :
+Noto doit permettre d’ouvrir, lire, modifier, organiser, convertir, comparer, optimiser, traiter et automatiser des opérations sur des documents et des fichiers, le tout dans une application unifiée.
 
-> **Ouvrir rapidement un fichier et le rendre agréable à consulter.**
+Il ne s’agit pas de créer une maquette, une simple page de démonstration ou une liste de fonctionnalités fictives. Il faut travailler sur le véritable projet, réutiliser son architecture et livrer des fonctionnalités utilisables, testées et documentées.
 
-L'application doit être volontairement simple.
+### Identité officielle
 
-Pas de :
+Nom : **Noto**
 
-* compte utilisateur
-* cloud
-* synchronisation
-* IA
-* serveur obligatoire
-* système de collaboration
-* fonctionnalités sociales
-* abonnement
-* télémétrie intrusive
+Slogan principal, à reproduire exactement :
 
-Tout doit fonctionner **localement sur le PC**.
+**« Noto. Vos fichiers, vos outils, un seul espace. »**
 
-Noto doit pouvoir être utilisé comme une petite application installée sur Windows, sans configuration compliquée.
+Ce slogan doit notamment apparaître :
+- sur l’écran de chargement de l’application ;
+- sur l’écran d’accueil de l’installateur Windows ;
+- sur les écrans d’accueil ou de bienvenue pertinents ;
+- dans les ressources de présentation de Noto lorsque cela est approprié.
 
----
+Le nom, le logo, les icônes, les couleurs et la typographie doivent former une identité visuelle cohérente.
 
-# 2. Plateforme
+## 2. Règles absolues
 
-Cible principale :
+### 2.1. Préserver l’existant
 
-**Windows**
+Avant toute modification :
 
-L'application doit pouvoir être distribuée sous forme d'un véritable installateur Windows.
+1. Examine le dépôt, son historique utile, son architecture, ses composants, ses dépendances et sa configuration.
+2. Identifie toutes les fonctionnalités déjà opérationnelles.
+3. Repère les fonctionnalités partiellement implémentées, les limites connues et les tests existants.
+4. Consulte la documentation, notamment `README.md`, `ROADMAP.md`, les documents d’architecture et de sécurité, ainsi que les fichiers de configuration Tauri.
+5. Vérifie les scripts npm, les workflows GitHub Actions et les procédures de compilation et de génération des installateurs.
+6. Établis une liste des éléments qui doivent impérativement continuer à fonctionner.
 
-Objectifs :
+**Ne supprime aucune fonctionnalité existante simplement pour simplifier le développement.** Ne réécris pas arbitrairement l’application et ne remplace pas une fonctionnalité existante par une version moins complète.
 
-* `.exe` installable
-* installation simple
-* désinstallation propre
-* raccourci Menu Démarrer
-* raccourci Bureau proposé pendant l'installation si pertinent
-* icône propre
-* nom de l'application : **Noto**
+Préserve notamment, lorsqu’ils sont présents et fonctionnels :
+- les lecteurs de fichiers et leurs capacités actuelles ;
+- l’éditeur de texte, Markdown, code, HTML et CSV ;
+- la prévisualisation des PDF, images, présentations et documents ;
+- les onglets, fichiers récents et groupes ;
+- les préférences, thèmes et réglages ;
+- les opérations de classement, renommage et déplacement ;
+- la récupération des brouillons lorsqu’elle est activée ;
+- les fonctions de navigation et les menus contextuels ;
+- les protections de sécurité et les autorisations Tauri ;
+- les associations de fichiers et les comportements de l’application de bureau.
 
-Une version portable peut être proposée en complément si cela est simple à maintenir.
+Conserve les technologies actuelles : React 18, TypeScript, Vite et Tauri 2, sauf nécessité technique démontrée. Ne migre pas l’application vers une autre plateforme pour le simple plaisir de changer de technologie.
 
-Choisis une technologie adaptée à ce type d'application.
+### 2.2. Gratuité totale
+
+**Le projet doit rester gratuit pour son développeur et utilisable sans abonnement obligatoire.**
+
+- Aucun service payant obligatoire.
+- Aucune API payante obligatoire.
+- Aucun compte obligatoire.
+- Aucun hébergement payant obligatoire.
+- Aucune dépendance à un service d’IA payant.
+- Aucun abonnement caché.
+- Aucune fonctionnalité essentielle bloquée derrière un paiement.
+
+Privilégie les bibliothèques open source, les moteurs locaux et les outils gratuits.
+
+Avant d’ajouter une dépendance, vérifie sa licence, sa compatibilité avec Windows et Tauri, sa maintenance, ses éventuels coûts et ses besoins système. Respecte les licences de toutes les bibliothèques et redistribue leurs mentions légales si nécessaire.
+
+Si une fonctionnalité ne peut pas être réalisée gratuitement dans des conditions fiables, cherche une solution locale gratuite. Si aucune solution raisonnable n’existe, explique clairement la limite et propose une solution de remplacement sans prétendre que la fonctionnalité est terminée.
+
+### 2.3. Traitement local et confidentialité
+
+Noto doit rester une application locale, conçue pour que les documents de l’utilisateur restent sur son appareil.
+
+- Aucun téléversement automatique de documents.
+- Aucune télémétrie cachée.
+- Aucune transmission silencieuse de contenu.
+- Aucun compte ou serveur distant requis pour les opérations courantes.
+- Aucun envoi de documents vers un service d’IA externe.
+- Aucun téléchargement massif lancé sans avertissement et consentement.
+- Aucun accès global au système de fichiers sans nécessité et autorisation appropriée.
+
+Les opérations de traitement doivent fonctionner hors ligne dès lors que leurs dépendances sont disponibles localement.
+
+Si un téléchargement facultatif de moteur ou de modèle OCR est nécessaire, indique sa taille, son origine, sa licence, son emplacement et son utilité. Demande le consentement de l’utilisateur.
+
+### 2.4. Fiabilité et honnêteté
+
+Ne crée pas de boutons factices, de résultats simulés, de fausses barres de progression ou de fonctionnalités simplement décoratives.
+
+Une fonctionnalité est considérée comme terminée uniquement si :
+- son interface fonctionne ;
+- son traitement réel fonctionne ;
+- ses erreurs sont gérées ;
+- son résultat est exploitable ;
+- les fichiers sources restent protégés ;
+- les tests pertinents réussissent ;
+- ses limites sont documentées.
+
+Distingue clairement les fonctions prises en charge, les fonctions partiellement prises en charge et les fonctions indisponibles.
+
+Ne prétends jamais qu’une opération a réussi si le résultat n’a pas été vérifié.
+
+## 3. Audit initial et stratégie d’implémentation
+
+Commence par examiner l’ensemble du dépôt et établis une cartographie précise des fonctionnalités, des composants et des dépendances.
+
+Identifie notamment :
+- les points d’entrée React et Tauri ;
+- les lecteurs et éditeurs existants ;
+- les services de manipulation des fichiers ;
+- les composants de prévisualisation ;
+- les autorisations et protections de sécurité ;
+- les mécanismes d’importation et d’exportation ;
+- les tests existants ;
+- la configuration NSIS ;
+- les scripts de build et de publication ;
+- les limitations actuelles des formats PDF et Office.
+
+Ensuite, organise le travail par étapes cohérentes et réalise les changements dans le dépôt. Ne te contente pas de me fournir un plan théorique.
+
+Si le périmètre est trop important pour être livré en une seule série de changements, procède par lots fonctionnels, chacun cohérent, testé et utilisable. Maintiens un état d’avancement documenté.
+
+Ne pose pas de questions sur des choix techniques ordinaires que tu peux raisonnablement prendre toi-même. Ne bloque le travail que lorsqu’une décision indispensable ne peut réellement pas être déduite du projet ou lorsqu’un risque majeur exige mon accord.
+
+## 4. Organisation générale de Noto
+
+Noto doit devenir un espace de travail unifié, pas un assemblage désordonné d’outils indépendants.
+
+Organise les fonctionnalités autour de sections clairement identifiables, par exemple :
+
+1. Accueil et tableau de bord.
+2. Fichiers et organisation.
+3. PDF.
+4. Images.
+5. Conversion universelle.
+6. OCR et numérisation.
+7. Comparaison et analyse.
+8. Traitement par lots.
+9. Workflows et automatisation.
+10. Historique et rapports.
+11. Paramètres.
+
+Ces sections doivent s’intégrer à la navigation existante plutôt que remplacer brutalement les écrans actuels.
+
+Le gestionnaire de fichiers doit fonctionner indépendamment des projets. Les projets existants peuvent servir à organiser des documents et des workflows, mais aucun projet ne doit être obligatoire pour utiliser l’atelier documentaire.
+
+Réutilise les composants, services et mécanismes existants chaque fois que possible. Évite les doublons, les composants géants et la multiplication de systèmes de conversion incompatibles entre eux.
+
+## 5. Atelier PDF complet
+
+Construis un véritable atelier PDF, avec une interface claire, des prévisualisations, des réglages compréhensibles et des opérations réelles.
+
+### 5.1. Gestion des pages
+
+Implémente, selon les possibilités techniques réelles des bibliothèques retenues :
+
+- fusionner plusieurs PDF ;
+- diviser un PDF en plusieurs fichiers ;
+- extraire des pages ;
+- sélectionner des plages de pages ;
+- supprimer des pages ;
+- réorganiser les pages par glisser-déposer ;
+- faire pivoter les pages ;
+- dupliquer des pages ;
+- insérer des pages issues d’autres PDF ;
+- extraire certaines pages dans un nouveau document ;
+- afficher des miniatures ;
+- sélectionner plusieurs pages ;
+- inverser l’ordre des pages ;
+- définir des plages personnalisées ;
+- afficher le nombre de pages et les informations utiles.
+
+Prévois un aperçu du résultat et la possibilité de vérifier les changements avant l’exportation.
+
+### 5.2. Compression et optimisation
+
+Propose plusieurs niveaux d’optimisation lorsque cela est techniquement pertinent :
+
+- conservation maximale de la qualité ;
+- compression équilibrée ;
+- compression plus poussée ;
+- optimisation pour le partage ;
+- optimisation pour l’impression ;
+- optimisation pour les documents numérisés.
+
+Permets de réduire la taille des images incorporées lorsque cela est approprié, sans dégrader inutilement le document.
+
+Affiche :
+- la taille initiale ;
+- la taille finale réelle ;
+- la différence et le pourcentage d’économie ;
+- les réglages appliqués ;
+- les avertissements concernant une éventuelle perte de qualité.
+
+Une estimation doit être explicitement présentée comme une estimation. Ne garantis pas une réduction de taille si elle n’est pas possible.
+
+### 5.3. Modification et annotation des PDF
+
+Permets, selon les capacités des moteurs retenus :
+
+- d’ajouter du texte ;
+- d’ajouter des images ;
+- d’ajouter des formes, flèches et lignes ;
+- d’ajouter des commentaires ;
+- de surligner du texte ;
+- de souligner ou barrer du texte lorsque c’est possible ;
+- de dessiner et annoter ;
+- d’ajouter des en-têtes et pieds de page ;
+- de numéroter les pages ;
+- d’ajouter des filigranes textuels ou visuels ;
+- de régler la position, la taille, la couleur, l’opacité et la rotation des éléments ajoutés ;
+- de modifier les marges ou la mise en page lorsque le moteur le permet.
+
+Distingue explicitement trois types d’opérations :
+
+1. Modification du contenu PDF natif.
+2. Ajout d’annotations ou de calques superposés.
+3. Reconstruction ou conversion du document.
+
+Ne présente pas un texte ajouté par-dessus un ancien texte comme une véritable modification de ce dernier.
+
+### 5.4. Édition du texte PDF
+
+Étudie la possibilité d’éditer le texte existant tout en préservant la mise en page, les polices, les tableaux, les images et les liens.
+
+Si une modification native fiable n’est pas possible, propose une solution de reconstruction ou de conversion avec prévisualisation et avertissements.
+
+Les documents complexes doivent bénéficier d’un message expliquant les risques de modification de mise en page.
+
+### 5.5. Conversion PDF
+
+Implémente les conversions pertinentes :
+
+- PDF vers images ;
+- images vers PDF ;
+- PDF vers TXT ;
+- PDF vers Markdown lorsque l’extraction le permet ;
+- PDF vers DOCX si un moteur gratuit fiable est disponible ;
+- documents compatibles vers PDF ;
+- extraction des images contenues dans un PDF ;
+- extraction des métadonnées ;
+- extraction du texte ;
+- extraction des tableaux lorsque cela est fiable.
+
+La conversion vers DOCX ne doit pas promettre une reproduction parfaite d’une mise en page complexe. Préserve autant que possible les paragraphes, titres, tableaux, images, liens et structures. Signale les éléments qui ne peuvent pas être conservés.
+
+### 5.6. Comparaison des PDF
+
+Permets de comparer deux PDF :
+- comparaison textuelle ;
+- pages ajoutées ou supprimées ;
+- différences de contenu ;
+- différences visuelles lorsque les rendus peuvent être comparés ;
+- navigation entre les différences ;
+- rapport de comparaison exportable.
+
+Prévois une comparaison même si les documents n’ont pas exactement le même nombre de pages.
+
+### 5.7. Sécurité et fonctions avancées
+
+Étudie et implémente lorsque cela est possible :
+- ouverture de PDF protégés avec un mot de passe fourni par l’utilisateur ;
+- protection d’un PDF par mot de passe ;
+- formulaires PDF ;
+- annotations et commentaires ;
+- signatures électroniques simples ;
+- informations sur les métadonnées et leur suppression ;
+- contrôles de taille, résolution, polices et pages ;
+- détection des pages numérisées ;
+- vérification de l’accessibilité des PDF.
+
+Ne prétends pas offrir une signature électronique juridiquement qualifiée si le système ne le permet pas.
+
+La suppression définitive de contenu sensible doit être une véritable caviardisation : le contenu sous-jacent doit être retiré, pas simplement recouvert d’un rectangle noir. Vérifie le résultat et avertis lorsque des métadonnées, objets cachés ou informations ne peuvent pas être éliminés de façon fiable.
+
+## 6. Atelier images complet
+
+Construis un atelier capable de convertir, optimiser, modifier et traiter des images seules ou en lots.
+
+### 6.1. Formats
+
+Prends en charge les formats suivants dans la mesure permise par les moteurs disponibles :
+
+- PNG ;
+- JPEG/JPG ;
+- WebP ;
+- GIF ;
+- TIFF/TIF ;
+- BMP ;
+- SVG ;
+- ICO ;
+- AVIF ;
+- HEIC/HEIF si une solution compatible et gratuite existe.
+
+Distingue la lecture, la conversion, l’édition et l’exportation. La prise en charge d’un format à l’ouverture ne signifie pas nécessairement qu’il est possible de l’exporter.
+
+Explique les limites de transparence, d’animation, de couleurs, de profils et de métadonnées.
+
+### 6.2. Conversion et compression
+
+Permets :
+- la conversion entre formats compatibles ;
+- le réglage de la qualité JPEG/WebP et des formats pertinents ;
+- la compression des images ;
+- la modification de la résolution ;
+- des dimensions personnalisées ;
+- des préréglages pour le Web, les documents, l’impression et le partage ;
+- le maintien des proportions ;
+- le traitement de plusieurs images simultanément ;
+- la définition d’un dossier de destination ;
+- des règles de nommage ;
+- l’affichage des tailles initiales et finales.
+
+Pour chaque traitement, propose une prévisualisation avant exportation et conserve les originaux.
+
+### 6.3. Édition d’images
+
+Ajoute, lorsque techniquement réalisable :
+
+- rotation ;
+- retournement horizontal et vertical ;
+- recadrage ;
+- redimensionnement ;
+- modification des dimensions de la toile ;
+- luminosité ;
+- contraste ;
+- saturation ;
+- niveaux de gris ;
+- ajustements de couleur ;
+- redressement ;
+- correction de perspective ;
+- bordures ;
+- arrière-plans ;
+- filigranes ;
+- planches de contact ;
+- collages ;
+- découpage d’une image en tuiles ;
+- génération de plusieurs tailles d’une même image.
+
+Prévois des aperçus avant/après, une annulation des changements et une exportation non destructive.
+
+### 6.4. Métadonnées et images avancées
+
+Prends en charge les métadonnées pertinentes :
+- EXIF ;
+- IPTC ;
+- orientation ;
+- dimensions ;
+- profils colorimétriques ;
+- date de création si disponible ;
+- informations techniques du fichier.
+
+Permets la suppression sélective des métadonnées et une option de suppression plus complète, en expliquant ce qui peut rester.
+
+Étudie le traitement des GIF animés, des TIFF multipages et des profils colorimétriques. Préserve les animations et les pages multiples lorsque le moteur le permet, plutôt que de les supprimer silencieusement.
+
+## 7. OCR et numérisation intelligente
+
+Ajoute un système OCR local permettant d’extraire le texte de documents numérisés et d’images.
+
+Fonctionnalités recherchées :
+- OCR sur images ;
+- OCR sur PDF numérisés ;
+- création de PDF interrogeables ;
+- extraction de texte ;
+- reconnaissance multilingue si les modèles nécessaires sont disponibles ;
+- prévisualisation des résultats ;
+- navigation entre le texte reconnu et l’image d’origine ;
+- indication des passages incertains lorsque le moteur expose une confiance exploitable ;
+- exportation en TXT, Markdown ou formats compatibles.
+
+### Nettoyage des scans
+
+Étudie :
+- la détection des bords ;
+- le redressement ;
+- la correction de perspective ;
+- la rotation automatique ;
+- la correction du contraste ;
+- la réduction du bruit ;
+- la détection de pages blanches ;
+- la détection de colonnes et de blocs de texte lorsque possible.
+
+L’utilisateur doit pouvoir vérifier et corriger les résultats OCR avant de les exporter.
+
+Privilégie les moteurs OCR locaux gratuits. Les modèles doivent être facultatifs, téléchargés de manière transparente et accompagnés de leur licence. Aucune API payante ou externe ne doit être indispensable.
+
+## 8. Conversion universelle
+
+Crée un moteur commun de conversion plutôt qu’une collection d’outils isolés.
+
+Le moteur doit détecter :
+- le format d’entrée ;
+- les formats de sortie compatibles ;
+- les opérations disponibles ;
+- les limites de chaque conversion ;
+- les risques de perte de mise en page, de qualité, de transparence ou de métadonnées.
+
+Propose des pipelines adaptés au fichier sélectionné.
+
+Exemples :
+- plusieurs images vers un seul PDF ;
+- PDF vers une série d’images ;
+- PDF vers texte ;
+- document Office vers PDF ;
+- compression d’un PDF ;
+- conversion d’images puis insertion dans un document ;
+- extraction de toutes les images d’un document ;
+- extraction de texte et de tableaux ;
+- traitement successif de plusieurs fichiers.
+
+Affiche les opérations réellement disponibles pour chaque type de fichier. N’annonce jamais une conversion qui n’est pas implémentée.
+
+### Formats bureautiques
+
+Évalue les possibilités de prise en charge de :
+- DOCX ;
+- ODT ;
+- RTF ;
+- TXT ;
+- Markdown ;
+- XLSX ;
+- ODS ;
+- CSV ;
+- TSV ;
+- PPTX ;
+- ODP ;
+- HTML ;
+- EPUB.
+
+Conserve les fonctions de lecture existantes. Améliore progressivement l’extraction, la conversion et l’édition lorsque les moteurs le permettent.
+
+Étudie LibreOffice en mode headless uniquement si sa licence, sa compatibilité avec le système de build, ses dépendances et sa distribution sont acceptables. Ne rends pas son installation obligatoire sans l’indiquer clairement.
+
+Les formats complexes doivent être pris en charge selon des niveaux explicites :
+- prise en charge complète ;
+- prise en charge partielle ;
+- lecture seule ;
+- conversion limitée ;
+- non pris en charge.
+
+Les fichiers DOCX/ODT/PPTX/ODP ne doivent pas être décrits comme entièrement éditables si le code se contente d’en extraire le texte.
+
+## 9. Gestionnaire de fichiers et détection intelligente
+
+Améliore le gestionnaire de fichiers en préservant les fonctionnalités actuelles.
+
+Ajoute :
+- recherche par nom ;
+- filtrage par extension et type ;
+- tri par nom, taille, date et format ;
+- affichage des métadonnées ;
+- détection des fichiers strictement identiques par empreinte cryptographique ;
+- détection facultative des images visuellement similaires, distincte de la détection exacte ;
+- renommage en lot selon des règles ;
+- organisation selon des critères définis ;
+- classement et déplacement sécurisés ;
+- comparaison de fichiers ;
+- création et extraction d’archives ZIP sûres.
+
+Les détections visuelles doivent indiquer qu’il s’agit de similarités et non de doublons garantis.
+
+### Archives
+
+Lors de l’importation ou de l’extraction d’archives :
+- vérifie les chemins ;
+- empêche les extractions hors du dossier cible ;
+- protège contre les archives excessivement volumineuses ;
+- limite le nombre d’entrées et la taille décompressée ;
+- gère les archives corrompues ;
+- n’écrase jamais silencieusement un fichier ;
+- n’exécute jamais le contenu d’une archive.
+
+Prévois des limites configurables lorsque c’est pertinent et une gestion claire des erreurs.
+
+## 10. Traitement par lots
+
+Le traitement par lots doit être un élément central de Noto.
+
+L’utilisateur doit pouvoir sélectionner plusieurs fichiers et leur appliquer une série d’opérations.
+
+Fonctionnalités :
+- sélection multiple ;
+- glisser-déposer ;
+- aperçu des opérations ;
+- préréglages réutilisables ;
+- choix du dossier de sortie ;
+- règles de nommage ;
+- barre de progression fondée sur le travail réel ;
+- état individuel de chaque fichier ;
+- erreurs individuelles sans interrompre inutilement tout le lot ;
+- annulation ;
+- pause et reprise lorsque cela est techniquement possible ;
+- résumé des résultats ;
+- accès aux fichiers générés ;
+- rapport exportable.
+
+Si une opération ne peut pas être annulée une fois lancée, indique-le clairement.
+
+Les traitements doivent éviter les collisions de noms et préserver les originaux.
+
+## 11. Workflows visuels et automatisation
+
+Crée un éditeur de workflows visuels réutilisant le même moteur que les traitements par lots.
+
+L’utilisateur doit pouvoir organiser des étapes, les relier et définir les entrées et sorties.
+
+Exemple de workflow :
+
+1. Sélectionner des images.
+2. Corriger leur orientation.
+3. Redimensionner les images.
+4. Optimiser leur poids.
+5. Créer un PDF.
+6. Enregistrer le résultat dans un dossier choisi.
+7. Générer un rapport.
+
+Chaque étape doit afficher :
+- son nom ;
+- ses paramètres ;
+- les formats acceptés ;
+- les formats produits ;
+- ses éventuelles limites ;
+- son état d’exécution ;
+- ses erreurs.
+
+Ajoute :
+- sauvegarde locale des workflows ;
+- duplication ;
+- renommage ;
+- préréglages ;
+- validation des connexions ;
+- prévention des cycles invalides ;
+- aperçu du pipeline ;
+- exécution sur un ou plusieurs fichiers ;
+- exportation et importation sécurisées de workflows ;
+- historique des exécutions.
+
+Un workflow importé ne doit jamais pouvoir exécuter arbitrairement du code, lancer des commandes système ou accéder à des fichiers sans autorisation.
+
+Les fonctionnalités de pause, de reprise et de reprise après fermeture ne doivent être ajoutées que si leur fonctionnement est fiable.
+
+## 12. Comparaison, analyse et qualité documentaire
+
+Ajoute des outils d’analyse pour PDF, images et documents compatibles.
+
+Selon les formats :
+- comparaison textuelle ;
+- comparaison visuelle ;
+- comparaison de métadonnées ;
+- détection des pages blanches ;
+- détection de résolutions faibles ;
+- analyse des dimensions ;
+- informations sur les polices lorsque disponibles ;
+- détection des documents numérisés ;
+- comparaison des tableaux lorsque fiable ;
+- détection des changements ;
+- génération d’un rapport.
+
+Pour les PDF, distingue les différences de texte des différences visuelles. Pour les images, distingue les changements exacts, les changements de dimensions et les similarités perceptuelles.
+
+Les résultats doivent être compréhensibles et vérifiables.
+
+## 13. Historique, rapports et annulation
+
+Crée un historique local des opérations réalisées dans Noto.
+
+Chaque entrée doit pouvoir inclure :
+- le type d’opération ;
+- la date ;
+- les fichiers sources ;
+- les fichiers produits ;
+- les paramètres ;
+- la durée si elle est mesurée ;
+- le statut ;
+- les erreurs éventuelles ;
+- les tailles avant et après.
+
+Ajoute des rapports exportables pour les traitements complexes et les lots.
+
+L’historique ne doit pas conserver automatiquement une copie complète de tous les documents sans nécessité.
+
+L’annulation doit être proposée lorsqu’elle est réalisable. Pour les opérations qui créent de nouveaux fichiers, il doit être possible de retrouver et supprimer le résultat sans risquer de détruire l’original.
+
+## 14. Fonctionnalités intelligentes locales
+
+Ajoute progressivement des fonctions intelligentes, mais uniquement si elles sont réellement utiles et réalisables gratuitement.
 
 Priorités :
+- détection de formats ;
+- détection de doublons ;
+- analyse des métadonnées ;
+- suggestions d’opérations compatibles ;
+- reconnaissance OCR ;
+- détection de pages blanches ;
+- propositions de workflows ;
+- classement assisté ;
+- résumé local de documents si un moteur gratuit approprié est disponible.
 
-1. stabilité
-2. performances
-3. légèreté
-4. simplicité du code
-5. facilité de maintenance
-6. facilité de build
-7. compatibilité Windows
+Privilégie les algorithmes classiques et les moteurs locaux lorsque cela suffit.
 
-Évite les dépendances inutiles.
+L’IA doit rester facultative. Aucun service cloud payant ne doit être requis.
+
+N’ajoute pas un gros modèle local qui ralentirait fortement l’application ou nécessiterait des ressources excessives sans expliquer ses contraintes. Les modèles doivent être facultatifs, leur licence doit être vérifiée et leur téléchargement doit être transparent.
+
+## 15. Interface et expérience utilisateur
+
+L’application doit rester visuellement cohérente avec Noto, tout en gagnant en clarté et en maturité.
+
+Conserve les thèmes et préférences existants.
+
+L’interface doit être :
+- moderne ;
+- professionnelle ;
+- lisible ;
+- cohérente ;
+- rapide ;
+- accessible ;
+- adaptée à Windows ;
+- compréhensible pour un utilisateur non spécialiste.
+
+Évite les interfaces surchargées, les menus interminables et les écrans remplis de paramètres techniques.
+
+### Organisation d’un outil
+
+Chaque outil important doit proposer :
+1. Une sélection des fichiers.
+2. Les opérations disponibles.
+3. Des paramètres simples par défaut.
+4. Un mode avancé lorsque nécessaire.
+5. Une prévisualisation.
+6. Un choix de destination.
+7. Une exécution réelle.
+8. Une progression.
+9. Un résultat vérifié.
+10. Des explications en cas d’erreur.
+
+Utilise des icônes cohérentes, des libellés précis, des états de chargement utiles, des messages d’erreur actionnables et des confirmations pour les opérations risquées.
+
+Prévois les fenêtres redimensionnables, les petits écrans, la mise à l’échelle Windows et la navigation au clavier.
+
+## 16. Écran de chargement et identité visuelle
+
+Crée ou améliore l’écran de chargement de Noto.
+
+Il doit comporter :
+- le logo officiel de Noto ;
+- le nom Noto ;
+- le slogan exact « Noto. Vos fichiers, vos outils, un seul espace. » ;
+- une animation subtile et élégante ;
+- un indicateur de chargement lié à l’initialisation réelle ;
+- une transition fluide vers l’application.
+
+Ne simule pas une progression artificielle. N’ajoute pas de délai artificiel destiné à prolonger l’animation.
+
+Si l’initialisation échoue, affiche un message compréhensible et une possibilité de consulter les informations utiles au diagnostic.
+
+Réutilise les ressources graphiques existantes lorsque c’est pertinent. N’invente pas un nouveau logo incompatible avec la marque.
+
+## 17. Installateur Windows : conserver NSIS, supprimer MSI
+
+### Décision obligatoire
+
+**Conserver NSIS comme unique format d’installation distribué par défaut. Supprimer la génération MSI, et non la génération NSIS.**
+
+Dans la configuration actuellement inspectée, `src-tauri/tauri.conf.json` configure les cibles `nsis` et `msi`. Vérifie les fichiers réels avant modification.
+
+Retire la génération MSI des cibles de build, puis examine et mets à jour :
+- la configuration Tauri ;
+- les scripts de compilation ;
+- les workflows GitHub Actions ;
+- les instructions de publication ;
+- la documentation d’installation ;
+- le README ;
+- les références aux fichiers `.msi` ;
+- les ressources graphiques exclusivement utilisées par MSI/WiX, uniquement si elles sont réellement devenues inutiles.
+
+Conserve les ressources NSIS existantes et améliore-les. Ne supprime aucune ressource partagée par l’application ou par NSIS.
+
+Ne supprime pas des fichiers au seul motif qu’ils contiennent le mot « MSI » : vérifie d’abord leur rôle et leurs dépendances.
+
+À la fin, la procédure de distribution principale doit générer et proposer le fichier d’installation NSIS `.exe`, sans générer un MSI inutile.
+
+### 17.1. Installateur professionnel
+
+Améliore l’installateur NSIS pour qu’il constitue une véritable partie de l’expérience Noto.
+
+L’installateur doit être soigné, clair, rapide, fiable et entièrement en français par défaut.
+
+#### Écran de bienvenue
+
+Affiche :
+- le logo Noto ;
+- le nom Noto ;
+- le slogan exact « Noto. Vos fichiers, vos outils, un seul espace. » ;
+- une courte présentation ;
+- un bouton principal clairement identifiable ;
+- les informations utiles sur l’installation.
+
+Le slogan ne doit jamais être coupé, tronqué ou illisible. Les visuels doivent être adaptés aux dimensions réelles de l’assistant NSIS.
+
+#### Options d’installation
+
+Propose les options raisonnables compatibles avec le fonctionnement de NSIS et Tauri :
+- dossier d’installation ;
+- raccourci sur le Bureau ;
+- raccourci dans le menu Démarrer ;
+- affichage du chemin d’installation ;
+- options avancées clairement séparées des options habituelles.
+
+Ne modifie pas silencieusement les associations de fichiers ni les préférences Windows. Si une option existe pour les associations de fichiers, elle doit être explicite et documentée.
+
+Conserve un fonctionnement sans droits administrateur lorsque le mode d’installation choisi le permet. Ne demande pas d’autorisations élevées sans nécessité.
+
+#### Progression
+
+Affiche une progression fondée sur les étapes réelles de l’installation.
+
+Ne fabrique pas de pourcentage arbitraire et n’ajoute pas d’attente artificielle.
+
+Affiche les erreurs réelles. Si l’installation est interrompue, nettoie les éléments temporaires et évite de laisser un état incohérent.
+
+#### Fin d’installation
+
+Avant d’annoncer la réussite, vérifie que les éléments essentiels sont installés.
+
+Propose :
+- un bouton « Lancer Noto » ;
+- une confirmation de fin ;
+- des informations utiles ;
+- un accès aux instructions ou à l’aide si nécessaire.
+
+Ne présente pas une installation incomplète comme réussie.
+
+### 17.2. Sécurité et confiance
+
+L’installateur ne doit pas :
+- installer de logiciel supplémentaire non demandé ;
+- afficher de publicité ;
+- imposer un compte ;
+- exiger une connexion Internet pour une installation standard ;
+- modifier des réglages Windows sans autorisation ;
+- collecter des données cachées ;
+- contourner les protections de Windows.
+
+Documente le statut de signature du programme et, si possible, les sommes de contrôle SHA-256 permettant de vérifier les fichiers distribués.
+
+Ne prétends pas que l’installateur est signé si ce n’est pas le cas. Ne promets pas l’absence d’avertissements SmartScreen : un fichier non signé peut en déclencher. N’ajoute pas de certificat payant obligatoire.
+
+### 17.3. Désinstallation propre
+
+La désinstallation doit :
+- supprimer les fichiers installés par Noto ;
+- supprimer les raccourcis créés par l’installation ;
+- ne pas supprimer silencieusement les documents personnels ;
+- ne pas effacer automatiquement les projets, brouillons ou préférences utilisateur ;
+- proposer une option explicite si l’utilisateur souhaite également supprimer les données locales de l’application.
+
+Teste l’installation neuve, la réinstallation, la mise à niveau et la désinstallation.
+
+### 17.4. Préserver la publication
+
+Vérifie les workflows de build et de release. Mets à jour les artefacts pour qu’ils proposent l’installateur NSIS attendu et que la documentation indique le bon nom de fichier.
+
+Ne casse pas le workflow CI ni la génération des artefacts existants. Ne prétends pas avoir publié une release GitHub si tu ne l’as pas réellement publiée.
+
+## 18. Sécurité technique
+
+Conserve et renforce les protections existantes.
+
+- Maintiens le sandbox HTML.
+- Préserve la politique CSP.
+- Garde les autorisations Tauri minimales.
+- N’exécute pas les macros Office.
+- N’exécute pas de scripts intégrés aux documents.
+- Valide les entrées des convertisseurs.
+- Protège les chemins de fichiers.
+- Limite les ressources utilisées pour les archives et les documents volumineux.
+- Évite les injections HTML et les chemins d’extraction dangereux.
+- Gère les fichiers corrompus et les extensions trompeuses.
+- Nettoie les fichiers temporaires.
+- Ne demande l’accès qu’aux fichiers choisis par l’utilisateur.
+
+Les opérations de suppression, d’écrasement et de remplacement doivent être protégées. Par défaut, crée de nouveaux fichiers et préserve les sources.
+
+Avant toute opération potentiellement destructive, explique le risque et demande confirmation.
+
+## 19. Architecture et qualité du code
+
+L’architecture doit rester modulaire.
+
+Sépare clairement :
+- l’interface utilisateur ;
+- les services de lecture et d’écriture ;
+- les moteurs de conversion ;
+- les opérations PDF ;
+- les opérations image ;
+- l’OCR ;
+- les traitements par lots ;
+- les workflows ;
+- l’historique ;
+- les rapports ;
+- les services de fichiers ;
+- les validations et contrôles de sécurité.
+
+Réutilise les moteurs communs au lieu de réimplémenter plusieurs fois les mêmes opérations.
+
+Évite :
+- les composants React gigantesques ;
+- les duplications de logique ;
+- les dépendances inutiles ;
+- les types `any` injustifiés ;
+- les erreurs silencieuses ;
+- les traitements bloquants sur l’interface ;
+- les modifications non testées des fonctions existantes.
+
+Utilise les types TypeScript, la gestion explicite des erreurs et des mécanismes d’annulation adaptés.
+
+Pour les tâches longues, préserve la réactivité de l’interface. Étudie les workers ou les mécanismes adaptés lorsqu’ils sont nécessaires et compatibles avec Tauri.
+
+## 20. Gestion des erreurs et fichiers volumineux
+
+Prévois les situations suivantes :
+- document corrompu ;
+- format non pris en charge ;
+- format détecté incorrectement ;
+- mot de passe manquant ou incorrect ;
+- manque d’espace disque ;
+- fichier inaccessible ;
+- destination inexistante ;
+- conflit de nom ;
+- fichier verrouillé ;
+- opération annulée ;
+- mémoire insuffisante ;
+- archive excessive ;
+- échec du moteur de conversion ;
+- résultat vide ou invalide.
+
+Les messages doivent expliquer ce qui s’est passé et, lorsque possible, comment résoudre le problème.
+
+N’essaie pas de charger intégralement des fichiers très volumineux en mémoire sans raison. Utilise des traitements progressifs lorsque c’est approprié.
+
+Les limites techniques doivent être explicites et raisonnables.
+
+## 21. Tests obligatoires
+
+Le dépôt possède des scripts de vérification, notamment `npm run check`, `npm run build` et `npm run tauri:build`. Vérifie leur état réel et utilise-les.
+
+Ajoute des tests unitaires et d’intégration adaptés aux fonctionnalités développées.
+
+Teste notamment :
+- la fusion et la division de PDF ;
+- l’extraction et la suppression de pages ;
+- la rotation et la réorganisation ;
+- la compression et la conversion ;
+- les conversions d’images ;
+- le maintien des proportions ;
+- la préservation de la transparence lorsque possible ;
+- l’OCR si un moteur est intégré ;
+- les traitements par lots ;
+- les workflows ;
+- les conflits de noms ;
+- l’absence d’écrasement silencieux ;
+- les fichiers corrompus ;
+- les archives malformées ;
+- la protection des fichiers sources ;
+- les régressions sur les fonctionnalités existantes.
+
+Utilise des fichiers de test représentatifs, y compris des PDF contenant du texte, des PDF numérisés, des documents multipages, des images transparentes et des fichiers bureautiques.
+
+Vérifie les résultats produits, pas uniquement le fait que la fonction n’a pas levé d’exception.
+
+Exécute les vérifications disponibles et rapporte précisément :
+- les commandes exécutées ;
+- les tests réussis ;
+- les tests échoués ;
+- les limites de l’environnement ;
+- les fonctions qui n’ont pas pu être testées.
+
+Ne masque pas un échec de build ou de test.
+
+## 22. Documentation
+
+Mets à jour la documentation du projet pour qu’elle corresponde au logiciel réel.
+
+Documente :
+- les fonctionnalités disponibles ;
+- les formats supportés ;
+- les limitations ;
+- les dépendances et leurs licences ;
+- les procédures de développement ;
+- les commandes de test ;
+- la génération de l’installateur NSIS ;
+- l’installation et la désinstallation ;
+- la confidentialité ;
+- les limites de l’OCR ;
+- les moteurs de conversion ;
+- les formats partiellement pris en charge.
+
+Mets à jour le README et la feuille de route. Ne laisse pas de documentation annonçant la génération MSI si elle a été supprimée.
+
+N’annonce comme terminée aucune fonctionnalité qui reste simulée, partielle ou non testée.
+
+## 23. Ordre de réalisation
+
+Procède par étapes, sans sacrifier la stabilité.
+
+### Étape A — Audit et stabilisation
+- Examiner l’architecture.
+- Établir l’inventaire de l’existant.
+- Identifier les tests et les risques.
+- Confirmer le fonctionnement de la branche ciblée.
+- Vérifier la configuration des installateurs.
+
+### Étape B — Fondations communes
+- Organiser les services de fichiers et de conversion.
+- Définir les interfaces communes.
+- Renforcer la gestion des erreurs et les protections.
+- Ajouter les tests de non-régression.
+
+### Étape C — Atelier PDF
+- Commencer par les opérations essentielles de pages, fusion, division, extraction, rotation et conversion.
+- Ajouter compression, annotations et fonctions avancées selon les moteurs disponibles.
+- Tester chaque opération.
+
+### Étape D — Atelier images
+- Ajouter conversion, compression, redimensionnement et opérations par lots.
+- Développer progressivement les fonctions avancées.
+- Tester la qualité et les formats.
+
+### Étape E — OCR, analyse et comparaison
+- Intégrer les moteurs locaux gratuits.
+- Ajouter les rapports et les outils d’analyse.
+- Documenter les limitations.
+
+### Étape F — Conversion universelle et workflows
+- Connecter les opérations à un moteur commun.
+- Ajouter les traitements par lots.
+- Développer l’éditeur de workflows et les préréglages.
+
+### Étape G — Interface et identité
+- Intégrer les outils à la navigation existante.
+- Améliorer l’expérience utilisateur.
+- Ajouter le slogan et l’écran de chargement.
+- Préserver les préférences et les fonctionnalités actuelles.
+
+### Étape H — Installateur
+- Conserver NSIS.
+- Retirer la génération MSI après audit de ses références.
+- Améliorer l’installateur `.exe`.
+- Intégrer le logo et le slogan.
+- Vérifier la désinstallation et les workflows de publication.
+
+### Étape I — Validation finale
+- Exécuter les tests.
+- Construire l’application.
+- Construire l’installateur lorsque l’environnement le permet.
+- Vérifier les résultats réels.
+- Mettre à jour la documentation.
+- Produire un rapport final honnête.
+
+## 24. Critères de réussite
+
+Le travail sera considéré comme satisfaisant lorsque :
+
+1. Les fonctions existantes continuent de fonctionner.
+2. Les nouveaux outils sont réellement utilisables.
+3. Les fichiers sources sont protégés.
+4. Les conversions produisent des résultats valides.
+5. Les traitements par lots fonctionnent correctement.
+6. Les erreurs sont gérées clairement.
+7. Les protections de sécurité sont conservées.
+8. Les fonctions payantes ou dépendantes d’un cloud ne sont pas obligatoires.
+9. Le slogan est intégré à l’écran de chargement et à l’installateur.
+10. L’installateur principal est NSIS en `.exe`, sans génération MSI inutile.
+11. La documentation correspond aux fonctionnalités réellement disponibles.
+12. Les tests et compilations exécutés sont rapportés sans dissimulation.
+
+## 25. Rapport final obligatoire
+
+À la fin, fournis un rapport comprenant :
+
+- le résumé des changements ;
+- les fonctionnalités réellement implémentées ;
+- les fonctionnalités améliorées ;
+- les limitations restantes ;
+- les fichiers et modules importants modifiés ;
+- les dépendances ajoutées, leur licence et leur coût ;
+- les changements de configuration de l’installateur ;
+- les commandes de tests exécutées et leurs résultats ;
+- le résultat de la compilation ;
+- le chemin ou le nom exact de l’installateur généré, uniquement si sa génération a réellement réussi ;
+- les éventuelles tâches restantes.
+
+Distingue clairement ce qui est terminé, ce qui est partiel et ce qui reste à faire.
+
+Ne prétends pas qu’un fichier a été créé, qu’un test a réussi ou qu’une release a été publiée sans preuve.
 
 ---
 
-# 3. Formats pris en charge
+## INSTRUCTION FINALE
 
-Noto doit pouvoir ouvrir le maximum de formats utiles sans devenir une suite bureautique.
+Fais évoluer **le véritable projet Noto** vers cette vision en respectant l’existant, la sécurité, la gratuité et la qualité du logiciel.
 
-## Texte / Markdown
+Prends toi-même les décisions techniques raisonnables. Privilégie les solutions simples, fiables, locales, gratuites et maintenables.
 
-* `.md`
-* `.markdown`
-* `.txt`
-* `.text`
-* `.log`
+Ne te limite pas à modifier le README ou à créer des écrans factices. Implémente les fonctionnalités réelles, teste-les, corrige les régressions et documente honnêtement les limites.
 
-## Code
-
-* `.js`
-* `.ts`
-* `.jsx`
-* `.tsx`
-* `.html`
-* `.css`
-* `.scss`
-* `.json`
-* `.xml`
-* `.yaml`
-* `.yml`
-* `.py`
-* `.java`
-* `.c`
-* `.cpp`
-* `.h`
-* `.hpp`
-* `.cs`
-* `.php`
-* `.sql`
-* `.sh`
-* `.bat`
-* `.cmd`
-* `.ps1`
-
-## Configuration
-
-* `.ini`
-* `.env`
-* `.toml`
-* `.conf`
-* `.editorconfig`
-* `.gitignore`
-* `.gitattributes`
-
-## Documents
-
-* `.pdf`
-
-## Images
-
-* `.png`
-* `.jpg`
-* `.jpeg`
-* `.gif`
-* `.webp`
-* `.bmp`
-* `.svg`
-* `.ico`
-* `.tif`
-* `.tiff`
-
-## Données
-
-* `.csv`
-
-## Web
-
-* `.html`
-* éventuellement `.htm`
-
----
-
-# 4. Gestion des formats inconnus
-
-Si l'utilisateur ouvre un fichier dont l'extension n'est pas officiellement supportée :
-
-Si le fichier semble être du texte :
-
-→ proposer de l'ouvrir comme fichier texte.
-
-Sinon :
-
-→ afficher une page propre indiquant que le format n'est actuellement pas pris en charge.
-
-Ne jamais faire planter Noto simplement parce qu'un fichier est inconnu.
-
-Afficher une erreur compréhensible en français.
-
----
-
-# 5. Viewer Markdown
-
-Le Markdown est l'une des fonctionnalités principales de Noto.
-
-Lorsqu'un fichier `.md` est ouvert, afficher directement son **rendu Markdown**.
-
-Supporter au minimum :
-
-* titres H1 à H6
-* paragraphes
-* gras
-* italique
-* texte barré
-* listes
-* listes numérotées
-* listes imbriquées
-* citations
-* liens
-* images
-* tableaux
-* code inline
-* blocs de code
-* séparateurs
-* cases à cocher
-* ancres
-* liens internes
-* caractères échappés
-
-Le rendu doit être :
-
-* lisible
-* propre
-* moderne
-* agréable sur les longs documents
-
-Le rendu doit rester proche d'un Markdown classique.
-
-Ne pas inventer un système de mise en page complètement différent.
-
----
-
-# 6. Éditeur Markdown
-
-Le viewer reste le mode principal.
-
-L'édition doit être accessible depuis une action claire :
-
-**Éditer**
-
-Lorsque l'utilisateur clique dessus, Noto passe en mode édition.
-
-Prévoir :
-
-* éditeur Markdown
-* coloration syntaxique
-* numéros de lignes
-* indentation
-* Ctrl + S
-* annuler
-* rétablir
-* rechercher
-* remplacer
-* copier
-* couper
-* coller
-* sélection normale
-* aperçu en temps réel
-
-L'utilisateur doit pouvoir passer facilement entre :
-
-**Édition ↔ Aperçu**
-
-sans perdre ses modifications.
-
-Si un fichier contient des modifications non sauvegardées :
-
-→ Noto doit l'indiquer clairement.
-
-Si l'utilisateur tente de fermer le fichier :
-
-→ demander confirmation uniquement si nécessaire.
-
----
-
-# 7. Édition des autres fichiers texte
-
-Noto ne doit pas devenir un IDE.
-
-Cependant, pour les fichiers texte et code simples, il peut être possible d'activer un mode édition.
-
-Par exemple :
-
-`.txt`
-
-→ lecture + édition
-
-`.json`
-
-→ lecture + édition
-
-`.js`
-
-→ lecture + édition simple
-
-etc.
-
-L'objectif est surtout de permettre une petite modification rapide.
-
-Pas besoin de :
-
-* terminal
-* debugger
-* extensions IDE
-* compilation
-* Git intégré
-* autocomplétion complexe
-
----
-
-# 8. Viewer de code
-
-Pour les fichiers de code :
-
-* coloration syntaxique
-* police monospace
-* numéros de lignes
-* recherche
-* sélection
-* copie
-* zoom
-* défilement fluide
-
-Le rendu doit être adapté au langage détecté.
-
-Pour JSON :
-
-* coloration syntaxique
-* indentation lisible
-* structure facile à comprendre
-
-Pour les gros fichiers, éviter de charger inutilement tout le contenu dans l'interface si cela provoque des ralentissements.
-
----
-
-# 9. Viewer HTML
-
-Pour les fichiers HTML, proposer deux modes :
-
-### Code
-
-Afficher le HTML avec coloration syntaxique.
-
-### Aperçu
-
-Afficher le rendu HTML.
-
-L'utilisateur doit pouvoir passer facilement de :
-
-**Code ↔ Aperçu**
-
-Le rendu doit être isolé correctement afin qu'un fichier HTML local ne puisse pas compromettre l'application.
-
----
-
-# 10. Viewer PDF
-
-Noto doit proposer un viewer PDF simple.
-
-Fonctions :
-
-* affichage des pages
-* page suivante
-* page précédente
-* numéro de page
-* aller à une page
-* zoom
-* zoom +
-* zoom -
-* ajuster à la largeur
-* ajuster à la page
-* défilement
-* recherche lorsque supportée correctement
-
-Pas besoin d'éditer les PDF.
-
----
-
-# 11. Viewer d'images
-
-Pour les images :
-
-* affichage centré
-* ajustement à la fenêtre
-* taille réelle
-* zoom
-* zoom avant
-* zoom arrière
-* déplacement de l'image lorsqu'elle est zoomée
-* rotation si facilement réalisable
-* informations basiques sur l'image
-
-Formats :
-
-PNG, JPG, JPEG, GIF, WEBP, BMP, SVG, ICO, TIFF.
-
-Pour les GIF :
-
-→ conserver l'animation.
-
-Pour SVG :
-
-→ afficher correctement le rendu vectoriel.
-
----
-
-# 12. Viewer CSV
-
-Pour les fichiers `.csv` :
-
-Afficher les données sous forme de tableau.
-
-Prévoir :
-
-* lignes
-* colonnes
-* défilement horizontal
-* défilement vertical
-* lecture correcte des séparateurs courants
-* gestion des valeurs contenant des guillemets
-* affichage propre des cellules
-
-Noto n'a pas besoin de devenir un tableur.
-
----
-
-# 13. Glisser-déposer
-
-L'utilisateur doit pouvoir faire :
-
-**Fichier → glisser dans Noto → ouverture immédiate**
-
-Supporter le drag & drop depuis l'Explorateur Windows.
-
-Si plusieurs fichiers sont déposés :
-
-→ gérer proprement la situation, par exemple avec une liste de fichiers ouverts.
-
----
-
-# 14. Fichiers récents
-
-Ajouter une petite section :
-
-**Récents**
-
-Elle doit rester locale.
-
-Afficher :
-
-* nom du fichier
-* chemin éventuellement tronqué
-* type
-* date de dernière ouverture
-
-Prévoir une possibilité de supprimer un élément de la liste.
-
-Si le fichier n'existe plus :
-
-→ l'indiquer proprement.
-
----
-
-# 15. Intégration Windows
-
-Noto doit être correctement déclaré auprès de Windows comme application capable d'ouvrir les formats qu'il prend en charge.
-
-IMPORTANT :
-
-**Noto ne doit PAS imposer ses associations de fichiers.**
-
-Lors de l'installation, l'utilisateur doit conserver le contrôle.
-
-Windows doit simplement savoir que Noto peut ouvrir certains formats.
-
-Ainsi l'utilisateur pourra naturellement faire :
-
-**clic droit → Ouvrir avec → Noto**
-
-et éventuellement :
-
-**Toujours utiliser cette application**
-
-Noto doit donc apparaître correctement dans la liste des applications compatibles avec les formats pris en charge.
-
-Ne pas remplacer automatiquement les applications par défaut existantes.
-
-Ne pas forcer Noto comme programme par défaut.
-
-Les associations doivent être déclarées proprement dans le package/installateur Windows.
-
----
-
-# 16. Interface
-
-L'interface doit être :
-
-* moderne
-* minimaliste
-* élégante
-* rapide
-* professionnelle
-* claire
-
-Le design doit être discret.
-
-Éviter absolument :
-
-* néons
-* effets futuristes
-* animations excessives
-* gradients partout
-* énormes boutons
-* interface de dashboard
-* 50 paramètres inutiles
-
-Noto doit donner l'impression d'un **petit logiciel Windows premium et simple**.
-
----
-
-# 17. Écran d'accueil
-
-Lorsqu'aucun fichier n'est ouvert :
-
-Afficher une interface simple avec :
-
-**Noto**
-
-et quelques actions :
-
-* Ouvrir un fichier
-* Ouvrir plusieurs fichiers
-* éventuellement Ouvrir un dossier
-* fichiers récents
-* zone de glisser-déposer
-
-Ne pas surcharger l'écran.
-
----
-
-# 18. Barre supérieure
-
-Lorsqu'un fichier est ouvert, la barre supérieure doit rester minimaliste.
-
-Afficher principalement :
-
-* nom du fichier
-* éventuellement type
-* action principale
-* Éditer lorsque disponible
-* rechercher
-* menu supplémentaire
-
-Les actions secondaires peuvent être regroupées dans un menu.
-
----
-
-# 19. Onglets
-
-Les onglets sont autorisés si cela améliore réellement l'utilisation.
-
-Exemple :
-
-`README.md | config.json | image.png`
-
-Chaque fichier peut alors être ouvert dans son propre onglet.
-
-Mais ne pas ajouter les onglets si cela rend l'application inutilement complexe.
-
-L'objectif reste la simplicité.
-
----
-
-# 20. Thèmes
-
-Prévoir :
-
-* thème clair
-* thème sombre
-
-Le thème sombre doit être particulièrement travaillé.
-
-Tous les composants doivent respecter le thème :
-
-* viewer
-* éditeur
-* PDF
-* images
-* tableaux
-* menus
-* paramètres
-* fenêtres d'erreur
-
----
-
-# 21. Paramètres
-
-Créer une petite page de paramètres.
-
-Ne pas créer un énorme panneau de configuration.
-
-Catégories possibles :
-
-### Apparence
-
-* thème
-* taille du texte
-
-### Éditeur
-
-* taille de police
-* numéros de lignes
-* retour à la ligne automatique
-
-### Général
-
-* fichiers récents
-* comportement à l'ouverture
-
-Les paramètres doivent être sauvegardés localement.
-
----
-
-# 22. Gestion des erreurs
-
-Toutes les erreurs visibles par l'utilisateur doivent être compréhensibles.
-
-Ne jamais afficher simplement :
-
-`Error 0x800...`
-
-Afficher plutôt :
-
-> Impossible d'ouvrir ce fichier.
-
-Puis une explication courte et éventuellement un bouton :
-
-**Copier les détails**
-
-Prévoir des états :
-
-* chargement
-* fichier vide
-* fichier trop volumineux
-* format inconnu
-* fichier inaccessible
-* PDF invalide
-* image invalide
-* erreur de sauvegarde
-
-L'application ne doit jamais afficher un écran vide sans explication.
-
----
-
-# 23. Performance
-
-Noto doit être rapide au démarrage.
-
-Attention particulièrement aux :
-
-* gros fichiers texte
-* gros fichiers JSON
-* gros fichiers Markdown
-* PDF volumineux
-* images très lourdes
-
-Éviter les opérations bloquantes sur l'interface.
-
-Si un fichier prend du temps à charger :
-
-→ afficher un état de chargement.
-
-Si un fichier est extrêmement volumineux :
-
-→ prévenir l'utilisateur avant une opération potentiellement lourde.
-
----
-
-# 24. Sécurité
-
-Tout fonctionne localement.
-
-Les fichiers ouverts par l'utilisateur ne doivent pas être envoyés vers un serveur.
-
-Pour HTML et SVG, faire particulièrement attention au contenu potentiellement dangereux.
-
-Ne pas exécuter arbitrairement du contenu provenant d'un fichier.
-
----
-
-# 25. Architecture du projet
-
-Le projet doit être organisé proprement.
-
-Ne pas mettre tout le code dans un seul fichier.
-
-Créer une architecture claire avec des dossiers séparés pour :
-
-* interface
-* viewers
-* éditeur
-* parsing
-* gestion des fichiers
-* paramètres
-* composants UI
-* utilitaires
-* assets
-* configuration
-* tests
-
-L'architecture exacte dépendra de la technologie choisie, mais elle doit rester simple.
-
-Ne pas créer 200 fichiers inutiles juste pour donner l'impression que le projet est complexe.
-
----
-
-# 26. GitHub public
-
-Le repository doit être prêt à être rendu public.
-
-Créer au minimum :
-
-```text
-Noto/
-├── src/
-├── assets/
-├── tests/
-├── docs/
-├── screenshots/
-├── .github/
-│   └── workflows/
-├── .gitignore
-├── README.md
-├── LICENSE
-├── CONTRIBUTING.md
-├── SECURITY.md
-├── CHANGELOG.md
-└── ...
-```
-
-Adapter cette structure à la technologie choisie.
-
----
-
-# 27. README.md
-
-Le README doit être réellement professionnel.
-
-Il doit contenir :
-
-* logo Noto
-* présentation courte
-* aperçu du projet
-* screenshots
-* fonctionnalités
-* formats supportés
-* installation
-* utilisation
-* raccourcis clavier
-* développement
-* build
-* contribution
-* licence
-
-Ajouter des badges utiles uniquement.
-
-Ne pas mettre 30 badges inutiles.
-
-Le README doit permettre à quelqu'un qui découvre le projet de comprendre Noto en moins de deux minutes.
-
----
-
-# 28. Screenshots
-
-Créer un dossier :
-
-`screenshots/`
-
-Il doit contenir de vraies captures de l'application.
-
-Prévoir notamment :
-
-1. écran d'accueil
-2. viewer Markdown
-3. éditeur Markdown
-4. viewer code
-5. viewer PDF
-6. viewer image
-7. viewer CSV
-8. thème clair
-9. thème sombre
-
-Les screenshots doivent être propres et montrer l'interface réelle.
-
-Ils pourront être utilisés dans le README GitHub.
-
-Si l'environnement permet de générer automatiquement ces captures, fais-le.
-
-Sinon, préparer clairement la structure et les indications nécessaires pour les ajouter.
-
----
-
-# 29. Documentation
-
-Créer un dossier `docs/` si nécessaire.
-
-Documenter notamment :
-
-* architecture
-* installation
-* développement
-* build Windows
-* ajout d'un nouveau format
-* création d'un viewer
-* système de thèmes
-* packaging
-
-La documentation doit rester compréhensible pour un développeur qui découvre le projet.
-
----
-
-# 30. GitHub Actions
-
-Mettre en place une CI simple.
-
-À chaque Pull Request ou push important :
-
-* installation des dépendances
-* vérification du projet
-* lint si pertinent
-* tests
-* build si raisonnable
-
-Prévoir également un workflow de release si cela est pertinent.
-
-Le but est d'avoir un projet réellement maintenable sur GitHub.
-
----
-
-# 31. Tests
-
-Créer des tests pour les parties importantes.
-
-Tester notamment :
-
-* parsing Markdown
-* ouverture de fichiers
-* détection des extensions
-* JSON
-* CSV
-* gestion des erreurs
-* sauvegarde
-* conversion/rendu Markdown
-
-Pas besoin de tester chaque pixel de l'interface.
-
----
-
-# 32. Packaging
-
-Créer une vraie procédure de build Windows.
-
-Le projet doit permettre de produire :
-
-* application installable
-* éventuellement version portable
-
-Tester que l'application installée :
-
-* démarre correctement
-* possède son icône
-* peut ouvrir les fichiers supportés
-* apparaît dans les applications Windows compatibles
-* se désinstalle correctement
-
----
-
-# 33. Icône et identité visuelle
-
-Créer une identité visuelle simple autour du nom :
-
-**Noto**
-
-Le logo doit être :
-
-* minimal
-* reconnaissable
-* lisible en petite taille
-* adapté à une icône Windows
-* cohérent avec l'interface
-
-Pas besoin d'un logo compliqué.
-
-Prévoir les assets nécessaires pour Windows et GitHub.
-
----
-
-# 34. Langue
-
-L'interface principale doit être en **français**.
-
-Les messages d'erreur doivent également être en français.
-
-Préparer néanmoins l'architecture de manière à pouvoir ajouter l'anglais plus tard sans refaire toute l'application.
-
----
-
-# 35. Raccourcis clavier
-
-Prévoir au minimum :
-
-* `Ctrl + O` → ouvrir
-* `Ctrl + S` → sauvegarder
-* `Ctrl + Shift + S` → enregistrer sous si pertinent
-* `Ctrl + F` → rechercher
-* `Ctrl + H` → remplacer
-* `Ctrl + Z` → annuler
-* `Ctrl + Y` → rétablir
-* `Ctrl + C` → copier
-* `Ctrl + X` → couper
-* `Ctrl + V` → coller
-* `Ctrl + W` → fermer le fichier/onglet si les onglets existent
-
----
-
-# 36. Ce qu'il ne faut PAS faire
-
-Ne transforme pas Noto en :
-
-* VS Code
-* Notion
-* Word
-* Photoshop
-* Excel
-* gestionnaire de fichiers complet
-* navigateur web
-* suite collaborative
-
-N'ajoute pas de fonctionnalités uniquement parce qu'elles sont techniquement possibles.
-
-Chaque fonctionnalité doit répondre à la question :
-
-> Est-ce que cela rend Noto meilleur pour consulter ou modifier rapidement un fichier ?
-
-Si la réponse est non, ne pas l'ajouter.
-
----
-
-# 37. Qualité finale
-
-Avant de considérer la V1 comme terminée, vérifier :
-
-* aucune fonctionnalité majeure cassée
-* aucun écran vide sans explication
-* aucune erreur console importante
-* aucune dépendance inutile
-* interface cohérente
-* responsive aux différentes tailles de fenêtre
-* thème clair fonctionnel
-* thème sombre fonctionnel
-* fichiers Markdown fonctionnels
-* fichiers texte fonctionnels
-* code fonctionnel
-* images fonctionnelles
-* PDF fonctionnel
-* CSV fonctionnel
-* HTML fonctionnel
-* drag & drop fonctionnel
-* sauvegarde fonctionnelle
-* raccourcis fonctionnels
-* packaging Windows fonctionnel
-* intégration Windows fonctionnelle
-* README complet
-* screenshots présents
-* repository propre
-
----
-
-# 38. Méthode de développement
-
-Ne cherche pas à tout construire d'un seul bloc.
-
-Construis Noto progressivement :
-
-### Phase 1
-
-Base de l'application + fenêtre + navigation + ouverture de fichiers.
-
-### Phase 2
-
-Viewer texte + Markdown.
-
-### Phase 3
-
-Éditeur Markdown.
-
-### Phase 4
-
-Viewer code + JSON + configuration.
-
-### Phase 5
-
-Viewer images.
-
-### Phase 6
-
-Viewer PDF.
-
-### Phase 7
-
-Viewer CSV.
-
-### Phase 8
-
-Viewer HTML.
-
-### Phase 9
-
-Thèmes + paramètres + fichiers récents.
-
-### Phase 10
-
-Drag & drop + intégration Windows.
-
-### Phase 11
-
-Tests + optimisation.
-
-### Phase 12
-
-Packaging Windows + GitHub Actions.
-
-### Phase 13
-
-README + documentation + screenshots + finition.
-
----
-
-# 39. Règle importante pour l'agent
-
-Tu dois réellement **construire le projet**, pas simplement produire une maquette.
-
-Le résultat final doit être une application fonctionnelle que l'on peut :
-
-1. cloner depuis GitHub
-2. installer les dépendances
-3. lancer en développement
-4. compiler
-5. installer sur Windows
-6. utiliser quotidiennement
-
-À chaque étape, privilégie une implémentation simple et fiable plutôt qu'une fonctionnalité impressionnante mais fragile.
-
-Quand une décision technique n'est pas imposée dans ce document, choisis la solution la plus simple, maintenable et adaptée à Noto.
-
----
-
-# 40. État final attendu
-
-À la fin de la V1, je dois avoir :
-
-**Noto**
-
-Une application Windows locale, rapide et moderne capable de :
-
-**Ouvrir → afficher → éventuellement modifier → sauvegarder**
-
-une grande variété de fichiers courants.
-
-Le logiciel doit rester extrêmement simple à comprendre dès la première ouverture.
-
-Le repository GitHub public doit être aussi propre que l'application elle-même.
+**La priorité est de construire un logiciel utile, cohérent et fiable, pas de cocher artificiellement le plus grand nombre de fonctionnalités.**
