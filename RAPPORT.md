@@ -33,7 +33,7 @@ Ce rapport décrit **ce qui fonctionne réellement**, ce qui est partiel et ce q
 
 - **Slogan** « Noto. Vos fichiers, vos outils, un seul espace. » présent sur l’écran de démarrage (avec étapes réelles : préférences chargées → interface prête) et sur les visuels de l’installeur (panneau latéral : slogan complet ; bandeau : slogan sur deux lignes, jamais tronqué).
 - **Commande Tauri `reveal_path`** ajoutée pour ouvrir l’emplacement d’un fichier produit.
-- **Installeur** : NSIS uniquement (`bundle.targets: ["nsis"]`), en français, `currentUser` (sans élévation), compression LZMA, visuels NSIS, crochets `installerHooks` qui vérifient réellement l’installation et confirment avant désinstallation, sans aucun dialogue en mode silencieux.
+- **Installeur** : NSIS uniquement (`bundle.targets: ["nsis"]`), en français, `currentUser` (sans élévation), compression LZMA, visuels NSIS, crochets `installerHooks` qui vérifient réellement l’installation et confirment avant désinstallation, sans aucun dialogue en mode silencieux. Le gabarit NSIS de Tauri 2.12.3 place le panneau latéral sur la page d’accueil et la page finale (`MUI_WELCOMEFINISHPAGE_BITMAP`) et le bandeau sur les autres pages (`MUI_HEADERIMAGE_BITMAP`), et insère les quatre crochets déclarés (`!ifmacrodef` / `!insertmacro`) : les visuels du logo, du nom et du slogan apparaissent donc bien sur l’assistant, même si leur rendu final ne s’observe que sous Windows.
 - **MSI supprimé** partout : configuration, assets WiX, générateur d’images, tests de fumée, signature, empreintes, artefacts et fichiers publiés de la CI. Détail complet dans [`docs/inventaire-et-migration.md`](docs/inventaire-et-migration.md).
 
 ### Documentation mise à jour
