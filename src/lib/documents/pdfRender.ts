@@ -369,12 +369,17 @@ export function markdownToBlocks(source: string): DocumentBlock[] {
   return blocks;
 }
 
+/**
+ * Retire réellement le balisage Markdown : les titres perdent leurs `#`, les
+ * listes gardent une puce simple et le texte reste lisible tel quel. C’est ce
+ * qu’annonce l’outil « Convertir du Markdown en texte ».
+ */
 export function markdownToPlainText(source: string): string {
   return markdownToBlocks(source).map((block) => {
-    if (block.type === 'heading') return `${'#'.repeat(block.level)} ${block.text}`;
+    if (block.type === 'heading') return block.text;
     if (block.type === 'paragraph') return block.text;
     if (block.type === 'code') return block.text;
-    if (block.type === 'list') return block.items.map((item) => `- ${item}`).join('\n');
+    if (block.type === 'list') return block.items.map((item) => `• ${item}`).join('\n');
     if (block.type === 'table') return block.rows.map((row) => row.join('\t')).join('\n');
     if (block.type === 'image') return block.caption ?? '';
     return '';

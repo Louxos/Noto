@@ -7,7 +7,7 @@ import {
   Copy, ClipboardPaste, Download, File, FileCode2, FileDiff, FileImage, FileText, FileType2, FileUp, FolderInput, FolderPlus, FolderSearch, Globe2, Presentation, Upload,
   Image as ImageIcon, Keyboard, LayoutGrid, LoaderCircle, Maximize2, Moon, MoreHorizontal,
   PanelLeft, Pencil, Plus, RotateCcw, Scissors, Search, Settings2, ShieldCheck, Sun, Table2,
-  TextCursorInput, X, Save, Replace, Sparkles, Trash2, Pin,
+  TextCursorInput, X, Save, Replace, Sparkles, Trash2, Pin, Wrench,
 } from 'lucide-react';
 import { CodeViewer } from './components/CodeViewer';
 import { CsvViewer } from './components/CsvViewer';
@@ -32,6 +32,7 @@ import { createGroup, addGroupFile, deleteGroup, duplicateGroup, loadGroups, rem
 import { loadPinnedSearchFolders, savePinnedSearchFolders, togglePinnedSearchFolder } from './lib/searchFolders';
 import { defaultPreferences, loadPreferences, loadRecentFiles, savePreferences, saveRecentFiles, upsertRecent, TOOLBAR_ACTIONS, type Preferences, type RecentFile, type ToolbarAction } from './lib/preferences';
 import type { BrowserFileHandle, OpenDocument } from './types';
+import type { StudioRequest } from './studio/StudioScreen';
 import './styles.css';
 
 const MarkdownViewer = lazy(() => import('./components/MarkdownViewer').then((module) => ({ default: module.MarkdownViewer })));
@@ -39,6 +40,7 @@ const ImageViewer = lazy(() => import('./components/ImageViewer').then((module) 
 const PdfViewer = lazy(() => import('./components/PdfViewer').then((module) => ({ default: module.PdfViewer })));
 const PresentationViewer = lazy(() => import('./components/PresentationViewer').then((module) => ({ default: module.PresentationViewer })));
 const OfficeDocumentViewer = lazy(() => import('./components/OfficeDocumentViewer').then((module) => ({ default: module.OfficeDocumentViewer })));
+const StudioScreen = lazy(() => import('./studio/StudioScreen'));
 
 const formatIcons: Record<string, typeof FileText> = {
   markdown: BookOpenText,
@@ -105,7 +107,8 @@ function OpenDialogButton({ onClick, compact = false }: { onClick: () => void; c
 export default function App() {
   const [documents, setDocuments] = useState<OpenDocument[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [page, setPage] = useState<'home' | 'file' | 'recents' | 'group' | 'smart-group'>('home');
+  const [page, setPage] = useState<'home' | 'file' | 'recents' | 'group' | 'smart-group' | 'studio'>('home');
+  const [studioRequest, setStudioRequest] = useState<StudioRequest | null>(null);
   const [preferences, setPreferences] = useState<Preferences>(() => loadPreferences());
   const [recents, setRecents] = useState<RecentFile[]>(() => loadRecentFiles(preferences.recentLimit));
   const [groups, setGroups] = useState<FileGroup[]>(() => loadGroups());
@@ -191,6 +194,18 @@ export default function App() {
   const dirty = Boolean(activeDoc && activeDoc.content !== activeDoc.savedContent);
   const canReadText = Boolean(activeDoc && (['markdown', 'text', 'code', 'html', 'csv', 'pdf'].includes(activeDoc.kind) || (activeDoc.kind === 'unknown' && textFallbackIds.has(activeDoc.id))));
   const canEdit = Boolean(activeDoc && canReadText && !activeDoc.truncated && ['markdown', 'text', 'code', 'html', 'csv', 'unknown'].includes(activeDoc.kind));
+
+  const openStudio = useCallback((request: StudioRequest | null = null) => {
+    setStudioRequest(request);
+    setPage('studio');
+    setActiveId(null);
+    setActiveGroupId(null);
+    setActiveSmartGroup(null);
+  }, []);
+
+  const openStudioForPath = useCallback((path: string) => {
+    openStudio({ paths: [path] });
+  }, [openStudio]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => window.dispatchEvent(new Event('noto:boot-ready')));
@@ -516,6 +531,8 @@ export default function App() {
         activeId,
         activeGroupId,
         page: page === 'group' ? 'group' : page === 'file' ? 'file' : 'home',
+        // L’atelier n’est pas restauré à l’ouverture : la session reprend sur la
+        // bibliothèque, jamais au milieu d’un traitement.
       });
     } else clearDesktopSession();
   }, [activeGroupId, activeId, documents, page, preferences.restoreSession]);
@@ -1253,6 +1270,11 @@ export default function App() {
       { id: 'recents', label: 'Fichiers récents', icon: <Clock3 size={15} />, onSelect: () => { setPage('recents'); setActiveId(null); setActiveGroupId(null); setActiveSmartGroup(null); } },
       { id: 'smart-pdf', label: 'PDF ouverts récemment', icon: <FileType2 size={15} />, onSelect: () => openSmartGroup('pdf') },
       { id: 'smart-images', label: 'Images récentes', icon: <FileImage size={15} />, onSelect: () => openSmartGroup('image') },
+      { id: 'studio', label: 'Atelier de traitement…', icon: <Wrench size={15} />, dividerBefore: true, onSelect: () => openStudio(null) },
+      { id: 'studio-pdf', label: 'Atelier PDF (fusion, découpe, filigrane…)', icon: <FileType2 size={15} />, onSelect: () => openStudio({ operationId: 'pdf.merge', family: 'pdf' }) },
+      { id: 'studio-image', label: 'Atelier images (conversion, optimisation…)', icon: <FileImage size={15} />, onSelect: () => openStudio({ operationId: 'image.convert', family: 'image' }) },
+      { id: 'studio-ocr', label: 'OCR et nettoyage de scans', icon: <BookOpen size={15} />, onSelect: () => openStudio({ operationId: 'ocr.image' }) },
+      { id: 'studio-convert', label: 'Conversion de documents', icon: <Download size={15} />, onSelect: () => openStudio({ operationId: 'office.to-pdf' }) },
       { id: 'sidebar', label: preferences.sidebarCollapsed ? 'Déployer la barre latérale' : 'Réduire la barre latérale', icon: <MoreHorizontal size={15} />, dividerBefore: true, onSelect: () => updatePreference('sidebarCollapsed', !preferences.sidebarCollapsed) },
       { id: 'toolbar-density', label: preferences.compactToolbar ? 'Aérer la barre d’outils' : 'Compacter la barre d’outils', icon: <PanelLeft size={15} />, onSelect: () => updatePreference('compactToolbar', !preferences.compactToolbar) },
       { id: 'theme', label: preferences.theme === 'light' ? 'Activer le thème sombre' : 'Activer le thème clair', icon: preferences.theme === 'light' ? <Moon size={15} /> : <Sun size={15} />, onSelect: () => updatePreference('theme', preferences.theme === 'light' ? 'dark' : 'light') },
@@ -1268,6 +1290,10 @@ export default function App() {
   const commands: CommandOption[] = [
     { id: 'open', label: 'Ouvrir un fichier', detail: 'Parcourir votre appareil', shortcut: 'Ctrl+O', keywords: 'parcourir importer', icon: <FileUp size={16} />, onSelect: () => void handleOpen() },
     { id: 'folder-search', label: 'Rechercher dans un dossier', detail: 'Recherche locale à la demande', keywords: 'chercher dossier contenu fichiers', icon: <FolderSearch size={16} />, disabled: !isTauri(), onSelect: () => setFolderSearchOpen(true) },
+    { id: 'studio-open', label: 'Ouvrir l’atelier', detail: 'Traiter, convertir et analyser des fichiers localement', keywords: 'atelier pdf image ocr conversion traitement', icon: <Wrench size={16} />, onSelect: () => openStudio(null) },
+    { id: 'studio-pdf-open', label: 'Atelier PDF', detail: 'Fusionner, découper, compresser, filigraner', keywords: 'atelier pdf fusion découpe compression', icon: <FileType2 size={16} />, onSelect: () => openStudio({ operationId: 'pdf.merge', family: 'pdf' }) },
+    { id: 'studio-images-open', label: 'Atelier images', detail: 'Convertir, optimiser, modifier, planches-contacts', keywords: 'atelier image conversion optimisation', icon: <FileImage size={16} />, onSelect: () => openStudio({ operationId: 'image.convert', family: 'image' }) },
+    { id: 'studio-ocr-open', label: 'OCR et scans', detail: 'Reconnaître le texte, créer un PDF interrogeable', keywords: 'ocr texte scan numérisation tesseract', icon: <BookOpen size={16} />, onSelect: () => openStudio({ operationId: 'ocr.image' }) },
     { id: 'compare-text', label: 'Comparer des fichiers texte', detail: 'Afficher les différences de deux onglets', keywords: 'diff comparaison code texte', icon: <FileDiff size={16} />, onSelect: () => setTextDiffOpen(true) },
     { id: 'save', label: 'Enregistrer', detail: 'Sauvegarder les modifications', shortcut: 'Ctrl+S', keywords: 'sauvegarde fichier', icon: <Save size={16} />, disabled: !dirty || !canEdit, onSelect: () => void handleSave() },
     { id: 'find', label: 'Rechercher', detail: 'Trouver du texte dans le fichier actif', shortcut: 'Ctrl+F', keywords: 'chercher trouver', icon: <Search size={16} />, disabled: !canReadText, onSelect: () => { setSearchOpen(true); setReplaceOpen(false); } },
@@ -1307,6 +1333,7 @@ export default function App() {
     const inCurrentGroup = currentGroup?.files.some((file) => file.id === contextFile.id) ?? false;
     const items: MenuEntry[] = [
       { id: 'open-file', label: 'Ouvrir le fichier', icon: <FileUp size={15} />, onSelect: () => void handleRecent(contextFile) },
+      { id: 'studio-file', label: contextFile.source === 'desktop' ? 'Ouvrir dans l’atelier' : 'Ouvrir dans l’atelier (fichier local requis)', icon: <Wrench size={15} />, disabled: contextFile.source !== 'desktop' || !isTauri(), onSelect: () => openStudioForPath(contextFile.path) },
       { id: 'add-group', label: 'Classer dans un groupe…', icon: <FolderPlus size={15} />, onSelect: () => setGroupAssignmentTarget(contextFile) },
       { id: 'rename-file', label: contextFile.source === 'desktop' && isTauri() ? 'Renommer…' : 'Renommer (application de bureau)', icon: <Pencil size={15} />, dividerBefore: true, disabled: contextFile.source !== 'desktop' || !isTauri(), onSelect: () => setRenameTarget(contextFile) },
       { id: 'move-file', label: contextFile.source === 'desktop' && isTauri() ? 'Déplacer vers un dossier…' : 'Déplacer (application de bureau)', icon: <FolderInput size={15} />, disabled: contextFile.source !== 'desktop' || !isTauri(), onSelect: () => void moveFileToFolder(contextFile) },
@@ -1446,6 +1473,9 @@ export default function App() {
           <button className={`nav-item ${page === 'recents' ? 'active' : ''}`} type="button" onClick={() => { setPage('recents'); setActiveId(null); setActiveGroupId(null); }}>
             <Clock3 size={17} /><span>Récents</span><span className="nav-count">{recents.length || ''}</span>
           </button>
+          <button className={`nav-item ${page === 'studio' ? 'active' : ''}`} type="button" title="Atelier : traiter, convertir et analyser vos fichiers" onClick={() => openStudio(null)}>
+            <Wrench size={17} /><span>Atelier</span>
+          </button>
         </nav>
 
         <section className="sidebar-group-section" aria-label="Groupes de fichiers">
@@ -1502,10 +1532,10 @@ export default function App() {
             <span className="topbar-icon">{activeDoc && page === 'file' ? kindIcon(activeDoc.kind, 16) : <span className="mini-logo">N</span>}</span>
             <div className="topbar-heading">
               <div className="topbar-name-row">
-                <h1>{page === 'recents' ? 'Récents' : page === 'smart-group' ? smartGroupTitle : page === 'group' && currentGroup ? currentGroup.name : page === 'file' && activeDoc ? activeDoc.name : 'Accueil'}</h1>
+                <h1>{page === 'studio' ? 'Atelier' : page === 'recents' ? 'Récents' : page === 'smart-group' ? smartGroupTitle : page === 'group' && currentGroup ? currentGroup.name : page === 'file' && activeDoc ? activeDoc.name : 'Accueil'}</h1>
                 {page === 'file' && activeDoc && activeDoc.content !== activeDoc.savedContent && <span className="unsaved-indicator" title="Modifications non enregistrées" />}
               </div>
-              <span className="topbar-subtitle">{page === 'file' && activeDoc ? `${getFormatLabel(activeDoc.kind)}${activeDoc.path && activeDoc.source === 'desktop' && !preferences.hidePaths ? ` · ${activeDoc.path}` : ''}` : page === 'group' && currentGroup ? `${currentGroup.files.length} fichier${currentGroup.files.length === 1 ? '' : 's'} · Espace local` : page === 'smart-group' ? `${smartGroupFiles.length} fichier${smartGroupFiles.length === 1 ? '' : 's'} · Collection dynamique locale` : 'Espace local'}</span>
+              <span className="topbar-subtitle">{page === 'studio' ? 'Traitement local · aucun envoi en ligne' : page === 'file' && activeDoc ? `${getFormatLabel(activeDoc.kind)}${activeDoc.path && activeDoc.source === 'desktop' && !preferences.hidePaths ? ` · ${activeDoc.path}` : ''}` : page === 'group' && currentGroup ? `${currentGroup.files.length} fichier${currentGroup.files.length === 1 ? '' : 's'} · Espace local` : page === 'smart-group' ? `${smartGroupFiles.length} fichier${smartGroupFiles.length === 1 ? '' : 's'} · Collection dynamique locale` : 'Espace local'}</span>
             </div>
           </div>
 
@@ -1596,6 +1626,11 @@ export default function App() {
         </div>}
 
         <section className="workspace-content">
+          {page === 'studio' && (
+            <Suspense fallback={<div className="viewer-empty">Préparation de l’atelier…</div>}>
+              <StudioScreen request={studioRequest} onClose={() => { setStudioRequest(null); setPage('home'); }} />
+            </Suspense>
+          )}
           {page === 'home' && <HomeScreen recents={recents} hidePaths={preferences.hidePaths} onOpen={() => void handleOpen()} onRecent={(recent) => void handleRecent(recent)} onViewAll={() => setPage('recents')} />}
           {page === 'recents' && <RecentScreen recents={recents} hidePaths={preferences.hidePaths} onOpen={() => void handleOpen()} onRecent={(recent) => void handleRecent(recent)} onRemove={(id) => setRecents((current) => current.filter((item) => item.id !== id))} onTogglePin={(recent) => setRecents((current) => current.map((item) => item.id === recent.id ? { ...item, pinned: !item.pinned } : item))} />}
           {page === 'smart-group' && activeSmartGroup && <SmartGroupScreen title={smartGroupTitle} kind={activeSmartGroup} files={smartGroupFiles} hidePaths={preferences.hidePaths} onRecent={(recent) => void handleRecent(recent)} />}
