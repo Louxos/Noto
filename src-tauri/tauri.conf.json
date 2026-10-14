@@ -27,7 +27,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis", "msi"],
+    "targets": ["nsis"],
     "category": "Utility",
     "publisher": "Noto",
     "homepage": "https://github.com/Louxos/Noto",
@@ -46,18 +46,15 @@
       "nsis": {
         "installMode": "currentUser",
         "displayLanguageSelector": false,
-        "languages": ["French", "English"],
-        "installerIcon": "icons/icon.ico",
+        "languages": ["French"],
+      "compression": "lzma",
+      "installerIcon": "icons/icon.ico",
         "uninstallerIcon": "icons/icon.ico",
         "headerImage": "windows/installer/nsis-header.bmp",
         "uninstallerHeaderImage": "windows/installer/nsis-header.bmp",
         "sidebarImage": "windows/installer/nsis-sidebar.bmp",
+        "installerHooks": "windows/installer/hooks.nsh",
         "startMenuFolder": "Noto"
-      },
-      "wix": {
-        "language": "fr-FR",
-        "bannerPath": "windows/installer/wix-banner.bmp",
-        "dialogImagePath": "windows/installer/wix-dialog.bmp"
       }
     },
     "fileAssociations": [

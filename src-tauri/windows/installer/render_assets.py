@@ -109,9 +109,10 @@ def nsis_sidebar():
     circle(d, (129, 16, 134, 21), fill=VIOLET)
     mark(d, 18, 20, 39)
     text(d, (67, 23), "Noto", 20, WHITE, bold=True)
-    text(d, (20, 76), "LECTURE · ÉDITION · LOCAL", 6.2, "#BEBBEF", bold=True)
-    text(d, (19, 103), "Vos fichiers.\nÀ leur place.", 17.4, WHITE, bold=True, spacing=4)
-    text(d, (20, 159), "Lisez, organisez,\nmodifiez en local.", 8.4, "#D2D2E0", spacing=4)
+    text(d, (20, 74), "LECTURE · ÉDITION · LOCAL", 5.9, "#BEBBEF", bold=True)
+    # Slogan officiel de Noto, affiché en entier, sur deux lignes lisibles.
+    text(d, (19, 96), "Noto. Vos fichiers,\nvos outils,\nun seul espace.", 12.4, WHITE, bold=True, spacing=5)
+    text(d, (20, 158), "Traitement local :\nrien n’est envoyé en ligne.", 7.4, "#D2D2E0", spacing=4)
 
     # A quiet, polished document-card illustration.
     rect(d, (18, 214, 146, 274), "#39384F", radius=8, outline="#53516D", width=1)
@@ -130,81 +131,15 @@ def nsis_header():
     image = Image.new("RGB", (p(150), p(57)), WHITE)
     d = ImageDraw.Draw(image)
     mark(d, 9, 9, 39)
-    text(d, (56, 9), "Noto", 18, INK, bold=True)
-    text(d, (57, 34), "LECTURE · ÉDITION · LOCAL", 5.3, MUTED, bold=True)
+    text(d, (56, 7), "Noto", 16.5, INK, bold=True)
+    # Slogan officiel, réparti sur deux lignes pour rester lisible sans troncature.
+    text(d, (57, 28), "Vos fichiers, vos outils,\nun seul espace.", 4.7, MUTED, bold=True, spacing=2)
     rect(d, (143, 0, 150, 57), VIOLET)
     export(image, "nsis-header.bmp", (150, 57))
 
 
-def wix_banner():
-    image = Image.new("RGB", (p(493), p(58)), WHITE)
-    d = ImageDraw.Draw(image)
-    rect(d, (0, 56, 493, 58), "#E9E9EF")
-    mark(d, 15, 10, 38)
-    text(d, (65, 8), "Noto", 17.5, INK, bold=True)
-    text(d, (66, 34), "LECTURE · ÉDITION · LOCAL", 6.7, MUTED, bold=True)
-    rect(d, (355, 17, 477, 41), LAVENDER, radius=12)
-    circle(d, (366, 26, 372, 32), fill=VIOLET)
-    text(d, (379, 23), "PRIVÉ PAR CONCEPTION", 5.9, VIOLET_DARK, bold=True)
-    export(image, "wix-banner.bmp", (493, 58))
-
-
-def wix_dialog():
-    image = gradient(493, 312, "#FCFCFE", "#F4F4F8")
-    d = ImageDraw.Draw(image)
-    # Editorial brand panel on the left.
-    rect(d, (0, 0, 174, 312), "#292B3A")
-    circle(d, (64, -75, 230, 91), fill="#34344D")
-    circle(d, (87, -45, 197, 65), outline="#4C4969", width=1)
-    circle(d, (144, 38, 150, 44), fill=VIOLET)
-    mark(d, 22, 23, 46)
-    text(d, (23, 84), "Noto", 23, WHITE, bold=True)
-    rect(d, (23, 122, 58, 124), VIOLET)
-    text(d, (22, 142), "Vos fichiers,\nsans détour.", 15, WHITE, bold=True, spacing=5)
-    text(d, (23, 198), "Un espace local pour\nlire, classer et éditer.", 8.1, "#D0D0DE", spacing=4)
-    rect(d, (22, 265, 151, 289), "#3A394F", radius=12, outline="#53516D", width=1)
-    circle(d, (31, 274, 37, 280), fill=MINT)
-    text(d, (43, 271), "100 % LOCAL", 6.2, WHITE, bold=True)
-
-    # App mockup: recognizable Noto workspace rather than generic stock imagery.
-    rect(d, (211, 47, 466, 229), "#E6E6EF", radius=11)
-    rect(d, (205, 40, 460, 222), WHITE, radius=11, outline="#E5E5ED", width=1)
-    rect(d, (205, 40, 460, 66), "#FAFAFC", radius=11)
-    rect(d, (205, 57, 460, 67), "#FAFAFC")
-    mark(d, 216, 46, 14)
-    text(d, (236, 47), "Noto", 8.4, INK, bold=True)
-    circle(d, (429, 49, 435, 55), fill="#E7E6F5")
-    circle(d, (440, 49, 446, 55), fill="#E7E6F5")
-    rect(d, (218, 78, 280, 211), "#F6F6F9", radius=5)
-    rect(d, (288, 78, 447, 211), "#FFFFFF", radius=5, outline="#EFEFF3", width=1)
-    # Sidebar rows
-    for y, width in [(91, 42), (108, 49), (125, 38)]:
-        rect(d, (228, y, 235, y + 7), "#E4E2FB", radius=2)
-        rect(d, (241, y + 2, 241 + width, y + 5), "#D7D7E0", radius=1)
-    rect(d, (226, 142, 272, 161), "#EFEEFF", radius=4)
-    rect(d, (231, 148, 237, 154), VIOLET, radius=2)
-    rect(d, (242, 149, 266, 152), "#B7B4E9", radius=1)
-    # Document page and writing lines
-    rect(d, (305, 91, 429, 197), "#FFFFFF", radius=4, outline="#EDEDF2", width=1)
-    rect(d, (319, 105, 371, 110), INK, radius=2)
-    rect(d, (319, 121, 414, 124), "#D9D9E2", radius=1)
-    rect(d, (319, 131, 405, 134), "#E1E1E8", radius=1)
-    rect(d, (319, 141, 414, 144), "#E1E1E8", radius=1)
-    rect(d, (319, 151, 398, 154), "#E1E1E8", radius=1)
-    rect(d, (319, 168, 356, 182), "#EEEFFF", radius=3)
-    rect(d, (364, 168, 414, 171), "#E1E1E8", radius=1)
-    rect(d, (364, 177, 406, 180), "#E1E1E8", radius=1)
-
-    text(d, (206, 251), "OUVREZ. CONSULTEZ.", 8, INK, bold=True)
-    text(d, (206, 267), "MODIFIEZ, SI BESOIN.", 8, INK, bold=True)
-    rect(d, (206, 289, 260, 292), VIOLET, radius=1)
-    text(d, (269, 286), "VOTRE ESPACE, VOTRE RYTHME", 5.7, MUTED, bold=True)
-    export(image, "wix-dialog.bmp", (493, 312))
-
-
 if __name__ == "__main__":
+    # Seul l’installeur NSIS est produit par Noto : il n’y a donc que deux visuels.
     nsis_sidebar()
     nsis_header()
-    wix_banner()
-    wix_dialog()
-    print("Rendered branded Noto installer bitmaps in", OUT)
+    print("Rendered branded Noto NSIS installer bitmaps in", OUT)

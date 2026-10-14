@@ -25,7 +25,7 @@ Les changements notables sont consignés ici, selon une version simplifiée de K
 - Récupération locale des brouillons texte, désactivée par défaut, avec demande de restauration, rétention réglable (1/7/30 jours), confirmation avant désactivation/effacement et limites de taille documentées.
 - Réglage de la limite des fichiers récents (4/8/12/20) et option pour masquer les chemins visibles.
 - Retrait groupé de plusieurs références d’un groupe sans supprimer ni déplacer les fichiers originaux.
-- Installateurs NSIS/MSI personnalisés aux couleurs Noto, avec licence MIT, choix de dossier et options de raccourci/lancement dans l’assistant NSIS.
+- Installeur NSIS personnalisé aux couleurs Noto : licence MIT, dossier d’installation, menu Démarrer, raccourci Bureau et lancement facultatifs. (Le paquet MSI a été retiré : le NSIS est désormais l’unique installeur.)
 - Restauration de session desktop facultative (chemins uniquement, désactivée par défaut) et export/import local des groupes/réglages sans contenu de document.
 - Index documentaire centralisé dans `docs/` avec guide utilisateur et description des limites de rendu.
 
