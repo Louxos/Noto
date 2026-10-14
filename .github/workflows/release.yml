@@ -216,11 +216,27 @@ jobs:
             src-tauri/target/release/bundle/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 30
+      - name: Select curated release notes when the tag has one
+        id: notes
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          $candidate = ".github/release-notes/${{ github.ref_name }}.md"
+          if (Test-Path -LiteralPath $candidate) {
+            Write-Host "Using curated release notes: $candidate"
+            "path=$candidate" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          } else {
+            Write-Host "No curated notes for ${{ github.ref_name }}; the release will use GitHub's generated notes."
+          }
+
       - name: Publish versioned GitHub Release downloads
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           name: Noto ${{ github.ref_name }}
+          # Les notes rédigées (si le tag en possède) sont placées avant les notes
+          # générées automatiquement à partir des commits.
+          body_path: ${{ steps.notes.outputs.path }}
           generate_release_notes: true
           prerelease: ${{ contains(github.ref_name, '-') }}
           fail_on_unmatched_files: true

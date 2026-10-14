@@ -2,9 +2,47 @@
 
 Les changements notables sont consignés ici, selon une version simplifiée de Keep a Changelog.
 
-## [Non publié] — 2026-10-08
+## [0.2.0] — 2026-10-14
+
+Noto devient une suite documentaire locale : un atelier réunit des outils réels de traitement PDF, image, OCR, conversion et archivage, exécutés sur l’appareil, sans compte ni envoi en ligne.
 
 ### Ajouté
+- **Atelier de traitement** : espace unique accessible depuis la barre latérale, le menu Affichage, la palette de commandes et le menu contextuel d’un fichier. Il n’affiche que les outils réellement capables de traiter les fichiers présents, expose les réglages (avancés masqués par défaut), la nature exacte du travail et ses limites, puis montre la progression réelle, l’état de chaque fichier, les mesures avant/après, les avertissements et un rapport exportable.
+- **Registre unique de 55 opérations** (`src/lib/operations/`), réutilisé par l’atelier et par les futurs traitements par lots et workflows. Chaque opération déclare ses entrées, ses sorties, ses paramètres, ses limites et sa nature (modification native, calque, reconstruction, analyse).
+- **Atelier PDF** : fusion, découpe par plages ou segments, extraction, suppression, rotation, réordonnancement, duplication, insertion, imposition 2/4/6/9 ; compression en six modes annoncés avec tailles mesurées ; filigrane, en-tête et pied de page, numérotation, signature d’image ; lecture et écriture des métadonnées ; inspection et remplissage des formulaires ; conversion vers images, texte, Markdown, Word, HTML et extraction des images ; images vers PDF ; analyse du document (pages, polices, pages numérisées) ; comparaison visuelle avec compte rendu par page.
+- **Caviardage destructif vérifié** : les pages concernées sont reconstruites sans le contenu masqué, puis le texte retiré est recherché dans le fichier produit pour confirmer la suppression réelle.
+- **Atelier images** : conversion, optimisation par profil, édition (rotation, retournement, recadrage, redimensionnement, luminosité/contraste/saturation, niveaux de gris, bordure, filigrane), planches-contacts, collages, découpage en tuiles, variantes, lecture et suppression des métadonnées EXIF/IPTC, comparaison perceptuelle. Les formats d’écriture sont testés avant l’annonce du résultat.
+- **OCR local** : reconnaissance du texte d’images et de PDF numérisés, création de PDF interrogeable (image d’origine + couche de texte invisible), nettoyage de scan (redressement estimé par analyse des lignes, contraste, marges, débruitage, niveaux de gris), assemblage de scans en PDF.
+- **Consentement explicite pour les modèles OCR** : les modèles de langue ne sont ni embarqués ni téléchargés silencieusement. L’atelier affiche langue, taille estimée, origine exacte et licence, attend un accord explicite — révocable — puis met les modèles en cache local pour un usage hors ligne.
+- **Conversion universelle** : texte/Markdown vers PDF, Word, HTML et texte brut ; CSV/TSV vers XLSX, PDF tabulaire et Markdown ; XLSX vers CSV ; DOCX, ODT, RTF, PPTX, ODP et EPUB vers PDF reconstruit ou vers texte, sans jamais exécuter de macro.
+- **Archives ZIP sûres** : création avec noms uniques et compression réglable, extraction protégée contre les chemins dangereux (`..`, chemins absolus, lecteurs) et bornes de nombre d’entrées et de taille.
+- **Analyse de lots** : doublons strictement identiques détectés par empreinte SHA-256 (avec espace récupérable), rapprochement prudent par nom présenté comme une simple ressemblance, filtres, tri et plan de renommage en série sans écrasement.
+- **Exécution vérifiée** : progression fondée sur le travail effectué, annulation coopérative, erreurs détaillées fichier par fichier, écriture relue pour comparer la taille réellement écrite, historique local des traitements (noms, tailles, réglages — aucun contenu de document) exportable en Markdown.
+- **Commande système `reveal_path`** pour ouvrir l’emplacement d’un fichier produit (Windows, macOS, Linux).
+- **Test anti-dérive de version** : l’interface, le paquet npm, l’installeur Tauri et la définition Cargo doivent annoncer la même version, sinon la vérification continue échoue.
+
+### Modifié
+- **Slogan officiel** « Noto. Vos fichiers, vos outils, un seul espace. » affiché sur l’écran de démarrage et repris dans les visuels de l’installeur, sans troncature.
+- **Écran de démarrage** : les messages correspondent à des étapes réellement franchies (préférences locales, préparation, interface prête), avec mise en garde honnête en cas d’attente prolongée ou de fichier d’interface manquant.
+- **Installeur NSIS français** (`installMode: currentUser`, sans élévation, compression LZMA) : vérification réelle de l’installation, confirmation explicite avant désinstallation rappelant que les documents personnels sont conservés, et aucun dialogue en mode silencieux.
+- Documentation alignée sur la réalité : guide de l’atelier, inventaire des fonctionnalités préservées, audit de la suppression du MSI, guide d’installation et notes de version.
+
+### Corrigé
+- « Convertir du Markdown en texte » retire désormais réellement le balisage (plus de `#` en début de titre, puces normalisées).
+- L’outil d’édition d’image déclare le réglage de qualité qu’il utilisait en silence et aplatit la transparence sur un fond choisi avant tout encodage JPEG.
+- La reconstruction PDF normalise les caractères non pris en charge par les polices standard et signale les remplacements.
+
+### Supprimé
+- **Génération du paquet MSI** : `bundle.targets` ne contient plus que `nsis`. La configuration WiX, les visuels WiX, leur code de génération, les tests de fumée MSI, la signature, les empreintes, les artefacts et les fichiers publiés par le workflow ont été retirés. L’installeur NSIS est l’unique canal de distribution. Détail : `docs/inventaire-et-migration.md`.
+
+## [0.1.0] — 2026-10-13
+
+### Ajouté
+- Première version de Noto : application Tauri 2 avec interface React/Vite.
+- Viewers Markdown, code/texte, HTML isolé, PDF, image et CSV.
+- Édition texte simple, aperçu Markdown en direct, sauvegarde locale, recherche et raccourcis.
+- Onglets, glisser-déposer, fichiers récents, thèmes et paramètres locaux.
+- Configuration d’installateur Windows, associations de formats, tests et workflows GitHub Actions.
 - Écran de démarrage Noto léger, cohérent avec la charte de l’application, avec indicateur de progression, prise en charge des préférences d’apparence et message après une attente prolongée.
 - Workflow Windows : génération de sommes SHA-256 pour les installateurs et signature Authenticode conditionnelle lorsque le certificat des mainteneurs est configuré.
 - Guide de première ouverture, rappelable depuis le menu Aide, avec raccourcis, formats, épinglage de dossiers locaux et accès aux associations Windows.
@@ -32,11 +70,3 @@ Les changements notables sont consignés ici, selon une version simplifiée de K
 ### Corrigé
 - Éditeur : le texte visible est désormais celui du `<textarea>` natif, ce qui aligne exactement le caret et la sélection sur le clic ; insertion de tabulations et auto-indentation à Entrée.
 
-## [0.1.0] — 2026-10-05
-
-### Ajouté
-- Première version de Noto : application Tauri 2 avec interface React/Vite.
-- Viewers Markdown, code/texte, HTML isolé, PDF, image et CSV.
-- Édition texte simple, aperçu Markdown en direct, sauvegarde locale, recherche et raccourcis.
-- Onglets, glisser-déposer, fichiers récents, thèmes et paramètres locaux.
-- Configuration d’installateur Windows, associations de formats, tests et workflows GitHub Actions.

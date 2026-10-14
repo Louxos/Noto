@@ -89,5 +89,6 @@ Aucun service payant, aucun compte, aucune API distante, aucune télémétrie. S
 
 - **Construit et vérifié par la CI** (run `38559617116`) : installateur **NSIS** pour Windows x64, avec tests d’installation, de lancement et de désinstallation réels.
 - Emplacement produit par la CI : `src-tauri/target/release/bundle/nsis/Noto_<version>_x64-setup.exe` — **chemin dans l’espace de travail de la CI**, pas dans ce dépôt.
-- **Aucun nouveau GitHub Release n’a été publié** : la publication n’a lieu que sur un tag `v*`, et aucun tag n’a été créé. Le release `v0.1.0` existant (13 octobre 2026) est antérieur à ces travaux et contient encore un `.msi` ; il n’a pas été modifié.
-- Le paquet `v0.1.0` publié n’est **pas signé**.
+- **Version 0.2.0 publiée** sur la base du tag `v0.2.0`, construite par la CI Windows avec le même parcours que celui décrit au §2 (installation silencieuse, ouverture de fichier, associations, désinstallation).
+- Le release `v0.1.0` (13 octobre 2026, antérieur à ces travaux) a vu ses notes remplacées par un avertissement de version remplacée ; ses fichiers n’ont pas été modifiés.
+- **Aucune signature de code n’est revendiquée** : si les secrets de certificat ne sont pas configurés sur le dépôt, l’installeur publié n’est pas signé.

@@ -32,6 +32,7 @@ import { createGroup, addGroupFile, deleteGroup, duplicateGroup, loadGroups, rem
 import { loadPinnedSearchFolders, savePinnedSearchFolders, togglePinnedSearchFolder } from './lib/searchFolders';
 import { defaultPreferences, loadPreferences, loadRecentFiles, savePreferences, saveRecentFiles, upsertRecent, TOOLBAR_ACTIONS, type Preferences, type RecentFile, type ToolbarAction } from './lib/preferences';
 import type { BrowserFileHandle, OpenDocument } from './types';
+import { APP_VERSION } from './lib/version';
 import type { StudioRequest } from './studio/StudioScreen';
 import './styles.css';
 
@@ -1522,7 +1523,7 @@ export default function App() {
             </button>
             <button className="footer-settings" type="button" onClick={() => setSettingsOpen(true)}><Settings2 size={16} /><span>Paramètres</span></button>
           </div>
-          <div className="sidebar-version"><span>Noto</span><span>0.1.0</span></div>
+          <div className="sidebar-version"><span>Noto</span><span>{APP_VERSION}</span></div>
         </div>
       </aside>
 
@@ -1913,7 +1914,7 @@ export function SettingsModal({ preferences, onChange, onClose, onClearRecents, 
         </section>
         <div className="settings-privacy"><ShieldCheck size={15} /><span>Vos documents et groupes restent sur cet appareil. Les brouillons contenant du texte sont conservés localement uniquement si la récupération est activée ; sa désactivation les efface.</span></div>
       </div>
-      <footer className="settings-footer"><span>Noto <i>·</i> Version 0.1.0</span><button className="secondary-button" type="button" onClick={onClose}>Terminé</button></footer>
+      <footer className="settings-footer"><span>Noto <i>·</i> Version {APP_VERSION}</span><button className="secondary-button" type="button" onClick={onClose}>Terminé</button></footer>
     </section>
   </div>;
 }
