@@ -59,6 +59,20 @@ Ces niveaux viennent de la table des formats (`src/lib/documents/formats.ts`) et
 - les avertissements à lire (par exemple : « le mode maximal peut allonger le temps de traitement ») ;
 - un rapport exportable en Markdown (`Exporter le rapport`), qui reprend sources, réglages, résultats, avertissements et erreurs.
 
+## Réseau et confidentialité
+
+Toutes les opérations de l’atelier s’exécutent sur votre appareil. Aucun fichier, aucun extrait de texte et aucun nom de fichier n’est envoyé où que ce soit : il n’existe ni compte, ni synchronisation, ni télémétrie.
+
+La seule connexion que Noto peut initier concerne l’OCR, et uniquement après votre accord explicite, révocable depuis le panneau **Modèles OCR** :
+
+| Élément téléchargé | Adresse annoncée dans le panneau | Taille | Quand |
+| --- | --- | --- | --- |
+| Script de travail du moteur | `https://cdn.jsdelivr.net/npm/tesseract.js@v…` | ~121 Ko | premier traitement OCR |
+| Cœur WebAssembly du moteur | `https://cdn.jsdelivr.net/npm/tesseract.js-core@v…` | ~4,5 Mo | premier traitement OCR |
+| Modèles de langue choisis | `https://tessdata.projectnaptha.com/4.0.0` | 4 Mo (orientation), 11 à 12 Mo par langue | premier traitement de chaque langue |
+
+Les modèles sont ensuite conservés dans le cache local de l’application ; les deux fichiers du moteur dépendent du cache du moteur de rendu. Sans connexion, aucun de ces téléchargements n’a lieu et l’OCR refuse de démarrer avec un message explicite, plutôt que d’échouer en silence.
+
 ## Limites assumées
 
 - Le traitement est local : sur un très gros lot, le temps dépend de votre processeur, pas d’un serveur.

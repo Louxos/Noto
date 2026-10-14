@@ -16,6 +16,21 @@ export const OCR_CONSENT_KEY = 'noto.ocr.consent.v1';
 export const OCR_TESSDATA_ORIGIN = 'https://tessdata.projectnaptha.com/4.0.0';
 export const OCR_TESSDATA_VERSION = '4.0.0';
 
+/**
+ * Le moteur Tesseract.js ne transporte ni son script de travail ni son cœur
+ * WebAssembly dans le paquet applicatif : par défaut, la bibliothèque les
+ * charge elle-même depuis jsDelivr. Noto ne masque pas ce repli : ces deux
+ * adresses sont affichées avant l’accord, comme celles des modèles de langue.
+ *
+ * Les versions ci-dessous sont celles déclarées par la dépendance installée
+ * (relevées dans `package-lock.json`) ; un test échoue si elles divergent, afin
+ * de ne jamais afficher une adresse obsolète.
+ */
+export const OCR_ENGINE_VERSION = '5.1.1';
+export const OCR_CORE_VERSION = '5.1.1';
+export const OCR_ENGINE_ORIGIN = `https://cdn.jsdelivr.net/npm/tesseract.js@v${OCR_ENGINE_VERSION}/dist/worker.min.js`;
+export const OCR_CORE_ORIGIN = `https://cdn.jsdelivr.net/npm/tesseract.js-core@v${OCR_CORE_VERSION}`;
+
 export interface OcrConsentRecord {
   grantedAt: number;
   /** Langues acceptées par l’utilisateur (`osd` inclus si demandé). */
@@ -90,7 +105,9 @@ export function hasOcrConsentFor(languages: string[]): boolean {
 
 /** Message d’erreur présenté tel quel à l’utilisateur. */
 export function ocrConsentRequiredMessage(languages: string[]): string {
-  return `L’OCR nécessite le téléchargement des modèles de langue (${languages.join(', ')}). `
-    + `Noto ne télécharge rien sans votre accord : ouvrez le panneau « Modèles OCR » de l’atelier pour connaître l’origine (${OCR_TESSDATA_ORIGIN}), `
-    + 'la taille estimée et la licence de chaque modèle, puis autorisez le téléchargement.';
+  return `L’OCR nécessite le téléchargement du moteur de reconnaissance et des modèles de langue (${languages.join(', ')}). `
+    + 'Noto ne télécharge rien sans votre accord : le script de travail du moteur vient de '
+    + `${OCR_ENGINE_ORIGIN}, son cœur WebAssembly de ${OCR_CORE_ORIGIN}, `
+    + `et les modèles de ${OCR_TESSDATA_ORIGIN}. `
+    + 'Ouvrez le panneau « Modèles OCR » de l’atelier pour connaître la taille estimée et la licence de chaque modèle, puis autorisez le téléchargement.';
 }

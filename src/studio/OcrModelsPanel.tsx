@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { CheckCircle2, Download, Globe2, HardDrive, Trash2 } from 'lucide-react';
 import { OCR_LANGUAGES, ocrLanguageLabel } from '../lib/ocr/ocrEngine';
 import {
+  OCR_CORE_ORIGIN,
+  OCR_ENGINE_ORIGIN,
   OCR_TESSDATA_ORIGIN,
   OCR_TESSDATA_VERSION,
   grantOcrConsent,
@@ -16,9 +18,10 @@ import {
  *
  * Il n’existe qu’une raison à ce panneau : rendre le téléchargement des modèles
  * vérifiablement explicite. L’utilisateur y voit la langue, la taille estimée,
- * l’adresse exacte d’origine et la licence de chaque modèle, puis autorise ou
- * non le téléchargement. Rien n’est téléchargé tant que l’accord n’a pas été
- * donné, et un simple bouton permet de le retirer.
+ * l’adresse exacte d’origine et la licence de chaque modèle, ainsi que les deux
+ * fichiers du moteur lui-même (script de travail et cœur WebAssembly), puis
+ * autorise ou non le téléchargement. Rien n’est téléchargé tant que l’accord
+ * n’a pas été donné, et un simple bouton permet de le retirer.
  */
 
 export function OcrModelsPanel({ languages, onConsentChanged }: { languages: string[]; onConsentChanged?: () => void }) {
@@ -46,9 +49,10 @@ export function OcrModelsPanel({ languages, onConsentChanged }: { languages: str
       </header>
 
       <p className="studio-empty">
-        La reconnaissance de texte utilise Tesseract.js (licence Apache-2.0). Les modèles de langue ne sont pas inclus dans
-        l’application : ils sont téléchargés une seule fois, puis conservés en cache local, ce qui rend les traitements suivants
-        hors ligne. Aucune image n’est envoyée en ligne.
+        La reconnaissance de texte utilise Tesseract.js (licence Apache-2.0). Ni le moteur ni les modèles de langue ne sont inclus
+        dans l’application : ils sont téléchargés une seule fois après votre accord, puis conservés en cache local, ce qui rend les
+        traitements suivants hors ligne. <strong>Aucune image, aucun texte reconnu et aucun nom de fichier ne sont envoyés en ligne</strong> :
+        seuls ces fichiers de code et de données sont récupérés, depuis les adresses affichées ci-dessous.
       </p>
 
       <ul className="studio-ocr-languages">
@@ -70,7 +74,9 @@ export function OcrModelsPanel({ languages, onConsentChanged }: { languages: str
       </ul>
 
       <dl className="studio-ocr-facts">
-        <div><dt><Globe2 size={12} aria-hidden="true" /> Origine</dt><dd>{OCR_TESSDATA_ORIGIN}</dd></div>
+        <div><dt><Globe2 size={12} aria-hidden="true" /> Moteur (script)</dt><dd>{OCR_ENGINE_ORIGIN}</dd></div>
+        <div><dt><Globe2 size={12} aria-hidden="true" /> Moteur (cœur WebAssembly)</dt><dd>{OCR_CORE_ORIGIN}</dd></div>
+        <div><dt><Globe2 size={12} aria-hidden="true" /> Modèles de langue</dt><dd>{OCR_TESSDATA_ORIGIN}</dd></div>
         <div><dt><HardDrive size={12} aria-hidden="true" /> Taille estimée</dt><dd>environ {estimatedMb} Mo pour {selectedLanguages.length} modèle(s) ({OCR_TESSDATA_VERSION})</dd></div>
         <div><dt>Licence</dt><dd>{selectedLanguages[0]?.license ?? OCR_LANGUAGES[0].license}</dd></div>
       </dl>

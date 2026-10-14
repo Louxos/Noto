@@ -44,10 +44,10 @@ Ce rapport décrit **ce qui fonctionne réellement**, ce qui est partiel et ce q
 
 | Commande | Résultat |
 | --- | --- |
-| `npm run check` (`tsc -b` + `vitest run`) | ✅ **37 fichiers de tests, 166 tests réussis** |
+| `npm run check` (`tsc -b` + `vitest run`) | ✅ **38 fichiers de tests, 169 tests réussis** |
 | `npm run build` | ✅ succès (bundle produit dans `dist/`) |
 | `npx tsc -b` seul | ✅ aucune erreur (mode strict, `noUnusedLocals`, `verbatimModuleSyntax`) |
-| Vitest ciblés | ✅ `operations/registry.test.ts` 7/7 · `pdfOperations.test.ts` 19/19 · `jobs/analysis.test.ts` 8/8 · `archiveWriter.test.ts` 7/7 · `image/scanCleanup.test.ts` 5/5 · `ocr/ocrConsent.test.ts` 6/6 · `studio/*` 10/10 |
+| Vitest ciblés | ✅ `operations/registry.test.ts` 7/7 · `pdfOperations.test.ts` 19/19 · `jobs/analysis.test.ts` 8/8 · `archiveWriter.test.ts` 7/7 · `image/scanCleanup.test.ts` 5/5 · `ocr/ocrConsent.test.ts` 7/7 · `ocr/ocrEngine.test.ts` 2/2 · `studio/*` 10/10 |
 | CI Windows — run `38562975186` sur `arena/30f013fe-noto` | ✅ **succès** : `npm ci`, `npm run check`, `npm run build`, commandes Windows natives, **construction de l’installeur avec les crochets NSIS**, test de fumée (installation silencieuse, ouverture de fichier, associations, désinstallation), empreintes SHA-256, dépôt de l’artefact `noto-windows-installers` |
 | CI Windows — run `38563865106` sur le tag `v0.2.0` | ✅ **tous les pas verts** : mêmes vérifications, puis sélection des notes rédigées (`generate_release_notes: false`), publication du release avec `Noto_0.2.0_x64-setup.exe` et `SHA256SUMS.txt` |
 | `gh release view v0.2.0` / `v0.1.0` (API GitHub) | ✅ titres, dates et **tailles réelles des fichiers publiés** relevés (ex. `Noto_0.2.0_x64-setup.exe` = 3 442 384 octets) ; les pages de version ne contiennent plus aucun texte généré en anglais |
@@ -79,7 +79,7 @@ Aucun service payant, aucun compte, aucune API distante, aucune télémétrie. S
 ## 5. Limites connues, assumées et documentées
 
 1. **Protection d’un PDF par mot de passe (écriture)** : non prise en charge. `pdf-lib` ne sait pas chiffrer, et aucune bibliothèque libre, locale et maintenue n’a été retenue. L’**ouverture** de documents protégés fonctionne. La fonction n’est pas proposée plutôt que simulée.
-2. **OCR** : les modèles ne sont pas embarqués dans l’installeur (environ 12 Mo par langue). Le premier traitement télécharge le modèle choisi, après accord explicite, puis le réutilise hors ligne. Embarquer les modèles est un travail futur identifié dans le ROADMAP.
+2. **OCR** : ni les modèles de langue (11 à 12 Mo par langue, 4 Mo pour la détection d’orientation) ni les deux fichiers du moteur (script de travail d’environ 121 Ko et cœur WebAssembly d’environ 4,5 Mo) ne sont embarqués dans l’installeur. Le premier traitement les télécharge depuis les adresses affichées dans le panneau « Modèles OCR » — `tessdata.projectnaptha.com` pour les modèles, `cdn.jsdelivr.net` pour le script et le cœur — après accord explicite. Les modèles sont ensuite écrits dans le cache local de l’application (IndexedDB) ; les fichiers du moteur dépendent du cache HTTP du moteur de rendu. **Un premier traitement hors ligne est donc impossible**, et c’est la seule connexion réseau que Noto initie : embarquer le moteur et les modèles est un travail futur identifié dans le ROADMAP.
 3. **Édition du texte natif d’un PDF** : non proposée. Le caviardage, lui, est destructif et vérifié.
 4. **Conversions bureautiques** : reconstructions annoncées comme telles (texte, tableaux, images courantes conservés ; mise en page d’origine non reproduite).
 5. **Ajout de fichiers dans l’atelier, en navigateur** : impossible pour l’instant (le bouton explique la limitation au lieu d’échouer). L’application de bureau n’a pas cette limite.

@@ -30,7 +30,13 @@ export interface OcrOptions {
   signal?: AbortSignal;
 }
 
-import { OCR_TESSDATA_ORIGIN, hasOcrConsentFor, ocrConsentRequiredMessage } from './ocrConsent';
+import {
+  OCR_CORE_ORIGIN,
+  OCR_ENGINE_ORIGIN,
+  OCR_TESSDATA_ORIGIN,
+  hasOcrConsentFor,
+  ocrConsentRequiredMessage,
+} from './ocrConsent';
 
 export interface OcrLanguageDescriptor {
   code: string;
@@ -66,11 +72,24 @@ export interface OcrSession {
  * Ouvre une session OCR.
  *
  * Aucun téléchargement n’a lieu sans un accord explicite de l’utilisateur :
- * les modèles de langue (`*.traineddata`) ne sont pas embarqués dans
- * l’application et sont récupérés depuis une source libre uniquement si
- * `hasOcrConsentFor()` le confirme. Le moteur les met ensuite en cache
- * localement, ce qui rend les traitements suivants hors ligne.
+ * ni les fichiers du moteur (script de travail et cœur WebAssembly) ni les
+ * modèles de langue (`*.traineddata`) ne sont embarqués dans l’application ;
+ * ils sont récupérés depuis les adresses affichées dans le panneau de
+ * consentement, uniquement si `hasOcrConsentFor()` le confirme, puis mis en
+ * cache localement, ce qui rend les traitements suivants hors ligne.
  */
+/**
+ * Message affiché quand le moteur n’a pas pu être chargé (connexion absente ou
+ * bloquée, cache vide). Il nomme les trois adresses réellement demandées plutôt
+ * que de laisser remonter une erreur réseau brute.
+ */
+export function ocrEngineLoadFailureMessage(detail: string): string {
+  return 'Le moteur OCR n’a pas pu être chargé. Le premier traitement télécharge le moteur '
+    + `(${OCR_ENGINE_ORIGIN} et ${OCR_CORE_ORIGIN}, environ 4,6 Mo) ainsi que les modèles de langue `
+    + `(${OCR_TESSDATA_ORIGIN}) : vérifiez la connexion, ou autorisez ces adresses dans votre pare-feu. `
+    + `Détail technique : ${detail}`;
+}
+
 export async function createOcrSession(
   languages: string[],
   options: { onProgress?: (value: number, label: string) => void; ignoreConsent?: boolean } = {},
@@ -81,16 +100,23 @@ export async function createOcrSession(
   }
   options.onProgress?.(0.02, 'Chargement du moteur OCR local (Tesseract.js)…');
   const tesseract = await import('tesseract.js');
-  const worker = await tesseract.createWorker(requested, 1, {
-    // Source déclarée explicitement : c’est celle annoncée dans le panneau de
-    // consentement, et non un repli implicite.
-    langPath: OCR_TESSDATA_ORIGIN,
-    logger: (message: { status?: string; progress?: number }) => {
-      if (!message?.status) return;
-      const value = typeof message.progress === 'number' ? Math.max(0, Math.min(1, message.progress)) : 0;
-      options.onProgress?.(value, translateStatus(message.status));
-    },
-  });
+  let worker: Awaited<ReturnType<typeof tesseract.createWorker>>;
+  try {
+    worker = await tesseract.createWorker(requested, 1, {
+      // Sources déclarées explicitement pour les modèles : c’est celle annoncée
+      // dans le panneau de consentement, et non un repli implicite. Les deux
+      // fichiers du moteur suivent les adresses également annoncées.
+      langPath: OCR_TESSDATA_ORIGIN,
+      logger: (message: { status?: string; progress?: number }) => {
+        if (!message?.status) return;
+        const value = typeof message.progress === 'number' ? Math.max(0, Math.min(1, message.progress)) : 0;
+        options.onProgress?.(value, translateStatus(message.status));
+      },
+    });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(ocrEngineLoadFailureMessage(detail));
+  }
   return {
     recognize: async (image) => {
       const result = await worker.recognize(image as never);

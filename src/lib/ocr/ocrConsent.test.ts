@@ -1,6 +1,12 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it, beforeEach } from 'vitest';
 import {
   OCR_CONSENT_KEY,
+  OCR_CORE_ORIGIN,
+  OCR_CORE_VERSION,
+  OCR_ENGINE_ORIGIN,
+  OCR_ENGINE_VERSION,
   OCR_TESSDATA_ORIGIN,
   grantOcrConsent,
   hasOcrConsentFor,
@@ -62,7 +68,22 @@ describe('consentement OCR', () => {
     const message = ocrConsentRequiredMessage(['fra', 'eng']);
     expect(message).toContain('fra, eng');
     expect(message).toContain(OCR_TESSDATA_ORIGIN);
+    expect(message).toContain(OCR_ENGINE_ORIGIN);
+    expect(message).toContain(OCR_CORE_ORIGIN);
+    expect(message).toContain('cœur WebAssembly');
     expect(message).toContain('licence');
     expect(message).toContain('sans votre accord');
+  });
+
+  it('affiche les adresses réellement demandées par la dépendance installée', () => {
+    // Les URL du moteur sont construites par tesseract.js à partir de la
+    // dépendance installée : si elle change, l’adresse annoncée doit suivre.
+    const lock = JSON.parse(readFileSync(resolve(__dirname, '../../../package-lock.json'), 'utf8')) as {
+      packages: Record<string, { version?: string }>;
+    };
+    expect(lock.packages['node_modules/tesseract.js']?.version).toBe(OCR_ENGINE_VERSION);
+    expect(lock.packages['node_modules/tesseract.js-core']?.version).toBe(OCR_CORE_VERSION);
+    expect(OCR_ENGINE_ORIGIN).toBe(`https://cdn.jsdelivr.net/npm/tesseract.js@v${OCR_ENGINE_VERSION}/dist/worker.min.js`);
+    expect(OCR_CORE_ORIGIN).toBe(`https://cdn.jsdelivr.net/npm/tesseract.js-core@v${OCR_CORE_VERSION}`);
   });
 });

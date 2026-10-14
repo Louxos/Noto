@@ -36,7 +36,7 @@ Cette feuille ne garde que les travaux **non terminés** ou les validations enco
 - [ ] Traduction anglaise de l’application avec choix manuel de la langue.
 - [ ] Favoris et étiquettes libres, avec recherche locale.
 - [ ] Extensions de viewers à permissions limitées, après revue de sécurité.
-- [ ] Embarquer les modèles OCR dans l’installeur (choix de langue à l’installation) pour supprimer le premier téléchargement. Aujourd’hui, l’OCR demande un accord explicite, télécharge les modèles une fois depuis une source libre, puis les réutilise hors ligne.
+- [ ] Embarquer le moteur OCR et les modèles dans l’installeur (choix de langue à l’installation) pour supprimer le premier téléchargement. Aujourd’hui, l’OCR demande un accord explicite, télécharge une fois le script de travail et le cœur WebAssembly du moteur (`cdn.jsdelivr.net`, environ 4,6 Mo) ainsi que les modèles choisis (`tessdata.projectnaptha.com`, 11 à 12 Mo par langue), puis les réutilise hors ligne. Tant que ce n’est pas fait, un premier traitement hors ligne est impossible et c’est la seule connexion réseau de l’application.
 - [ ] Protéger un PDF par mot de passe en écriture : l’ouverture de documents protégés est prise en charge, mais aucune solution libre et locale n’est retenue pour le chiffrement à l’écriture. La fonction n’est donc pas proposée plutôt que simulée.
 - [ ] Synchronisation cloud facultative, jamais activée automatiquement et uniquement après choix explicite du fournisseur et des dossiers.
 - [ ] Historique local de versions avec limite de stockage et suppression simple.
