@@ -1,10 +1,10 @@
 # Feuille de route de Noto
 
-Cette feuille ne garde que les travaux **non terminés** ou les validations encore manquantes. Les fonctionnalités déjà réalisées ont été retirées. Mise à jour : 8 octobre 2026.
+Cette feuille ne garde que les travaux **non terminés** ou les validations encore manquantes. Les fonctionnalités déjà réalisées ont été retirées. Mise à jour : 14 octobre 2026.
 
 ## Obligatoire avant une version stable — P0
 
-- [ ] **Signature Authenticode finale** : configurer les secrets du certificat de publication, valider la signature des deux bundles Windows et surveiller la réputation SmartScreen avant la première release stable. Les sommes SHA-256 et l’explication des avertissements sont désormais générées/documentées.
+- [ ] **Signature Authenticode finale** : configurer les secrets du certificat de publication, valider la signature de l’installeur NSIS et surveiller la réputation SmartScreen avant la première release stable. Les sommes SHA-256 et l’explication des avertissements sont déjà générées/documentées. (Le paquet MSI n’existe plus : le NSIS est l’unique installeur.)
 
 ## Prioritaire — P1
 
@@ -22,8 +22,7 @@ Cette feuille ne garde que les travaux **non terminés** ou les validations enco
 
 ### Gestion des fichiers
 
-- [ ] Détecter les doublons potentiels par nom et taille, puis proposer une comparaison avant toute action ; ne jamais supprimer un original sans confirmation.
-- [ ] Révéler un fichier dans l’Explorateur et proposer de l’ouvrir dans une autre application.
+- [ ] Révéler un fichier dans l’Explorateur et proposer de l’ouvrir dans une autre application. (L’atelier révèle déjà les fichiers produits ; l’action manque encore pour les fichiers d’origine.)
 - [ ] Glisser un onglet vers un groupe avec un indicateur clair de destination.
 
 ### Ergonomie
@@ -37,7 +36,8 @@ Cette feuille ne garde que les travaux **non terminés** ou les validations enco
 - [ ] Traduction anglaise de l’application avec choix manuel de la langue.
 - [ ] Favoris et étiquettes libres, avec recherche locale.
 - [ ] Extensions de viewers à permissions limitées, après revue de sécurité.
-- [ ] OCR local facultatif pour les images et PDF numérisés.
+- [ ] Embarquer les modèles OCR dans l’installeur (choix de langue à l’installation) pour supprimer le premier téléchargement. Aujourd’hui, l’OCR demande un accord explicite, télécharge les modèles une fois depuis une source libre, puis les réutilise hors ligne.
+- [ ] Protéger un PDF par mot de passe en écriture : l’ouverture de documents protégés est prise en charge, mais aucune solution libre et locale n’est retenue pour le chiffrement à l’écriture. La fonction n’est donc pas proposée plutôt que simulée.
 - [ ] Synchronisation cloud facultative, jamais activée automatiquement et uniquement après choix explicite du fournisseur et des dossiers.
 - [ ] Historique local de versions avec limite de stockage et suppression simple.
 - [ ] Actions personnalisées ou modèles de documents, sans exécuter de scripts de fichiers par défaut.
