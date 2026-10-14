@@ -7,6 +7,7 @@ import { loadHistory, saveHistory, type HistoryEntry } from '../lib/history';
 import { createOutputWriter } from '../lib/jobs/output';
 import { OPERATION_CATEGORIES } from '../lib/operations';
 import { OperationDetails, OperationPicker, ParameterForm, NoticeStack, FileSummary } from './StudioPanels';
+import { OcrModelsPanel } from './OcrModelsPanel';
 import { StudioFileList, StudioRunPanel } from './StudioRunPanel';
 import { useStudio } from './useStudio';
 import './studio.css';
@@ -148,6 +149,12 @@ export default function StudioScreen({ request, onClose }: { request?: StudioReq
                 <ParameterForm operation={studio.operation} values={studio.params} onChange={studio.setParam} />
               </section>
               <OperationDetails operation={studio.operation} />
+              {studio.operation.category === 'ocr' && (
+                <OcrModelsPanel
+                  languages={String(studio.params.languages ?? 'fra').split(/[,;\s]+/u).filter(Boolean)}
+                  onConsentChanged={() => studio.notify('info', 'Accord OCR enregistré : le téléchargement des modèles aura lieu au premier traitement, puis restera en cache local.')}
+                />
+              )}
             </>
           )}
 

@@ -30,6 +30,8 @@ export interface OcrOptions {
   signal?: AbortSignal;
 }
 
+import { OCR_TESSDATA_ORIGIN, hasOcrConsentFor, ocrConsentRequiredMessage } from './ocrConsent';
+
 export interface OcrLanguageDescriptor {
   code: string;
   label: string;
@@ -60,11 +62,29 @@ export interface OcrSession {
   terminate: () => Promise<void>;
 }
 
-/** Ouvre une session OCR : le premier appel charge réellement le moteur et les modèles. */
-export async function createOcrSession(languages: string[], options: { onProgress?: (value: number, label: string) => void } = {}): Promise<OcrSession> {
+/**
+ * Ouvre une session OCR.
+ *
+ * Aucun téléchargement n’a lieu sans un accord explicite de l’utilisateur :
+ * les modèles de langue (`*.traineddata`) ne sont pas embarqués dans
+ * l’application et sont récupérés depuis une source libre uniquement si
+ * `hasOcrConsentFor()` le confirme. Le moteur les met ensuite en cache
+ * localement, ce qui rend les traitements suivants hors ligne.
+ */
+export async function createOcrSession(
+  languages: string[],
+  options: { onProgress?: (value: number, label: string) => void; ignoreConsent?: boolean } = {},
+): Promise<OcrSession> {
+  const requested = languages.length ? languages : ['fra'];
+  if (!options.ignoreConsent && !hasOcrConsentFor(requested)) {
+    throw new Error(ocrConsentRequiredMessage(requested));
+  }
   options.onProgress?.(0.02, 'Chargement du moteur OCR local (Tesseract.js)…');
   const tesseract = await import('tesseract.js');
-  const worker = await tesseract.createWorker(languages, 1, {
+  const worker = await tesseract.createWorker(requested, 1, {
+    // Source déclarée explicitement : c’est celle annoncée dans le panneau de
+    // consentement, et non un repli implicite.
+    langPath: OCR_TESSDATA_ORIGIN,
     logger: (message: { status?: string; progress?: number }) => {
       if (!message?.status) return;
       const value = typeof message.progress === 'number' ? Math.max(0, Math.min(1, message.progress)) : 0;
