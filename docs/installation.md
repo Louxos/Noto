@@ -2,7 +2,7 @@
 
 Ce guide explique comment installer Noto sur Windows, récupérer un build de test depuis GitHub Actions, ou construire l’application depuis le dépôt. **Vous n’avez pas besoin de Node.js, Rust ni Visual Studio pour installer un binaire déjà construit.**
 
-> **État vérifié le 12 octobre 2026 :** [Releases/latest](https://github.com/Louxos/Noto/releases/latest) ne contient pas encore de version stable. Le canal de distribution recommandé est GitHub Releases : à chaque tag `vX.Y.Z`, l’unique workflow **Windows installers** publie l’installeur NSIS `.exe` et `SHA256SUMS.txt` comme fichiers séparés, avec des notes générées par GitHub ; un tag comportant un suffixe (`-rc.1`, par exemple) est marqué comme préversion. Pour tester le build courant, le workflow dépose aussi une archive ZIP temporaire `noto-windows-installers` sur les pushes `main` et `arena/**` ou lors d’un lancement manuel (conservation de 30 jours). Les derniers builds sont listés dans les [exécutions Windows installers](https://github.com/Louxos/Noto/actions/workflows/release.yml). Authenticode n’est activé que si les secrets du certificat sont configurés ; sinon, les installateurs restent non signés.
+> **État vérifié le 14 octobre 2026 :** la version stable **0.2.0** est publiée dans [Releases/latest](https://github.com/Louxos/Noto/releases/latest) — installeur NSIS `Noto_0.2.0_x64-setup.exe` et `SHA256SUMS.txt`. Le canal de distribution recommandé reste GitHub Releases : à chaque tag `vX.Y.Z`, l’unique workflow **Windows installers** publie l’installeur NSIS `.exe` et `SHA256SUMS.txt` comme fichiers séparés, accompagnés de notes rédigées (les notes générées ne servent que si aucune n’est fournie pour le tag) ; un tag comportant un suffixe (`-rc.1`, par exemple) est marqué comme préversion. Pour tester le build courant, le workflow dépose aussi une archive ZIP temporaire `noto-windows-installers` sur les pushes `main` et `arena/**` ou lors d’un lancement manuel (conservation de 30 jours). Les derniers builds sont listés dans les [exécutions Windows installers](https://github.com/Louxos/Noto/actions/workflows/release.yml). Authenticode n’est activé que si les secrets du certificat sont configurés ; sinon, les installateurs restent non signés.
 
 ## 1. Installer Noto — utilisateur Windows
 
@@ -16,7 +16,7 @@ Ce guide explique comment installer Noto sur Windows, récupérer un build de te
 
 Les versions officielles sont disponibles dans [Releases/latest](https://github.com/Louxos/Noto/releases/latest). Ouvrez **Assets** et téléchargez directement le fichier `.exe` NSIS, ainsi que `SHA256SUMS.txt`. Les fichiers sont des assets séparés, versionnés et permanents — pas une archive ZIP d’exécution CI. Vérifiez la somme avec le script ci-dessous, puis lancez l’installateur. **Noto ne publie plus de paquet MSI** : l’installeur NSIS est le seul canal de distribution, il s’installe par utilisateur (`currentUser`), donc sans invite d’élévation ni droits administrateur.
 
-La page ne contient pas encore de release stable. En attendant, utilisez le build de test indiqué plus bas ; ne le confondez pas avec une version officiellement publiée.
+La version stable disponible est la **0.2.0** (14 octobre 2026). Les versions antérieures à la 0.2.0 proposaient aussi un paquet MSI, qui n’est plus produit à partir de cette version. Les préversions éventuelles sont signalées comme telles sur la page Releases ; ne les confondez pas avec la version stable, ni avec le build de test décrit plus bas.
 
 ### Vérifier les sommes SHA-256
 
@@ -38,7 +38,7 @@ Get-Content .\SHA256SUMS.txt | ForEach-Object {
 
 ### Télécharger et lancer un build de test
 
-1. Ouvrez les [exécutions de l’unique workflow **Windows installers**](https://github.com/Louxos/Noto/actions/workflows/release.yml) et choisissez le succès le plus récent sur la branche `arena/01a10cf9-noto` ; le job Windows regroupe les vérifications, le build et le smoke test des installateurs.
+1. Ouvrez les [exécutions de l’unique workflow **Windows installers**](https://github.com/Louxos/Noto/actions/workflows/release.yml) et choisissez le succès le plus récent sur `main` ; le job Windows regroupe les vérifications, le build et le smoke test des installateurs.
 2. Dans **Artifacts**, téléchargez `noto-windows-installers` et décompressez l’archive ZIP.
 3. Vérifiez `SHA256SUMS.txt` avec le script ci-dessus, puis lancez l’installeur `.exe`.
 4. Lancez **Noto** depuis le menu Démarrer. Pour supprimer Noto, utilisez **Paramètres Windows → Applications → Applications installées**, ou l’entrée de désinstallation dans le menu Démarrer.
@@ -75,7 +75,7 @@ Les outils officiels et les prérequis Tauri sont détaillés dans la [documenta
 Dans PowerShell :
 
 ```powershell
-git clone --branch arena/01a10cf9-noto https://github.com/Louxos/Noto.git
+git clone https://github.com/Louxos/Noto.git
 cd Noto
 npm ci
 ```

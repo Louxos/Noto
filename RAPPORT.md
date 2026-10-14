@@ -44,11 +44,14 @@ Ce rapport décrit **ce qui fonctionne réellement**, ce qui est partiel et ce q
 
 | Commande | Résultat |
 | --- | --- |
-| `npm run check` (`tsc -b` + `vitest run`) | ✅ **36 fichiers de tests, 164 tests réussis** |
+| `npm run check` (`tsc -b` + `vitest run`) | ✅ **37 fichiers de tests, 166 tests réussis** |
 | `npm run build` | ✅ succès (bundle produit dans `dist/`) |
 | `npx tsc -b` seul | ✅ aucune erreur (mode strict, `noUnusedLocals`, `verbatimModuleSyntax`) |
 | Vitest ciblés | ✅ `operations/registry.test.ts` 7/7 · `pdfOperations.test.ts` 19/19 · `jobs/analysis.test.ts` 8/8 · `archiveWriter.test.ts` 7/7 · `image/scanCleanup.test.ts` 5/5 · `ocr/ocrConsent.test.ts` 6/6 · `studio/*` 10/10 |
-| CI Windows — run `38559617116` sur `arena/30f013fe-noto` | ✅ **succès (5 min)** : `npm ci`, `npm run check`, `npm run build`, commandes Windows natives, **construction de l’installeur avec les crochets NSIS**, test de fumée (installation silencieuse, ouverture de fichier, associations, désinstallation), empreintes SHA-256, dépôt de l’artefact `noto-windows-installers` |
+| CI Windows — run `38562975186` sur `arena/30f013fe-noto` | ✅ **succès** : `npm ci`, `npm run check`, `npm run build`, commandes Windows natives, **construction de l’installeur avec les crochets NSIS**, test de fumée (installation silencieuse, ouverture de fichier, associations, désinstallation), empreintes SHA-256, dépôt de l’artefact `noto-windows-installers` |
+| CI Windows — run `38563865106` sur le tag `v0.2.0` | ✅ **tous les pas verts** : mêmes vérifications, puis sélection des notes rédigées (`generate_release_notes: false`), publication du release avec `Noto_0.2.0_x64-setup.exe` et `SHA256SUMS.txt` |
+| `gh release view v0.2.0` / `v0.1.0` (API GitHub) | ✅ titres, dates et **tailles réelles des fichiers publiés** relevés (ex. `Noto_0.2.0_x64-setup.exe` = 3 442 384 octets) ; les pages de version ne contiennent plus aucun texte généré en anglais |
+| `gh run download … --name noto-windows-installers` | ❌ **impossible dans cet environnement** (échec `EOF` du service d’artefacts, 3 tentatives) : l’installeur de la CI n’a **pas** pu être inspecté localement, seuls les pas de la CI et les métadonnées publiées font foi |
 | `python3 src-tauri/windows/installer/render_assets.py` | ✅ visuels NSIS régénérés et contrôlés visuellement (slogan complet, sans troncature) |
 | `npm run tauri:build` | ❌ **impossible dans cet environnement** : pas de Windows ni de `cargo`. La construction réelle est assurée par la CI (voir ci-dessus). |
 
@@ -87,8 +90,9 @@ Aucun service payant, aucun compte, aucune API distante, aucune télémétrie. S
 
 ## 6. Livrable installeur
 
-- **Construit et vérifié par la CI** (run `38559617116`) : installateur **NSIS** pour Windows x64, avec tests d’installation, de lancement et de désinstallation réels.
+- **Construit et vérifié par la CI** (runs `38562975186` sur la branche, `38563865106` sur le tag `v0.2.0`) : installateur **NSIS** pour Windows x64, avec tests d’installation, de lancement et de désinstallation réels.
 - Emplacement produit par la CI : `src-tauri/target/release/bundle/nsis/Noto_<version>_x64-setup.exe` — **chemin dans l’espace de travail de la CI**, pas dans ce dépôt.
 - **Version 0.2.0 publiée** sur la base du tag `v0.2.0`, construite par la CI Windows avec le même parcours que celui décrit au §2 (installation silencieuse, ouverture de fichier, associations, désinstallation).
-- Le release `v0.1.0` (13 octobre 2026, antérieur à ces travaux) a vu ses notes remplacées par un avertissement de version remplacée ; ses fichiers n’ont pas été modifiés.
+- **Page de version publiée** : titre « Noto 0.2.0 — atelier documentaire local », notes rédigées en français (`.github/release-notes/v0.2.0.md`), sans liste de commits brute ni texte généré en anglais ; le workflow `.github/workflows/release.yml` désactive désormais les notes automatiques dès qu’un fichier de notes existe pour le tag.
+- Le release `v0.1.0` (13 octobre 2026, antérieur à ces travaux) ne contenait qu’une ligne de comparaison ; ses notes ont été **complétées à partir du `CHANGELOG.md`** de cette version, sans modifier une seule de ses pièces jointes (`Noto_0.1.0_x64-setup.exe`, `Noto_0.1.0_x64_fr-FR.msi`, `SHA256SUMS.txt`).
 - **Aucune signature de code n’est revendiquée** : si les secrets de certificat ne sont pas configurés sur le dépôt, l’installeur publié n’est pas signé.

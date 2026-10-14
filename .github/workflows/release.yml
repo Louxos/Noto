@@ -225,8 +225,12 @@ jobs:
           if (Test-Path -LiteralPath $candidate) {
             Write-Host "Using curated release notes: $candidate"
             "path=$candidate" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            # Des notes rédigées remplacent les notes générées : la page de version
+            # reste entièrement en français et sans liste de commits brute.
+            "generate=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           } else {
             Write-Host "No curated notes for ${{ github.ref_name }}; the release will use GitHub's generated notes."
+            "generate=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           }
 
       - name: Publish versioned GitHub Release downloads
@@ -234,10 +238,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           name: Noto ${{ github.ref_name }}
-          # Les notes rédigées (si le tag en possède) sont placées avant les notes
-          # générées automatiquement à partir des commits.
+          # Notes rédigées quand le tag en possède, sinon notes générées par GitHub.
           body_path: ${{ steps.notes.outputs.path }}
-          generate_release_notes: true
+          generate_release_notes: ${{ steps.notes.outputs.generate }}
           prerelease: ${{ contains(github.ref_name, '-') }}
           fail_on_unmatched_files: true
           files: |

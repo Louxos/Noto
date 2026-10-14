@@ -10,7 +10,7 @@
 
 **Noto** est un lecteur et un éditeur de fichiers local, développé avec React et Tauri 2. Pas de compte, de cloud ni de télémétrie : les documents restent sur votre appareil.
 
-> **Installation Windows — état vérifié le 12 octobre 2026 :** la page [Releases](https://github.com/Louxos/Noto/releases/latest) ne contient pas encore de version stable. C’est le canal recommandé pour les distributions : chaque tag `vX.Y.Z` publiera séparément l’installateur NSIS `.exe` et `SHA256SUMS.txt`, avec des notes de version générées par GitHub. Depuis cette version, Noto ne produit plus de paquet MSI : l’installeur NSIS est l’unique canal de distribution, sans droits administrateur. En attendant, le dernier build de test se télécharge depuis l’artefact `noto-windows-installers` de l’unique workflow [Windows installers](https://github.com/Louxos/Noto/actions/workflows/release.yml) ; cet artefact est une archive ZIP temporaire (30 jours), destinée aux tests, pas une release. Le workflow regroupe les vérifications et la construction Windows. Authenticode n’est activé que si les secrets de certificat sont configurés ; sinon les installateurs restent non signés. Consultez le [guide d’installation](docs/installation.md).
+> **Installation Windows — état vérifié le 14 octobre 2026 :** la version stable **0.2.0** est publiée sur la page [Releases](https://github.com/Louxos/Noto/releases/latest) avec l’installeur NSIS `Noto_0.2.0_x64-setup.exe` et `SHA256SUMS.txt`. Chaque tag `vX.Y.Z` publie ces deux fichiers, accompagnés de notes de version rédigées en français ; les versions antérieures à la 0.2.0 diffusaient aussi un paquet MSI, qui n’est plus produit. L’installeur s’exécute sans droits administrateur et ne supprime jamais vos données locales, sauf si vous cochez explicitement la case dédiée à la désinstallation. L’artefact `noto-windows-installers` du workflow [Windows installers](https://github.com/Louxos/Noto/actions/workflows/release.yml) reste une archive temporaire de test (30 jours), pas une release. Authenticode n’est activé que si les secrets de certificat sont configurés ; sinon les installateurs restent non signés. Consultez le [guide d’installation](docs/installation.md).
 
 ## Fonctionnalités
 
@@ -47,7 +47,7 @@ Les formats Office hérités `.ppt` et `.doc` ne sont pas annoncés comme pris e
 Prérequis : Node.js 22 et npm. Pour lancer l’interface web :
 
 ```bash
-git clone --branch arena/01a10cf9-noto https://github.com/Louxos/Noto.git
+git clone https://github.com/Louxos/Noto.git
 cd Noto
 npm ci
 npm run dev

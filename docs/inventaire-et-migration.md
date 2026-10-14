@@ -62,4 +62,4 @@ Le MSI (`bundle.windows.wix`) servait à produire `Noto_<version>_x64_fr-FR.msi`
 
 ### Conséquence pour les versions déjà publiées
 
-La version `v0.1.0`, publiée avant ce changement, contient encore `Noto_0.1.0_x64_fr-FR.msi`. Elle n’a pas été modifiée : réécrire une release passée fausserait son historique et ses sommes de contrôle. Les versions suivantes ne publieront que l’installeur NSIS et `SHA256SUMS.txt`.
+La version `v0.1.0`, publiée avant ce changement, contient encore `Noto_0.1.0_x64_fr-FR.msi`. Ses pièces jointes n’ont pas été touchées : réécrire une release passée fausserait ses sommes de contrôle. Seul le texte descriptif de sa page a été complété à partir du `CHANGELOG.md`, car il ne contenait qu’une ligne de comparaison. Les versions suivantes ne publieront que l’installeur NSIS et `SHA256SUMS.txt`.
