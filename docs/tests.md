@@ -7,7 +7,7 @@ Ce document décrit ce qui est réellement vérifié, avec quelle commande, et c
 | Commande | Contenu | Durée indicative |
 | --- | --- | --- |
 | `npm run lint` | ESLint sur tout le dépôt (erreurs réelles : variables inutilisées, promesses non attendues, dépendances de hooks, `any` interdit). Aucune règle de style. | ~5 s |
-| `npm run check` | `tsc -b` puis `vitest run` (57 fichiers, 298 tests au moment de la rédaction). Délai de 60 s par test : la suite construit et relit de vrais documents, et les exécuteurs d’intégration continue sont plus lents qu’un poste de développement. | ~26 s |
+| `npm run check` | `tsc -b` puis `vitest run` (58 fichiers, 305 tests au moment de la rédaction). Délai de 60 s par test : la suite construit et relit de vrais documents, et les exécuteurs d’intégration continue sont plus lents qu’un poste de développement. | ~26 s |
 | `npm run coverage` | Les mêmes tests avec rapport de couverture dans `coverage/`. | ~25 s |
 | `npm run build` | Construction de l’interface (`dist/`), qui échoue si les types ne passent pas. | ~15 s |
 | `npm run verify` | Les trois commandes ci-dessus, dans l’ordre. À exécuter avant toute pull request. | ~45 s |
@@ -32,6 +32,7 @@ Les tests ne se contentent pas de constater l’absence d’exception : ils reli
 - **Mesures** : chaque famille de mesures est testée sur des données construites à la main (en-têtes PNG, GIF, BMP, WebP dans ses trois variantes, JPEG, ICO, TIFF, dimensions SVG, fins de ligne, tableaux), y compris les cas qui doivent **échouer** — en-tête tronqué, format inconnu, PDF illisible, fichier énorme — pour vérifier qu’une mesure impossible est annoncée au lieu d’être inventée.
 - **Renommage** : le dialogue est piloté comme un utilisateur (nom, extension, validation, avertissement de changement de lecteur) et l’on vérifie qu’un nom refusé ou un renommage sans changement n’écrit **rien**.
 - **Liens et sections** : les identifiants de titres sont comparés à la règle de GitHub (accents, ponctuation, doublons, caractères non latins), la résolution d’une ancre est éprouvée sur un document réel (identifiant exact, écriture indulgente, section absente), et le clic est vérifié sur le lecteur monté : défilement demandé une fois, focus sur le titre, repère affiché, adresse du document inchangée. L’aperçu du survol est testé de bout en bout dans l’application — le lien externe, le renvoi interne résolu et le renvoi introuvable affichent chacun ce qu’ils annoncent.
+- **Documentation** : les documents Markdown sont relus comme des fichiers, pas comme du texte : chaque lien relatif doit exister, chaque ancre `#titre` d’un lien interne doit désigner un titre réel, chaque chemin cité entre accents graves qui commence par `src/`, `docs/`, `src-tauri/`… doit pointer vers un fichier présent, chaque document de `docs/` doit figurer dans l’index [`docs/README.md`](README.md), et aucun guide ne doit présenter le MSI comme un canal encore produit (la configuration est relue au passage). Un lien cassé par un renommage fait donc échouer `npm run check` au lieu de pourrir en silence.
 - **Icônes par type de fichier** : les `.ico` livrés sont relus octet par octet (en-tête, 7 tailles de 16 à 256 px, profondeur 32 bits, PNG à partir de 48 px), puis confrontés à la table du crochet NSIS et aux classes déclarées dans `tauri.conf.json` : aucune classe sans icône, aucune icône orpheline, aucune extension sans reprise de sauvegarde d’association.
 
 ## Ce qui ne peut pas être vérifié ici
@@ -48,6 +49,6 @@ Ces points sont assumés et suivis dans [`ROADMAP.md`](../ROADMAP.md) :
 
 ## Couverture
 
-`npm run coverage` produit un rapport chiffré. Au moment de la rédaction, la couverture des lignes du dossier `src/` est d’environ **34 %** : elle est concentrée sur les moteurs de traitement (registre d’opérations, écriture PDF, archives, analyse de lots, formats) et sur les fonctions pures. Les modules qui dépendent du DOM ou du canevas — rasterisation PDF, encodage d’images, sessions OCR, écrans de l’atelier — restent à 0 % ou presque, faute d’environnement d’exécution.
+`npm run coverage` produit un rapport chiffré. Mesure du 15 octobre 2026 : **40,56 %** des lignes, 37,88 % des instructions, 33,87 % des branches et 36,70 % des fonctions du dossier `src/` — une couverture concentrée sur les moteurs de traitement (registre d’opérations, écriture PDF, archives, analyse de lots, formats) et sur les fonctions pures. Les modules qui dépendent du DOM ou du canevas — rasterisation PDF, encodage d’images, sessions OCR, écrans de l’atelier — restent à 0 % ou presque, faute d’environnement d’exécution.
 
 Ce chiffre est publié tel quel, sans seuil artificiel : un seuil obligerait soit à tester davantage, soit à le baisser, et aucun des deux ne rendrait le produit plus sûr. Les améliorations prévues consistent à extraire davantage de logique pure des modules dépendants du DOM, là où c’est possible.

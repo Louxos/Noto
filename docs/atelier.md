@@ -77,5 +77,5 @@ Les modèles sont ensuite conservés dans le cache local de l’application ; le
 
 - Le traitement est local : sur un très gros lot, le temps dépend de votre processeur, pas d’un serveur.
 - Les conversions bureautiques sont des reconstructions : le texte, les tableaux et les images courantes sont conservés, la mise en page d’origine ne l’est pas.
-- Certaines opérations depend de formats que le moteur graphique du système ne sait pas encoder (par exemple AVIF ou HEIC en écriture) : dans ce cas, Noto refuse l’opération avec un message explicite plutôt que de produire un fichier invalide.
+- Certaines opérations dépendent de formats que le moteur graphique du système ne sait pas encoder (par exemple AVIF ou HEIC en écriture) : dans ce cas, Noto refuse l’opération avec un message explicite plutôt que de produire un fichier invalide.
 - L’édition du texte natif d’un PDF n’est pas proposée ; le caviardage, lui, retire réellement le contenu sous-jacent et le vérifie après écriture.

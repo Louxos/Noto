@@ -33,6 +33,10 @@ Cette feuille ne garde que les travaux **non terminés** ou les validations enco
 - [ ] Ajouter un thème automatique selon Windows, une option de réduction des animations et un contraste renforcé.
 - [ ] Ajouter des profils de barre d’outils (Lecture, Édition, Minimal).
 
+### Structure du dépôt
+
+- [ ] Découper les deux plus gros fichiers du dépôt — `src/App.tsx` (≈154 ko) et `src/styles.css` (≈124 ko) : ils concentrent aujourd’hui l’assemblage de l’interface et la mise en forme. Un découpage par domaine (onglets, barre d’état, dialogues, barre d’outils) rendrait les revues plus lisibles, sans changer le comportement. Le tri de la documentation et le test `docsIntegrity` ont été faits ; ce découpage reste à faire.
+
 ## Optionnel — P3, seulement si le besoin le justifie
 
 - [ ] Traduction anglaise de l’application avec choix manuel de la langue.

@@ -75,13 +75,13 @@ npm run tauri:build # installeur NSIS (à compiler sous Windows)
 
 ## Documentation
 
-- [Index de la documentation](docs/README.md)
-- [Guide utilisateur et formats](docs/user-guide.md)
+- [Index complet de la documentation](docs/README.md)
+- [Guide utilisateur et formats](docs/user-guide.md) et [l’atelier](docs/atelier.md)
 - [Icônes par type de fichier (Windows)](docs/icons-fichiers.md)
 - [Installation Windows](docs/installation.md)
-- [Architecture et sécurité](docs/architecture.md), [politique de sécurité](docs/security.md)
+- [Architecture](docs/architecture.md), [politique de sécurité](SECURITY.md) et [modèle de sécurité](docs/security.md)
 - [Ajouter un viewer](docs/adding-a-viewer.md), [construire sous Windows](docs/build-windows.md)
-- [Contribuer](docs/contributing.md)
-- [Feuille de route](ROADMAP.md) et [journal des changements](CHANGELOG.md)
+- [Contribuer](docs/contributing.md), [tests et vérifications](docs/tests.md)
+- [Feuille de route](ROADMAP.md), [journal des changements](CHANGELOG.md) et [rapport d’exécution](RAPPORT.md)
 
 Des exemples sont disponibles dans [`examples/`](examples/). Noto est distribué sous licence [MIT](LICENSE).

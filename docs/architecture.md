@@ -52,7 +52,7 @@ L’ouverture d’une archive n’écrit aucun fichier sur disque. Les chemins d
 
 ## Développement et vérifications
 
-- `npm run check` : TypeScript et tests unitaires.
+- `npm run check` : TypeScript et tests unitaires, y compris la relecture des documents Markdown (`src/lib/docsIntegrity.test.ts` : liens, ancres, chemins cités, index de `docs/`).
 - `npm run build` : bundle web.
 - `npm run tauri:dev` / `npm run tauri:build` : shell et installateurs Windows sur une machine avec la toolchain Tauri.
 

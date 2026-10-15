@@ -1,3 +1,5 @@
+> **Document de référence, conservé tel quel.** Ce cahier des charges a piloté l’évolution de Noto ; il n’est pas mis à jour au fil des versions et ne décrit donc pas l’état exact du logiciel. Ce qui est réellement livré, vérifié et ce qui reste partiel sont décrits dans [`../RAPPORT.md`](../RAPPORT.md), [`../ROADMAP.md`](../ROADMAP.md) et le [guide utilisateur](user-guide.md). La branche citée à la section 1 (`arena/01a10cf9-noto`) a été fusionnée dans `main` : les travaux en cours se poursuivent sur une branche de travail dédiée.
+
 # PROMPT PRINCIPAL — TRANSFORMATION COMPLÈTE DE NOTO EN SUITE DOCUMENTAIRE PROFESSIONNELLE
 
 ## 1. Mission générale

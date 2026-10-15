@@ -2,6 +2,8 @@
 
 Ce document répond à l’étape A du cahier des charges : il recense ce que Noto savait faire avant l’évolution, ce qui a été ajouté sans le casser, et ce qui a réellement disparu du dépôt lors du passage à un installeur NSIS unique. Il est vérifiable : chaque point renvoie au fichier concerné.
 
+> **Audit daté du 14 octobre 2026** (version 0.2.0). Il décrit un instant précis et n’est pas mis à jour à chaque version : les compteurs cités ci-dessous sont ceux de ce jour-là. L’état courant est décrit dans [`../RAPPORT.md`](../RAPPORT.md), [`../ROADMAP.md`](../ROADMAP.md) et [`tests.md`](tests.md).
+
 ## 1. Fonctionnalités préservées (aucune suppression, aucune réécriture)
 
 | Domaine | Comportement conservé | Où |
@@ -24,7 +26,7 @@ Ce document répond à l’étape A du cahier des charges : il recense ce que No
 | Sécurité locale | Aucun envoi réseau, stockage local uniquement, bac à sable HTML sans script | `src/lib/security.ts`, `docs/security.md` |
 | Écran de démarrage | Écran de préchargement avant React, thème appliqué depuis les préférences | `index.html`, `public/boot.js` |
 
-Les tests qui protégeaient ces comportements existaient déjà (`src/lib/*.test.ts`, `src/components/*.test.tsx`) et continuent de passer : 35 fichiers de tests, 158 tests.
+Les tests qui protégeaient ces comportements existaient déjà (`src/lib/*.test.ts`, `src/components/*.test.tsx`) et continuaient de passer à cette date : **35 fichiers, 158 tests**. Ils n’ont pas été supprimés depuis ; la suite compte aujourd’hui **57 fichiers et 298 tests** (voir [`tests.md`](tests.md)).
 
 ## 2. Ajouts de cette évolution
 
