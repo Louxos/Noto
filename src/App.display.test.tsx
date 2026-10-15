@@ -37,8 +37,8 @@ describe('affichage', () => {
     let element: Element | null = null;
     Object.defineProperty(document.documentElement, 'requestFullscreen', {
       configurable: true,
-      value: vi.fn(function (this: Element) {
-        element = this;
+      value: vi.fn(() => {
+        element = document.documentElement;
         document.dispatchEvent(new Event('fullscreenchange'));
         return Promise.resolve();
       }),

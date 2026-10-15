@@ -1,0 +1,33 @@
+name: Proposer une amélioration
+description: Une fonction, un format ou un réglage qui manque
+title: '[Idée] '
+labels: ['enhancement']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Avant de proposer, jetez un œil à [`ROADMAP.md`](../blob/main/ROADMAP.md) : les travaux déjà prévus y sont listés, et le projet écarte par principe tout ce qui exigerait un compte, un service payant ou l’envoi de documents.
+  - type: textarea
+    id: besoin
+    attributes:
+      label: Besoin
+      description: Ce que vous cherchez à faire, sans supposer de solution technique.
+    validations:
+      required: true
+  - type: textarea
+    id: aujourdhui
+    attributes:
+      label: Comment vous faites aujourd’hui
+      description: Contournement actuel, outil utilisé, temps perdu.
+    validations:
+      required: false
+  - type: dropdown
+    id: local
+    attributes:
+      label: La fonction peut-elle fonctionner entièrement hors ligne ?
+      options:
+        - Oui, aucun réseau nécessaire
+        - Oui, avec un téléchargement unique après accord explicite (comme les modèles OCR)
+        - Non, elle exigerait un service en ligne
+    validations:
+      required: true

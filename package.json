@@ -3,13 +3,16 @@
   "private": true,
   "version": "0.2.0",
   "type": "module",
-  "description": "Un lecteur de fichiers local, simple et soigné.",
+  "description": "Suite documentaire locale : lire, éditer, convertir et traiter vos fichiers sur votre appareil, sans compte ni envoi en ligne.",
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 1420 --strictPort",
     "build": "tsc -b && vite build",
+    "verify": "npm run lint && npm run check && npm run build",
     "preview": "vite preview --host 0.0.0.0",
     "test": "vitest run --environment node",
     "check": "tsc -b && vitest run",
+    "coverage": "vitest run --coverage",
+    "lint": "eslint .",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build"
@@ -34,6 +37,7 @@
     "utif": "^3.1.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
     "@tauri-apps/cli": "^2.8.4",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.7",
@@ -41,9 +45,40 @@
     "@types/react-dom": "^18.3.7",
     "@types/utif": "^3.0.6",
     "@vitejs/plugin-react": "^4.7.0",
+    "@vitest/coverage-v8": "^5.0.4",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "globals": "^16.5.0",
     "jsdom": "^30.1.2",
     "typescript": "^5.9.3",
+    "typescript-eslint": "^8.71.2",
     "vite": "^6.4.3",
     "vitest": "^5.0.3"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Louxos"
+  },
+  "homepage": "https://github.com/Louxos/Noto#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Louxos/Noto.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Louxos/Noto/issues"
+  },
+  "keywords": [
+    "tauri",
+    "react",
+    "typescript",
+    "pdf",
+    "ocr",
+    "images",
+    "local-first",
+    "privacy",
+    "windows"
+  ],
+  "engines": {
+    "node": ">=20.19"
   }
 }

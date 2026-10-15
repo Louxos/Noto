@@ -2,6 +2,23 @@
 
 Les changements notables sont consignés ici, selon une version simplifiée de Keep a Changelog.
 
+## [Non publié]
+
+### Ajouté
+- **Plein écran de la fenêtre** : `F11`, bouton en haut à droite, menu **Affichage** et palette de commandes. Dans l’application de bureau, c’est la fenêtre Tauri qui bascule ; dans un navigateur, l’API plein écran du document. L’état affiché est relu du système, et aucune commande n’apparaît là où le plein écran n’existe pas.
+- **Mode immersion** (`Ctrl+Maj+F`) : la barre latérale, les menus et les onglets s’effacent au profit du document, avec une sortie visible et `Échap`.
+- **Réduction progressive de la barre supérieure** : les libellés laissent la place aux icônes (infobulles et libellés accessibles conservés), puis les menus se regroupent dans un bouton **Tous les menus** où aucune commande n’est perdue.
+- Analyse statique **ESLint** (`npm run lint`, `npm run verify`) et rapport de **couverture** (`npm run coverage`), exécutés par la nouvelle vérification continue **Checks**.
+- Workflow **Security** : analyse CodeQL et contrôle des avis de vulnérabilité des dépendances.
+- Ossature de dépôt : `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, modèles d’issue et de pull request, `CODEOWNERS`, `dependabot.yml` (npm, Cargo, GitHub Actions), `.editorconfig`, `.gitattributes`, `.nvmrc`, et documentation des tests.
+
+### Corrigé
+- **Icônes superposées dans la barre du haut** : la zone des menus pouvait être comprimée sous sa largeur naturelle, et son contenu débordait par-dessus les actions — surtout en édition, avec le sélecteur de mode et toute la barre d’outils. Les zones fixes conservent désormais leur largeur (plus aucun chevauchement possible), et l’adaptation repose sur une mesure réelle de la mise en page, avec un retour en arrière prudent qui évite tout clignotement.
+- Dépendances de hooks signalées par ESLint (`closeWelcome` mémoïsé, lignes de comparaison mémoïsées).
+
+### Modifié
+- `package.json` documenté : description, licence, dépôt, signaux d’anomalie, mots-clés, version de Node requise.
+
 ## [0.2.0] — 2026-10-14
 
 Noto devient une suite documentaire locale : un atelier réunit des outils réels de traitement PDF, image, OCR, conversion et archivage, exécutés sur l’appareil, sans compte ni envoi en ligne.

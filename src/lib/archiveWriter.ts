@@ -72,6 +72,9 @@ export function isSafeArchivePath(path: string): boolean {
   const parts = normalized.split('/');
   for (const part of parts) {
     if (part === '..' || part === '.' || part === '') return false;
+    // Contrôle volontaire des caractères de contrôle : un nom d’entrée
+    // qui en contient est refusé par sécurité.
+    // eslint-disable-next-line no-control-regex
     if (/[\u0000-\u001f]/u.test(part)) return false;
   }
   return true;

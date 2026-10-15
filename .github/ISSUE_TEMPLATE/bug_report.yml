@@ -1,0 +1,69 @@
+name: Signaler un bug
+description: Un comportement incorrect, un fichier mal traité ou un écran cassé
+title: '[Bug] '
+labels: ['bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Merci de votre signalement. N’ouvrez pas de rapport ici pour une **faille de sécurité** : suivez [`SECURITY.md`](../blob/main/SECURITY.md).
+
+        Ne joignez **jamais** un document personnel. Un fichier minimal reproduisant le problème suffit.
+  - type: input
+    id: version
+    attributes:
+      label: Version de Noto
+      description: Visible dans la barre latérale, en bas, ou dans les notes de version.
+      placeholder: '0.2.0'
+    validations:
+      required: true
+  - type: dropdown
+    id: systeme
+    attributes:
+      label: Système
+      options:
+        - Windows 11
+        - Windows 10
+        - Autre (précisez dans la description)
+    validations:
+      required: true
+  - type: dropdown
+    id: contexte
+    attributes:
+      label: Où le problème se produit-il ?
+      options:
+        - Fenêtre de bureau (installeur NSIS)
+        - Version web (npm run dev / npm run preview)
+        - Les deux
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Étapes de reproduction
+      placeholder: |
+        1. Ouvrir …
+        2. Passer en édition …
+        3. Réduire la fenêtre jusqu’à …
+    validations:
+      required: true
+  - type: textarea
+    id: attendu
+    attributes:
+      label: Résultat attendu
+    validations:
+      required: true
+  - type: textarea
+    id: observe
+    attributes:
+      label: Résultat observé
+      description: Message d’erreur exact, capture d’écran, ou description précise du rendu.
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Détails utiles (facultatif)
+      description: Format du fichier concerné, taille, thème clair ou sombre, zoom ou mise à l’échelle Windows, préférences particulières.
+    validations:
+      required: false

@@ -13,6 +13,7 @@ La documentation du dépôt est centralisée ici. Les fichiers racine `INSTALLAT
 - [Ajouter un viewer](adding-a-viewer.md)
 - [Build Windows](build-windows.md)
 - [Contribuer](contributing.md)
+- [Tests et vérifications](tests.md) — commandes, ce qui est réellement vérifié, ce qui ne peut l’être que sous Windows
 
 ## Sécurité et planification
 

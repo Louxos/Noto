@@ -54,6 +54,15 @@ Markdown, texte, code, HTML source, CSV et TSV peuvent être édités lorsque l�
 - La récupération locale des brouillons est désactivée par défaut. Si vous l’activez dans les paramètres, Noto conserve les modifications des fichiers texte sur cet appareil pendant 1, 7 ou 30 jours et demande confirmation avant de les restaurer ; Noto avertit aussi si le fichier source semble avoir changé. Choisir **Annuler** dans l’invite de restauration supprime ce brouillon. La limite est de 750 000 caractères par brouillon et 1,5 million au total ; les réglages permettent d’effacer les brouillons. Désactiver la récupération demande confirmation et efface les brouillons locaux.
 - Les viewers Office et EPUB sont en lecture seule : utilisez **Enregistrer sous** uniquement depuis un format éditable.
 
+## Affichage : plein écran et immersion
+
+Deux niveaux distincts, utilisables ensemble :
+
+- **Plein écran de la fenêtre** (`F11`, ou menu **Affichage → Plein écran de la fenêtre**, ou le bouton en haut à droite) : la fenêtre Noto occupe tout l’écran du système, sans barre de titre. Dans l’application de bureau, c’est la fenêtre elle-même qui bascule ; dans un navigateur, c’est l’API plein écran du document. L’état affiché est relu du système : si vous quittez le plein écran par un autre moyen, le bouton se remet à jour tout seul. Quand l’environnement ne sait pas faire de plein écran, la commande n’est **pas** affichée.
+- **Mode immersion** (`Ctrl+Maj+F`, ou menu **Affichage → Mode immersion**) : la fenêtre garde sa taille, mais la barre latérale, les menus et les onglets s’effacent pour ne laisser que le document et les actions utiles. Un bouton reste visible en haut à droite ; `Échap` en sort également.
+
+La barre supérieure s’adapte d’elle-même quand la place manque : les libellés des actions laissent d’abord la place aux icônes (les infobulles et les libellés accessibles sont conservés), puis les menus se regroupent derrière un seul bouton **Tous les menus**, où chaque commande reste disponible avec son raccourci. Aucune action ne disparaît, et les zones ne se chevauchent jamais.
+
 ## Raccourcis des viewers
 
 | Contenu actif | Précédent / suivant | Plein écran |

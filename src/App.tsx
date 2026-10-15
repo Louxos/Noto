@@ -341,10 +341,10 @@ export default function App() {
     });
   }, [notify]);
 
-  function closeWelcome() {
+  const closeWelcome = useCallback(() => {
     try { localStorage.setItem(FIRST_RUN_KEY, 'done'); } catch { /* First-run dismissal is best-effort in private storage. */ }
     setWelcomeOpen(false);
-  }
+  }, []);
 
   const openWindowsDefaults = useCallback(async () => {
     if (!isTauri()) {

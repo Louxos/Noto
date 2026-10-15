@@ -15,9 +15,11 @@ npm run dev
 ## Avant une pull request
 
 ```bash
-npm run check
-npm run build
+npm run verify   # ESLint + types + tests + construction
+npm run coverage # rapport de couverture des tests
 ```
+
+Le détail de ce qui est vérifié (et de ce qui ne peut l’être que sous Windows) est dans [Tests et vérifications](tests.md).
 
 Décrivez le problème résolu, les changements visibles et les tests effectués. Pour un changement d’interface, joignez une capture réelle si l’environnement le permet.
 

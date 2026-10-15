@@ -26,7 +26,7 @@ export function validateJson(source: string): JsonValidationError | null {
     const location = message.match(/line\s+(\d+)\s+column\s+(\d+)/i);
     if (location) return { message, line: Number(location[1]), column: Number(location[2]) };
     const explicitPosition = message.match(/position\s+(\d+)/i)?.[1];
-    const unexpectedToken = message.match(/Unexpected token ['\"](.+?)['\"]/i)?.[1];
+    const unexpectedToken = message.match(/Unexpected token ['"](.+?)['"]/i)?.[1];
     const fallbackPosition = unexpectedToken ? source.lastIndexOf(unexpectedToken) : Math.max(0, source.length - 1);
     const position = explicitPosition ? Number(explicitPosition) : Math.max(0, fallbackPosition);
     const safePosition = Math.max(0, Math.min(source.length, position));

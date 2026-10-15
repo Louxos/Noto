@@ -34,6 +34,9 @@ export function splitFileName(name: string): { baseName: string; extension: stri
 
 export function sanitizeFileName(name: string): string {
   const cleaned = name
+    // Les caractères de contrôle sont volontairement retirés : Windows refuse
+    // les noms qui en contiennent.
+    // eslint-disable-next-line no-control-regex
     .replace(/[<>:"/\\|?*\u0000-\u001f]/gu, '-')
     .replace(/\s+/gu, ' ')
     .replace(/^[.\s]+|[.\s]+$/gu, '');

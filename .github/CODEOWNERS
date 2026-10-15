@@ -1,0 +1,8 @@
+# Propriétaire par défaut de toutes les modifications.
+* @Louxos
+
+# Zones sensibles : toute modification y est relue par le mainteneur.
+/.github/ @Louxos
+/src-tauri/ @Louxos
+/docs/security.md @Louxos
+/SECURITY.md @Louxos

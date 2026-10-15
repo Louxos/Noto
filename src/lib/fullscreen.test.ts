@@ -15,8 +15,9 @@ import {
  */
 function stubFullscreenApi() {
   let element: Element | null = null;
-  const requestFullscreen = vi.fn(function (this: Element) {
-    element = this;
+  const requestFullscreen = vi.fn(() => {
+    // L’API est appelée sur l’élément racine du document.
+    element = document.documentElement;
     document.dispatchEvent(new Event('fullscreenchange'));
     return Promise.resolve();
   });
