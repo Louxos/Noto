@@ -1,8 +1,20 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from './App';
+
+/**
+ * Les appels IPC de la fenêtre de bureau sont neutralisés : ce test porte sur
+ * l’affichage, et rien ne doit dépendre d’un pont Tauri absent dans jsdom.
+ */
+vi.mock('@tauri-apps/api/core', () => ({ isTauri: () => false, invoke: vi.fn(async () => []) }));
+vi.mock('@tauri-apps/api/event', () => ({ listen: vi.fn(async () => () => {}) }));
+vi.mock('@tauri-apps/api/webview', () => ({ getCurrentWebview: () => ({ onDragDropEvent: async () => () => {} }) }));
+
+/** Les attentes sont explicites : un exécuteur d’intégration continue lent ne
+ *  doit pas transformer une attente par défaut d’une seconde en échec. */
+const ATTENTE = { timeout: 10_000 } as const;
 
 /**
  * Tests d’affichage de la coque : plein écran de la fenêtre et mode immersion.
@@ -32,7 +44,7 @@ describe('affichage', () => {
     expect(fullscreenButton()).toBeNull();
   });
 
-  it('propose le plein écran dès que l’environnement le permet, et suit son état réel', async () => {
+  it('propose le plein écran dès que l’environnement le permet, et suit son état réel', { timeout: 20_000 }, async () => {
     const user = userEvent.setup();
     let element: Element | null = null;
     Object.defineProperty(document.documentElement, 'requestFullscreen', {
@@ -50,11 +62,11 @@ describe('affichage', () => {
     expect(enter.getAttribute('aria-pressed')).toBe('false');
 
     await user.click(enter);
-    const exit = await screen.findByRole('button', { name: 'Quitter le plein écran' });
-    expect(exit.getAttribute('aria-pressed')).toBe('true');
+    const exit = await screen.findByRole('button', { name: 'Quitter le plein écran' }, ATTENTE);
+    await waitFor(() => expect(exit.getAttribute('aria-pressed')).toBe('true'), ATTENTE);
   });
 
-  it('retire l’interface en mode immersion et laisse une sortie visible', async () => {
+  it('retire l’interface en mode immersion et laisse une sortie visible', { timeout: 20_000 }, async () => {
     const user = userEvent.setup();
     const { container } = render(<App />);
     const shell = container.querySelector('.app-shell');
@@ -70,7 +82,7 @@ describe('affichage', () => {
     expect(container.querySelector('.app-shell')?.className).not.toContain('immersive');
   });
 
-  it('sort de l’immersion avec Échap', async () => {
+  it('sort de l’immersion avec Échap', { timeout: 20_000 }, async () => {
     const user = userEvent.setup();
     const { container } = render(<App />);
     await user.keyboard('{Control>}{Shift>}f{/Shift}{/Control}');
