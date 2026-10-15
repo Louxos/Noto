@@ -30,7 +30,11 @@ jobs:
         with:
           workspaces: './src-tauri -> target'
       - run: npm ci
-      - run: npm run check
+      # Le journal Windows n'est pas lisible par l'API ici : le rapporteur
+      # github-actions remonte le test fautif en annotation, consultable
+      # avec `gh api repos/<owner>/<repo>/check-runs/<id>/annotations`.
+      - name: Types TypeScript et tests
+        run: npm run check -- --reporter=default --reporter=github-actions
       - run: npm run build
       - name: Test native Windows commands
         run: cargo test --manifest-path src-tauri/Cargo.toml
