@@ -111,6 +111,41 @@ jobs:
             }
           }
 
+          function Assert-FileTypeIcons([string] $installPath) {
+            # Chaque classe de fichiers doit avoir son icône, et le fichier doit
+            # exister : une entrée de registre pointant un fichier absent
+            # laisserait Windows avec une icône blanche.
+            $expected = @{
+              'Document Markdown' = 'md.ico'
+              'Document PDF' = 'pdf.ico'
+              'Fichier JSON' = 'json.ico'
+              'Image' = 'image.ico'
+              'Script en ligne de commande' = 'commandes.ico'
+            }
+            foreach ($className in ($expected.Keys | Sort-Object)) {
+              $iconFile = $expected[$className]
+              $iconPath = Join-Path (Join-Path $installPath 'filetypes') $iconFile
+              if (-not (Test-Path -LiteralPath $iconPath)) {
+                throw "The file-type icon $iconFile is missing from $installPath\filetypes."
+              }
+              $iconKey = "Registry::HKEY_CURRENT_USER\Software\Classes\$className\DefaultIcon"
+              if (-not (Test-Path -LiteralPath $iconKey)) {
+                throw "The $className file class has no DefaultIcon entry."
+              }
+              $iconValue = (Get-Item -LiteralPath $iconKey).GetValue('')
+              if ($iconValue -notlike "*$iconFile*") {
+                throw "The $className DefaultIcon is '$iconValue' instead of the $iconFile icon."
+              }
+            }
+          }
+
+          function Assert-FileTypeIconsRemoved([string] $installPath) {
+            $iconPath = Join-Path (Join-Path $installPath 'filetypes') 'md.ico'
+            if (Test-Path -LiteralPath $iconPath) {
+              throw "Uninstall left the file-type icons behind in $installPath\filetypes."
+            }
+          }
+
           function Assert-FileLaunch([string] $appPath, [string] $filePath) {
             $argument = '"' + $filePath + '"'
             $app = Start-Process -FilePath $appPath -ArgumentList $argument -PassThru
@@ -134,12 +169,14 @@ jobs:
           $nsisExe = Join-Path $nsisInstallPath 'Noto.exe'
           if (-not (Test-Path $nsisExe)) { throw "NSIS did not install Noto.exe into $nsisInstallPath." }
           Assert-FileAssociation $nsisInstallPath
+          Assert-FileTypeIcons $nsisInstallPath
           Assert-FileLaunch $nsisExe $samplePath
           $nsisUninstaller = Get-ChildItem -Path $nsisInstallPath -Filter 'unins*.exe' -File | Select-Object -First 1
           if (-not $nsisUninstaller) { throw 'The NSIS uninstaller was not installed.' }
           Start-Process -FilePath $nsisUninstaller.FullName -ArgumentList '/S' -Wait -PassThru | Out-Null
           if (Test-Path $nsisExe) { throw 'NSIS uninstall left Noto.exe behind.' }
           Assert-FileAssociationRemoved
+          Assert-FileTypeIconsRemoved $nsisInstallPath
 
           # NSIS is per-user and can leave the .md extension's default ProgID in HKCU after uninstall.
           # Remove that disposable smoke-test residue so the runner stays clean for the next step.

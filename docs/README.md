@@ -5,6 +5,7 @@ La documentation du dépôt est centralisée ici. Les fichiers racine `INSTALLAT
 ## Utiliser Noto
 
 - [Guide utilisateur, formats pris en charge et limites](user-guide.md)
+- [Icônes par type de fichier sous Windows](icons-fichiers.md) — fonctionnement, table des 21 classes, limites, régénération
 - [Installation et téléchargement Windows](installation.md) — releases avec installateurs directs et sommes SHA-256 ; artefacts Actions temporaires réservés aux builds de test
 
 ## Développer

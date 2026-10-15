@@ -147,14 +147,51 @@ export function decodeText(bytes: Uint8Array, encoding = detectTextEncoding(byte
 }
 
 
+/**
+ * Extension → langage de coloration.
+ *
+ * Les valeurs sont les noms enregistrés dans `src/lib/highlighting.ts`, plus
+ * les alias fournis par highlight.js (`toml` pour `ini`, `terraform` pour
+ * `hcl`…). Une extension absente n’a pas de coloration connue : le fichier
+ * s’affiche alors en texte simple, sans jamais échouer.
+ *
+ * Choix documentés, faute de grammaire exacte ;
+ *  - `.sass` (syntaxe indentée) utilise la grammaire SCSS, même famille ;
+ *  - `.vue`, `.svelte`, `.astro` utilisent la grammaire XML : le balisage est
+ *    coloré, pas le contenu des blocs script ou style ;
+ *  - `.sol` (Solidity) et `.pkl` (Pkl) utilisent la grammaire C-like :
+ *    commentaires, chaînes et nombres, sans les mots-clés du langage ;
+ *  - `.lock`, `.csv`, `.tsv`, `.rst`, `.log`, `.txt` restent en texte simple :
+ *    ces formats n’ont pas de grammaire fiable.
+ */
+export const LANGUAGE_BY_EXTENSION: Record<string, string> = {
+  md: 'markdown', markdown: 'markdown', mdown: 'markdown', mkd: 'markdown',
+  diff: 'diff', patch: 'diff',
+  ini: 'ini', conf: 'ini', config: 'ini', editorconfig: 'ini', properties: 'ini',
+  gitignore: 'ini', gitattributes: 'ini', toml: 'toml',
+  env: 'bash', sh: 'bash', bash: 'bash', zsh: 'bash', fish: 'bash', bashrc: 'bash', zshrc: 'bash',
+  tex: 'latex', latex: 'latex', adoc: 'asciidoc', asciidoc: 'asciidoc',
+  js: 'javascript', mjs: 'javascript', cjs: 'javascript', jsx: 'javascript',
+  ts: 'typescript', tsx: 'typescript',
+  json: 'json', ipynb: 'json', jsonc: 'jsonc', json5: 'jsonc',
+  xml: 'xml', html: 'xml', htm: 'xml', svg: 'xml', vue: 'xml', svelte: 'xml', astro: 'xml',
+  sln: 'xml', csproj: 'xml', fsproj: 'xml', vbproj: 'xml',
+  yaml: 'yaml', yml: 'yaml',
+  css: 'css', scss: 'scss', sass: 'scss', less: 'less',
+  py: 'python', pyw: 'python', java: 'java',
+  c: 'c', h: 'c', cc: 'cpp', cpp: 'cpp', cxx: 'cpp', hh: 'cpp', hpp: 'cpp', hxx: 'cpp',
+  cs: 'csharp', php: 'php', sql: 'sql', bat: 'dos', cmd: 'dos',
+  ps1: 'powershell', psm1: 'powershell', psd1: 'powershell',
+  rs: 'rust', go: 'go', rb: 'ruby', gemfile: 'ruby', rakefile: 'ruby', swift: 'swift',
+  kt: 'kotlin', kts: 'kotlin', scala: 'scala', dart: 'dart', lua: 'lua', pl: 'perl', r: 'r',
+  ex: 'elixir', exs: 'elixir', erl: 'erlang', hs: 'haskell', elm: 'elm',
+  clj: 'clojure', cljs: 'clojure', groovy: 'groovy', gradle: 'gradle',
+  fs: 'fsharp', fsx: 'fsharp', vb: 'vbnet', vbs: 'vbscript',
+  proto: 'protobuf', graphql: 'graphql', gql: 'graphql',
+  dockerfile: 'dockerfile', makefile: 'makefile', mk: 'makefile', cmake: 'cmake',
+  tf: 'hcl', hcl: 'hcl', nix: 'nix', sol: 'solidity', pkl: 'pkl',
+};
+
 export function languageForExtension(extension: string): string | undefined {
-  const aliases: Record<string, string> = {
-    md: 'markdown', markdown: 'markdown', mdown: 'markdown', js: 'javascript', mjs: 'javascript',
-    cjs: 'javascript', ts: 'typescript', jsx: 'javascript', tsx: 'typescript', html: 'xml', htm: 'xml',
-    css: 'css', scss: 'scss', json: 'json', xml: 'xml', yaml: 'yaml', yml: 'yaml', py: 'python',
-    java: 'java', c: 'c', cc: 'cpp', cpp: 'cpp', h: 'c', hpp: 'cpp', cs: 'csharp', php: 'php',
-    sql: 'sql', sh: 'bash', bash: 'bash', bat: 'dos', cmd: 'dos', ps1: 'powershell', ini: 'ini', env: 'bash', editorconfig: 'ini', conf: 'ini',
-    toml: 'toml', rs: 'rust', go: 'go', rb: 'ruby', swift: 'swift', kt: 'kotlin',
-  };
-  return aliases[extension.toLowerCase()];
+  return LANGUAGE_BY_EXTENSION[extension.toLowerCase()];
 }

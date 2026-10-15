@@ -5,6 +5,7 @@ Noto lit les fichiers localement. L’ouverture ou la sauvegarde d’un document
 ## Ouvrir et organiser
 
 - Ouvrez un fichier par le bouton **Ouvrir**, `Ctrl+O` ou glisser-déposer. Dans l’application Windows, **Ouvrir avec Noto** peut également transmettre un ou plusieurs fichiers ; une seconde demande est remise à la fenêtre Noto déjà ouverte.
+- Un fichier ouvert **depuis l’Explorateur** (double-clic sur un format associé à Noto, ou **Ouvrir avec**) s’affiche en **mode immersion** : le document seul, sans barre latérale, menus ni onglets. `Échap` ou `Ctrl+Maj+F` rétablit l’interface. Le réglage **Ouvrir en mode immersion depuis Windows** (activé par défaut, dans *Paramètres → Windows & associations*) permet de retrouver l’affichage habituel ; les fichiers ouverts depuis Noto ne changent jamais l’affichage.
 - Le guide de prise en main apparaît au premier lancement. Il reste accessible ensuite via **Aide → Guide de prise en main**. Vous pouvez y épingler un dossier pour la recherche locale ou ouvrir les paramètres d’associations Windows.
 - Utilisez les onglets, les fichiers récents, les groupes locaux et les collections intelligentes **PDF récents** / **Images récentes**. Une collection ne déplace pas les originaux. Les récents peuvent être filtrés par texte/type, triés par nom/type/date et épinglés. Les paramètres permettent de régler leur limite (4 à 20) et de masquer les chemins visibles ; l’action explicite **Copier le chemin** reste disponible.
 - Réordonnez les onglets par glisser-déposer ; faites un clic droit sur un onglet pour l’épingler, le désépingler ou fermer les autres onglets (les modifications non enregistrées sont confirmées).
@@ -22,6 +23,8 @@ Noto lit les fichiers localement. L’ouverture ou la sauvegarde d’un document
 
 Dans **Paramètres → Windows & associations**, **Ouvrir les paramètres Windows** mène à la page des applications par défaut. Choisissez Noto uniquement pour les extensions souhaitées : Windows reste seul à décider de l’application par défaut. Les fichiers transmis par l’Explorateur s’ouvrent dans Noto ; Noto ne remplace jamais silencieusement un choix existant.
 
+Noto ne se contente pas d’un logo unique dans l’Explorateur : chaque famille de formats a **sa propre icône** — Markdown, texte, configuration, LaTeX, code, web, scripts, JSON, XML, YAML, comparaison, tableaux, PDF, images, documents bureautiques, présentations et livres numériques. Les icônes sont posées par l’installeur, jamais par l’application, et la désinstallation restaure vos associations d’origine. Détails et vérifications : [`docs/icons-fichiers.md`](icons-fichiers.md).
+
 ## Menus contextuels
 
 Un clic droit ouvre un menu Noto sur l’espace de travail, les fichiers, les mots sélectionnés et les viewers. Les actions varient selon le contenu : copier/rechercher une sélection, coller dans l’éditeur, classer ou ouvrir un fichier, naviguer dans un PDF ou un diaporama et contrôler le zoom d’une image. `Échap` ferme un menu ; les flèches haut/bas permettent d’y naviguer.
@@ -31,7 +34,7 @@ Le presse-papiers reste soumis aux autorisations du navigateur ou du système. U
 ## Lecture des formats
 
 - **Markdown** : rendu des titres, listes, liens, tableaux et blocs de code ; l’édition offre un aperçu en direct.
-- **Texte/code/configuration** : affichage monospace, numéros de lignes et retour à la ligne réglables.
+- **Texte/code/configuration** : affichage monospace, numéros de lignes et retour à la ligne réglables. Le code est **coloré** (mots-clés, chaînes, nombres, commentaires, balises) selon la palette GitHub de `highlight.js`, dans la lecture comme dans l’édition. Les fichiers sans grammaire connue restent en texte simple, et la coloration s’efface d’elle-même sur les très gros fichiers (> 200 000 caractères à l’édition, 500 000 à la lecture) pour préserver la fluidité.
 - **HTML** : aperçu sandboxé ; les scripts, formulaires et accès réseau ne sont pas exécutés.
 - **CSV/TSV** : tableau avec détection du séparateur parmi virgule, point-virgule, tabulation et barre verticale.
 - **PDF** : navigation par boutons ou flèches gauche/droite, recherche, zoom et ajustement. Les commandes Sommaire, Signets et Miniatures ouvrent le panneau latéral ; les signets et la dernière page sont mémorisés localement par document. Le bouton **Texte** affiche une extraction sélectionnable de la page courante, que vous pouvez copier.
@@ -44,7 +47,7 @@ Les archives Office/EPUB sont lues en mémoire ; la taille de l’archive et le 
 
 ## Éditer et enregistrer
 
-Markdown, texte, code, HTML source, CSV et TSV peuvent être édités lorsque l’aperçu n’est pas tronqué. Le champ de saisie natif reste visible afin que le clic, la sélection et le curseur suivent exactement la position affichée. `Tab` insère deux espaces et `Maj+Tab` retire l’indentation courante ; `Entrée` conserve l’indentation de la ligne précédente.
+Markdown, texte, code, HTML source, CSV et TSV peuvent être édités lorsque l’aperçu n’est pas tronqué. Le champ de saisie natif reste au-dessus d’une couche colorée : le clic, la sélection et le curseur suivent exactement la position affichée, tandis que le texte apparaît coloré. `Tab` insère deux espaces et `Maj+Tab` retire l’indentation courante ; `Entrée` conserve l’indentation de la ligne précédente.
 
 - `Ctrl+E` active ou termine l’édition ; `Ctrl+G` ouvre le sélecteur de ligne.
 - `Ctrl+S` enregistre ; `Ctrl+Maj+S` ouvre les options d’une copie (UTF-8, UTF-16LE ou Windows-1252 ; fins de ligne préservées, LF, CRLF ou CR). L’extension d’origine est conservée ; un caractère non représentable en Windows-1252 est signalé.
@@ -59,7 +62,7 @@ Markdown, texte, code, HTML source, CSV et TSV peuvent être édités lorsque l�
 Deux niveaux distincts, utilisables ensemble :
 
 - **Plein écran de la fenêtre** (`F11`, ou menu **Affichage → Plein écran de la fenêtre**, ou le bouton en haut à droite) : la fenêtre Noto occupe tout l’écran du système, sans barre de titre. Dans l’application de bureau, c’est la fenêtre elle-même qui bascule ; dans un navigateur, c’est l’API plein écran du document. L’état affiché est relu du système : si vous quittez le plein écran par un autre moyen, le bouton se remet à jour tout seul. Quand l’environnement ne sait pas faire de plein écran, la commande n’est **pas** affichée.
-- **Mode immersion** (`Ctrl+Maj+F`, ou menu **Affichage → Mode immersion**) : la fenêtre garde sa taille, mais la barre latérale, les menus et les onglets s’effacent pour ne laisser que le document et les actions utiles. Un bouton reste visible en haut à droite ; `Échap` en sort également.
+- **Mode immersion** (`Ctrl+Maj+F`, ou menu **Affichage → Mode immersion**) : la fenêtre garde sa taille, mais la barre latérale, les menus et les onglets s’effacent pour ne laisser que le document et les actions utiles. Un bouton reste visible en haut à droite ; `Échap` en sort également. Ce mode s’active **automatiquement** lorsqu’un fichier vous est transmis par l’Explorateur Windows (voir *Ouvrir et organiser*).
 
 La barre supérieure s’adapte d’elle-même quand la place manque : les libellés des actions laissent d’abord la place aux icônes (les infobulles et les libellés accessibles sont conservés), puis les menus se regroupent derrière un seul bouton **Tous les menus**, où chaque commande reste disponible avec son raccourci. Aucune action ne disparaît, et les zones ne se chevauchent jamais.
 

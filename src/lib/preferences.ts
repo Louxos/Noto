@@ -18,6 +18,8 @@ export interface Preferences {
   hidePaths: boolean;
   draftRecoveryEnabled: boolean;
   draftRetentionDays: DraftRetentionDays;
+  /** Ouvrir en mode immersion un fichier transmis par Windows (double-clic). */
+  immersiveOnFileOpen: boolean;
   toolbarOrder: ToolbarAction[];
   hiddenToolbarActions: ToolbarAction[];
 }
@@ -50,6 +52,7 @@ export const defaultPreferences: Preferences = {
   hidePaths: false,
   draftRecoveryEnabled: false,
   draftRetentionDays: 7,
+  immersiveOnFileOpen: true,
   toolbarOrder: [...TOOLBAR_ACTIONS],
   hiddenToolbarActions: [],
 };
@@ -80,6 +83,9 @@ export function normalizePreferences(value: unknown): Preferences {
     hidePaths: parsed.hidePaths === true,
     draftRecoveryEnabled: parsed.draftRecoveryEnabled === true,
     draftRetentionDays: parsed.draftRetentionDays === 1 || parsed.draftRetentionDays === 30 ? parsed.draftRetentionDays : 7,
+    // Le mode immersion à l’ouverture d’un fichier depuis Windows est actif par
+    // défaut : seule la valeur explicitement fausse le désactive.
+    immersiveOnFileOpen: parsed.immersiveOnFileOpen !== false,
     toolbarOrder: [...order, ...TOOLBAR_ACTIONS.filter((action) => !order.includes(action))],
     hiddenToolbarActions: hidden,
   };

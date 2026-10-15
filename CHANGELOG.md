@@ -5,6 +5,9 @@ Les changements notables sont consignés ici, selon une version simplifiée de K
 ## [Non publié]
 
 ### Ajouté
+- **Mode immersion à l’ouverture depuis Windows** : un fichier transmis par l’Explorateur — double-clic sur un format associé à Noto, ou **Ouvrir avec** — s’affiche seul, sans barre latérale, menus ni onglets. Le réglage **Ouvrir en mode immersion depuis Windows** (activé par défaut, dans *Paramètres → Windows & associations*) rétablit le comportement classique ; les fichiers choisis depuis Noto ne changent rien à l’affichage.
+- **Icônes par type de fichier dans l’Explorateur** : Markdown, texte, comparaison, configuration, LaTeX, code, web, scripts, JSON, XML, YAML, CSV, TSV, PDF, images, Word/ODT/RTF, PowerPoint/ODP et EPUB ont chacun leur icône, au lieu de l’icône unique de Noto. Les 21 icônes (7 tailles chacune, de 16 à 256 px) sont générées sans dépendance ni ressource tierce (`src-tauri/icons/filetypes/generate_filetype_icons.py`) et posées dans le registre par l’installeur NSIS après la création des associations ; les extensions qui changent de classe sont reprises une par une afin que la désinstallation rende bien l’application d’origine. Détails et limites : [`docs/icons-fichiers.md`](docs/icons-fichiers.md).
+- **Coloration syntaxique dans l’éditeur** : le texte est coloré pendant la frappe, dans la même palette que la lecture, avec les 21 familles supplémentaires de `highlight.js` (Rust, Go, Scala, Lua, Elixir, Erlang, Haskell, Elm, Clojure, F#, Protobuf, GraphQL, Less, LaTeX, AsciiDoc, diff…) et deux grammaires écrites ici pour ce que `highlight.js` ne fournit pas (JSON avec commentaires et JSON5 ; HCL/Terraform), plus Solidity et Pkl. La coloration renonce d’elle-même au-delà de 200 000 caractères ou 20 000 lignes, sans jamais retarder la frappe.
 - **Plein écran de la fenêtre** : `F11`, bouton en haut à droite, menu **Affichage** et palette de commandes. Dans l’application de bureau, c’est la fenêtre Tauri qui bascule ; dans un navigateur, l’API plein écran du document. L’état affiché est relu du système, et aucune commande n’apparaît là où le plein écran n’existe pas.
 - **Mode immersion** (`Ctrl+Maj+F`) : la barre latérale, les menus et les onglets s’effacent au profit du document, avec une sortie visible et `Échap`.
 - **Réduction progressive de la barre supérieure** : les libellés laissent la place aux icônes (infobulles et libellés accessibles conservés), puis les menus se regroupent dans un bouton **Tous les menus** où aucune commande n’est perdue.
@@ -18,6 +21,8 @@ Les changements notables sont consignés ici, selon une version simplifiée de K
 - Délai des tests rendu explicite (20 s) : le délai par défaut de 5 s était trop court sur un exécuteur Windows pour le test de division d’un PDF page par page, qui construit et relit de vrais documents.
 
 ### Modifié
+- **Palette de coloration** : les couleurs viennent désormais du thème officiel **GitHub** de `highlight.js` (clair) et de sa variante sombre, au lieu de teintes propres à Noto. La lecture et l’édition partagent exactement la même palette, posée en variables CSS.
+- **Classes de fichiers affinées** : 21 classes au lieu de 14 (comparaison, configuration, LaTeX, web, scripts en ligne de commande, JSON, XML, YAML), afin que les icônes distinguent réellement les formats. Aucune extension n’est perdue et les extensions qui changent de classe voient leur sauvegarde d’association reprise à l’installation.
 - `package.json` documenté : description, licence, dépôt, signaux d’anomalie, mots-clés, version de Node requise.
 
 ## [0.2.0] — 2026-10-14

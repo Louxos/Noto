@@ -27,7 +27,9 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis"],
+    "targets": [
+      "nsis"
+    ],
     "category": "Utility",
     "publisher": "Noto",
     "homepage": "https://github.com/Louxos/Noto",
@@ -46,9 +48,11 @@
       "nsis": {
         "installMode": "currentUser",
         "displayLanguageSelector": false,
-        "languages": ["French"],
-      "compression": "lzma",
-      "installerIcon": "icons/icon.ico",
+        "languages": [
+          "French"
+        ],
+        "compression": "lzma",
+        "installerIcon": "icons/icon.ico",
         "uninstallerIcon": "icons/icon.ico",
         "headerImage": "windows/installer/nsis-header.bmp",
         "uninstallerHeaderImage": "windows/installer/nsis-header.bmp",
@@ -58,21 +62,304 @@
       }
     },
     "fileAssociations": [
-      { "ext": ["md", "markdown", "mdown", "mkd"], "name": "Document Markdown", "description": "Document Markdown", "role": "Viewer", "mimeType": "text/markdown" },
-      { "ext": ["txt", "text", "log", "diff", "patch", "ini", "env", "toml", "conf", "editorconfig", "gitignore", "gitattributes", "properties", "tex", "rst", "adoc", "asciidoc"], "name": "Fichier texte", "description": "Fichier texte", "role": "Viewer", "mimeType": "text/plain" },
-      { "ext": ["js", "mjs", "cjs", "ts", "jsx", "tsx", "css", "scss", "sass", "less", "json", "jsonc", "json5", "xml", "yaml", "yml", "py", "pyw", "java", "c", "cc", "cpp", "cxx", "h", "hpp", "hxx", "cs", "php", "sql", "sh", "bash", "zsh", "bat", "cmd", "ps1", "psm1", "psd1", "rs", "go", "rb", "swift", "kt", "kts", "vue", "svelte", "astro", "r", "lua", "scala", "dart", "ex", "exs", "erl", "hs", "clj", "groovy", "gradle", "vb", "fs", "proto", "graphql", "dockerfile", "makefile", "cmake", "tf", "hcl", "nix", "sol", "pkl", "lock"], "name": "Fichier de code", "description": "Fichier source ou de configuration", "role": "Editor", "mimeType": "text/plain" },
-      { "ext": ["html", "htm"], "name": "Document HTML", "description": "Document HTML", "role": "Viewer", "mimeType": "text/html" },
-      { "ext": ["pdf"], "name": "Document PDF", "description": "Document PDF", "role": "Viewer", "mimeType": "application/pdf" },
-      { "ext": ["png", "apng", "jpg", "jpeg", "gif", "webp", "bmp", "svg", "ico", "tif", "tiff", "avif"], "name": "Image", "description": "Fichier image", "role": "Viewer", "mimeType": "image/*" },
-      { "ext": ["csv"], "name": "Fichier CSV", "description": "Fichier de données CSV", "role": "Viewer", "mimeType": "text/csv" },
-      { "ext": ["tsv"], "name": "Fichier TSV", "description": "Fichier de données tabulaires", "role": "Viewer", "mimeType": "text/tab-separated-values" },
-      { "ext": ["pptx"], "name": "Présentation PowerPoint", "description": "Présentation PowerPoint", "role": "Viewer", "mimeType": "application/vnd.openxmlformats-officedocument.presentationml.presentation" },
-      { "ext": ["odp"], "name": "Présentation OpenDocument", "description": "Présentation OpenDocument", "role": "Viewer", "mimeType": "application/vnd.oasis.opendocument.presentation" },
-      { "ext": ["docx"], "name": "Document Word", "description": "Document Word", "role": "Viewer", "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document" },
-      { "ext": ["odt"], "name": "Document OpenDocument", "description": "Document OpenDocument", "role": "Viewer", "mimeType": "application/vnd.oasis.opendocument.text" },
-      { "ext": ["rtf"], "name": "Document RTF", "description": "Document RTF", "role": "Viewer", "mimeType": "application/rtf" },
-      { "ext": ["epub"], "name": "Livre numérique EPUB", "description": "Livre numérique EPUB", "role": "Viewer", "mimeType": "application/epub+zip" }
-    ]
+      {
+        "ext": [
+          "md",
+          "markdown",
+          "mdown",
+          "mkd"
+        ],
+        "name": "Document Markdown",
+        "description": "Document Markdown",
+        "role": "Viewer",
+        "mimeType": "text/markdown"
+      },
+      {
+        "ext": [
+          "txt",
+          "text",
+          "log",
+          "rst",
+          "adoc",
+          "asciidoc"
+        ],
+        "name": "Fichier texte",
+        "description": "Fichier texte",
+        "role": "Viewer",
+        "mimeType": "text/plain"
+      },
+      {
+        "ext": [
+          "diff",
+          "patch"
+        ],
+        "name": "Fichier de comparaison",
+        "description": "Fichier de comparaison",
+        "role": "Viewer",
+        "mimeType": "text/plain"
+      },
+      {
+        "ext": [
+          "ini",
+          "env",
+          "toml",
+          "conf",
+          "config",
+          "editorconfig",
+          "gitignore",
+          "gitattributes",
+          "properties",
+          "tf",
+          "hcl",
+          "lock"
+        ],
+        "name": "Fichier de configuration",
+        "description": "Fichier de configuration",
+        "role": "Editor",
+        "mimeType": "text/plain"
+      },
+      {
+        "ext": [
+          "tex",
+          "latex"
+        ],
+        "name": "Document LaTeX",
+        "description": "Document LaTeX",
+        "role": "Viewer",
+        "mimeType": "text/x-tex"
+      },
+      {
+        "ext": [
+          "js",
+          "mjs",
+          "cjs",
+          "ts",
+          "jsx",
+          "tsx",
+          "css",
+          "scss",
+          "sass",
+          "less",
+          "py",
+          "pyw",
+          "java",
+          "c",
+          "cc",
+          "cpp",
+          "cxx",
+          "h",
+          "hh",
+          "hpp",
+          "hxx",
+          "cs",
+          "php",
+          "sql",
+          "rs",
+          "go",
+          "rb",
+          "swift",
+          "kt",
+          "kts",
+          "r",
+          "lua",
+          "pl",
+          "scala",
+          "dart",
+          "ex",
+          "exs",
+          "erl",
+          "hs",
+          "elm",
+          "clj",
+          "cljs",
+          "groovy",
+          "gradle",
+          "vb",
+          "vbs",
+          "fs",
+          "fsx",
+          "proto",
+          "graphql",
+          "gql",
+          "dockerfile",
+          "makefile",
+          "mk",
+          "cmake",
+          "nix",
+          "sol",
+          "pkl"
+        ],
+        "name": "Fichier de code",
+        "description": "Fichier source de programmation",
+        "role": "Editor",
+        "mimeType": "text/plain"
+      },
+      {
+        "ext": [
+          "html",
+          "htm",
+          "vue",
+          "svelte",
+          "astro"
+        ],
+        "name": "Document web",
+        "description": "Document web",
+        "role": "Viewer",
+        "mimeType": "text/html"
+      },
+      {
+        "ext": [
+          "sh",
+          "bash",
+          "zsh",
+          "fish",
+          "bat",
+          "cmd",
+          "ps1",
+          "psm1",
+          "psd1"
+        ],
+        "name": "Script en ligne de commande",
+        "description": "Script en ligne de commande",
+        "role": "Editor",
+        "mimeType": "text/plain"
+      },
+      {
+        "ext": [
+          "json",
+          "jsonc",
+          "json5",
+          "ipynb"
+        ],
+        "name": "Fichier JSON",
+        "description": "Fichier JSON",
+        "role": "Viewer",
+        "mimeType": "application/json"
+      },
+      {
+        "ext": [
+          "xml"
+        ],
+        "name": "Fichier XML",
+        "description": "Fichier XML",
+        "role": "Viewer",
+        "mimeType": "application/xml"
+      },
+      {
+        "ext": [
+          "yaml",
+          "yml"
+        ],
+        "name": "Fichier YAML",
+        "description": "Fichier YAML",
+        "role": "Viewer",
+        "mimeType": "application/yaml"
+      },
+      {
+        "ext": [
+          "csv"
+        ],
+        "name": "Fichier CSV",
+        "description": "Fichier de données CSV",
+        "role": "Viewer",
+        "mimeType": "text/csv"
+      },
+      {
+        "ext": [
+          "tsv"
+        ],
+        "name": "Fichier TSV",
+        "description": "Fichier de données tabulaires",
+        "role": "Viewer",
+        "mimeType": "text/tab-separated-values"
+      },
+      {
+        "ext": [
+          "pdf"
+        ],
+        "name": "Document PDF",
+        "description": "Document PDF",
+        "role": "Viewer",
+        "mimeType": "application/pdf"
+      },
+      {
+        "ext": [
+          "png",
+          "apng",
+          "jpg",
+          "jpeg",
+          "gif",
+          "webp",
+          "bmp",
+          "svg",
+          "ico",
+          "tif",
+          "tiff",
+          "avif"
+        ],
+        "name": "Image",
+        "description": "Fichier image",
+        "role": "Viewer",
+        "mimeType": "image/*"
+      },
+      {
+        "ext": [
+          "docx"
+        ],
+        "name": "Document Word",
+        "description": "Document Word",
+        "role": "Viewer",
+        "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      },
+      {
+        "ext": [
+          "odt"
+        ],
+        "name": "Document OpenDocument",
+        "description": "Document OpenDocument",
+        "role": "Viewer",
+        "mimeType": "application/vnd.oasis.opendocument.text"
+      },
+      {
+        "ext": [
+          "rtf"
+        ],
+        "name": "Document RTF",
+        "description": "Document RTF",
+        "role": "Viewer",
+        "mimeType": "application/rtf"
+      },
+      {
+        "ext": [
+          "pptx"
+        ],
+        "name": "Présentation PowerPoint",
+        "description": "Présentation PowerPoint",
+        "role": "Viewer",
+        "mimeType": "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+      },
+      {
+        "ext": [
+          "odp"
+        ],
+        "name": "Présentation OpenDocument",
+        "description": "Présentation OpenDocument",
+        "role": "Viewer",
+        "mimeType": "application/vnd.oasis.opendocument.presentation"
+      },
+      {
+        "ext": [
+          "epub"
+        ],
+        "name": "Livre numérique EPUB",
+        "description": "Livre numérique EPUB",
+        "role": "Viewer",
+        "mimeType": "application/epub+zip"
+      }
+    ],
+    "resources": {
+      "icons/filetypes": "filetypes"
+    }
   },
   "plugins": {}
 }

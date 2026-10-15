@@ -302,20 +302,63 @@ button:disabled { opacity: .4; cursor: not-allowed !important; }
 .code-viewport.is-wrapped .code-shell { width: 100%; }
 .code-viewport.is-wrapped .code-content { min-width: 0; flex: 1; white-space: pre-wrap; overflow-wrap: anywhere; }
 .code-viewport.is-wrapped .code-content code { white-space: pre-wrap; }
+/* Coloration syntaxique — thème GitHub de highlight.js (BSD-3-Clause).
+   Les valeurs sont celles du thème officiel « github » et de sa variante
+   « github-dark » fournis avec highlight.js : c’est la palette de référence
+   des lecteurs de code, elle ne dépend donc d’aucun choix esthétique de Noto.
+   Les couleurs sont posées en variables pour que les deux vues — lecture
+   (CodeViewer) et édition (TextEditor) — partagent exactement la même palette. */
+:root {
+  --code-text: #24292e;
+  --code-keyword: #d73a49;
+  --code-entity: #6f42c1;
+  --code-constant: #005cc5;
+  --code-string: #032f62;
+  --code-variable: #e36209;
+  --code-comment: #6a737d;
+  --code-tag: #22863a;
+  --code-bullet: #735c0f;
+  --code-section: #005cc5;
+  --code-inserted: #22863a;
+  --code-inserted-bg: #f0fff4;
+  --code-deleted: #b31d28;
+  --code-deleted-bg: #ffeef0;
+}
+:root[data-theme='dark'] {
+  --code-text: #c9d1d9;
+  --code-keyword: #ff7b72;
+  --code-entity: #d2a8ff;
+  --code-constant: #79c0ff;
+  --code-string: #a5d6ff;
+  --code-variable: #ffa657;
+  --code-comment: #8b949e;
+  --code-tag: #7ee787;
+  --code-bullet: #f2cc60;
+  --code-section: #1f6feb;
+  --code-inserted: #aff5b4;
+  --code-inserted-bg: #033a16;
+  --code-deleted: #ffdcd7;
+  --code-deleted-bg: #67060c;
+}
 :root[data-theme='dark'] .code-shell, :root[data-theme='dark'] .code-viewport { background: var(--surface); }
-:root[data-theme='dark'] .code-content .hljs-comment, :root[data-theme='dark'] .code-content .hljs-quote { color: #858a99; }
-.hljs-comment, .hljs-quote { color: #9295a3; font-style: italic; }
-.hljs-keyword, .hljs-selector-tag, .hljs-literal, .hljs-section, .hljs-link { color: #876fc0; }
-.hljs-string, .hljs-attr, .hljs-template-tag, .hljs-template-variable { color: #3c927d; }
-.hljs-number, .hljs-symbol, .hljs-bullet { color: #be805e; }
-.hljs-title, .hljs-function .hljs-title, .hljs-title.function_ { color: #547eae; }
-.hljs-variable, .hljs-params, .hljs-property { color: #bd6f89; }
-.hljs-built_in, .hljs-type, .hljs-class .hljs-title { color: #bd8b51; }
-:root[data-theme='dark'] .hljs-keyword, :root[data-theme='dark'] .hljs-selector-tag, :root[data-theme='dark'] .hljs-literal { color: #c3a9ff; }
-:root[data-theme='dark'] .hljs-string, :root[data-theme='dark'] .hljs-attr { color: #8dccb6; }
-:root[data-theme='dark'] .hljs-number, :root[data-theme='dark'] .hljs-symbol { color: #e6b283; }
-:root[data-theme='dark'] .hljs-title, :root[data-theme='dark'] .hljs-title.function_ { color: #93b8ed; }
-:root[data-theme='dark'] .hljs-variable, :root[data-theme='dark'] .hljs-params { color: #e8a7bd; }
+.hljs { color: var(--code-text); background: transparent; }
+.hljs-comment, .hljs-quote, .hljs-code, .hljs-formula { color: var(--code-comment); }
+.hljs-doctag, .hljs-keyword, .hljs-meta .hljs-keyword, .hljs-template-tag, .hljs-template-variable,
+.hljs-type, .hljs-variable.language_ { color: var(--code-keyword); }
+.hljs-title, .hljs-title.class_, .hljs-title.class_.inherited__, .hljs-title.function_ { color: var(--code-entity); }
+.hljs-attr, .hljs-attribute, .hljs-literal, .hljs-meta, .hljs-number, .hljs-operator, .hljs-variable,
+.hljs-selector-attr, .hljs-selector-class, .hljs-selector-id { color: var(--code-constant); }
+.hljs-regexp, .hljs-string, .hljs-meta .hljs-string { color: var(--code-string); }
+.hljs-built_in, .hljs-symbol { color: var(--code-variable); }
+.hljs-name, .hljs-selector-tag, .hljs-selector-pseudo { color: var(--code-tag); }
+.hljs-subst { color: var(--code-text); }
+.hljs-section { color: var(--code-section); font-weight: bold; }
+.hljs-bullet { color: var(--code-bullet); }
+.hljs-emphasis { color: var(--code-text); font-style: italic; }
+.hljs-strong { color: var(--code-text); font-weight: bold; }
+.hljs-addition { color: var(--code-inserted); background: var(--code-inserted-bg); }
+.hljs-deletion { color: var(--code-deleted); background: var(--code-deleted-bg); }
+.hljs-link { text-decoration: underline; }
 
 .csv-viewer { display: flex; flex: 1; flex-direction: column; min-height: 0; background: var(--surface); }
 .csv-status { min-height: 43px; flex: 0 0 auto; display: flex; align-items: center; flex-wrap: wrap; gap: 10px 18px; padding: 8px 23px; color: var(--muted); border-bottom: 1px solid var(--line); font-size: 10px; }
@@ -378,11 +421,24 @@ button.zoom-label { border: 0; background: transparent; cursor: pointer; }
 .editor-frame { flex: 1; min-height: 0; display: flex; overflow: hidden; background: var(--surface); }
 .editor-gutter { flex: 0 0 53px; width: 53px; display: flex; flex-direction: column; align-items: flex-end; overflow: hidden; padding: 15px 13px 28px 5px; border-right: 1px solid var(--line); color: #a7a8b3; background: var(--surface); user-select: none; font-family: 'Cascadia Code', Consolas, monospace; line-height: 1.75; }
 .editor-gutter span { height: 1.75em; flex: 0 0 1.75em; }
-.editor-code-layer { position: relative; flex: 1; min-width: 0; min-height: 0; overflow: hidden; }
-.source-editor { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; margin: 0; padding: 15px 21px 35px; resize: none; overflow: auto; border: 0; outline: 0 !important; color: var(--text); -webkit-text-fill-color: currentColor; background: var(--surface); caret-color: var(--accent); font-family: 'Cascadia Code', 'SFMono-Regular', Consolas, monospace; line-height: 1.75; tab-size: 2; white-space: pre; }
+.editor-code-layer { position: relative; flex: 1; min-width: 0; min-height: 0; overflow: hidden; background: var(--surface); }
+.source-editor { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; margin: 0; padding: 15px 21px 35px; resize: none; overflow: auto; border: 0; outline: 0 !important; color: var(--text); -webkit-text-fill-color: currentColor; background: transparent; caret-color: var(--accent); font-family: 'Cascadia Code', 'SFMono-Regular', Consolas, monospace; line-height: 1.75; tab-size: 2; white-space: pre; }
 .source-editor::selection { color: var(--text); background: rgba(119, 114, 216, .28); }
 .editor-wrap .source-editor { white-space: pre-wrap; overflow-wrap: anywhere; }
 .source-editor:disabled { color: var(--muted); -webkit-text-fill-color: currentColor; cursor: not-allowed; }
+/* Le texte de l’éditeur est coloré par la couche ci-dessous : le textarea reste
+   au-dessus pour le curseur, la sélection et la saisie, mais son texte devient
+   transparent afin de ne pas doubler les glyphes colorés.
+   `.editor-code-layer` seule porte le fond, sinon la couche de coloration
+   laisserait voir son propre fond par-dessus la surface de l’application. */
+.editor-code-layer.is-highlighted .source-editor { color: transparent; -webkit-text-fill-color: transparent; }
+.editor-code-layer.is-highlighted .source-editor::selection { background: rgba(119, 114, 216, .32); }
+.editor-code-layer.is-highlighted .source-editor:disabled { color: transparent; -webkit-text-fill-color: transparent; }
+/* Copie de la couche colorée : mêmes métriques que le textarea, défilement
+   synchronisé par React, aucun pointer-event pour ne pas gêner la saisie. */
+.editor-highlight { position: absolute; inset: 0; z-index: 0; margin: 0; overflow: hidden; pointer-events: none; padding: 15px 21px 35px; border: 0; color: var(--text); background: transparent; font-family: 'Cascadia Code', 'SFMono-Regular', Consolas, monospace; line-height: 1.75; tab-size: 2; white-space: pre; }
+.editor-highlight code { font: inherit; white-space: inherit; }
+.editor-wrap .editor-highlight { white-space: pre-wrap; overflow-wrap: anywhere; }
 
 /* Unsupported type */
 .unsupported-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100%; max-width: 460px; padding: 60px 25px; margin: 0 auto; text-align: center; }

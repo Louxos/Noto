@@ -7,7 +7,7 @@ Ce document décrit ce qui est réellement vérifié, avec quelle commande, et c
 | Commande | Contenu | Durée indicative |
 | --- | --- | --- |
 | `npm run lint` | ESLint sur tout le dépôt (erreurs réelles : variables inutilisées, promesses non attendues, dépendances de hooks, `any` interdit). Aucune règle de style. | ~5 s |
-| `npm run check` | `tsc -b` puis `vitest run` (43 fichiers, 192 tests au moment de la rédaction). | ~25 s |
+| `npm run check` | `tsc -b` puis `vitest run` (47 fichiers, 222 tests au moment de la rédaction). | ~25 s |
 | `npm run coverage` | Les mêmes tests avec rapport de couverture dans `coverage/`. | ~25 s |
 | `npm run build` | Construction de l’interface (`dist/`), qui échoue si les types ne passent pas. | ~15 s |
 | `npm run verify` | Les trois commandes ci-dessus, dans l’ordre. À exécuter avant toute pull request. | ~45 s |
@@ -26,12 +26,16 @@ Les tests ne se contentent pas de constater l’absence d’exception : ils reli
 - **Images** : les octets produits sont relus et leur entête vérifié ; les opérations qui dépendent du canevas du système sont testées sur leur logique pure (détection de marges, estimation de rotation, contraste).
 - **Barre supérieure** : la règle de mesure et la machine à états de réduction sont testées, et un garde-fou lit la feuille de style pour empêcher le retour du chevauchement d’icônes.
 - **Affichage** : l’application complète est rendue dans jsdom pour vérifier l’absence d’écran blanc, l’absence de commande de plein écran quand l’environnement ne la propose pas, et le retrait de l’interface en mode immersion.
+- **Ouverture depuis Windows** : le pont Tauri est simulé (`startup_paths`, événement `noto-open-files`) pour vérifier que le mode immersion s’active seul sur un fichier transmis, qu’il ne s’active pas pour un fichier choisi dans Noto, et qu’il reste désactivable par le réglage.
+- **Coloration** : les sorties de `highlight.js` sont relues (classes `hljs-keyword`, `hljs-number`… présentes sur de vrais extraits de huit langages), l’échappement du code est vérifié sur du contenu hostile, et deux tests empêchent la régression silencieuse : chaque extension associée à Noto a une grammaire ou est assumée en texte simple, et chaque langage déclaré est réellement enregistré.
+- **Icônes par type de fichier** : les `.ico` livrés sont relus octet par octet (en-tête, 7 tailles de 16 à 256 px, profondeur 32 bits, PNG à partir de 48 px), puis confrontés à la table du crochet NSIS et aux classes déclarées dans `tauri.conf.json` : aucune classe sans icône, aucune icône orpheline, aucune extension sans reprise de sauvegarde d’association.
 
 ## Ce qui ne peut pas être vérifié ici
 
 Ces points sont assumés et suivis dans [`ROADMAP.md`](../ROADMAP.md) :
 
-- **Installeur NSIS** : la construction et l’installation réelle demandent Windows. Elles ont lieu dans le workflow **Windows installers**, jamais dans cet environnement de développement.
+- **Installeur NSIS** : la construction et l’installation réelle demandent Windows. Elles ont lieu dans le workflow **Windows installers**, jamais dans cet environnement de développement. Ce workflow installe réellement l’installeur, puis vérifie dans le registre que les classes de fichiers portent bien leur icône et que les fichiers `.ico` existent dans `$INSTDIR\filetypes` — et qu’ils ont disparu après désinstallation.
+- **Rendu des icônes par type** : les `.ico` sont contrôlés structurellement, et leur apparence dans l’Explorateur se constate sur une machine Windows (l’aperçu `docs/assets/icons-fichiers.png` sert de référence visuelle).
 - **Rendu visuel** : les tests s’exécutent sans moteur de rendu. Les positions, les échelles et les couleurs se contrôlent dans l’application (ou par les visuels régénérés par `python3 src-tauri/windows/installer/render_assets.py`, qui sont relus à l’œil).
 - **Opérations sur canevas et WebAssembly** : OCR Tesseract, rasterisation PDF, encodage d’images. Leur logique pure est testée, leur exécution complète se vérifie dans l’application.
 - **Plein écran de la fenêtre** : le niveau système (`setFullscreen` Tauri) ne peut pas être simulé ; le niveau document, lui, est testé.

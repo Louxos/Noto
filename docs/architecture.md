@@ -11,7 +11,8 @@ Noto est une application locale composée d’une interface React/Vite et d’un
 - `src/lib/pdfState.ts` persiste uniquement page courante et pages signet, sous une clé locale hachée ; le contenu du PDF n’est pas enregistré.
 - `src/components/WorkspaceTools.tsx` regroupe menus, menu contextuel accessible, palette, dialogues de groupes et aide des raccourcis.
 - `src/components/` contient les viewers dédiés ; ils reçoivent un modèle `OpenDocument` et n’ouvrent pas eux-mêmes de chemins.
-- `src/lib/fileTypes.ts` classe les extensions, libellés, MIME et langages.
+- `src/lib/fileTypes.ts` classe les extensions, libellés, MIME et langages (`LANGUAGE_BY_EXTENSION` est la table unique extension → grammaire, partagée par la lecture et l’édition).
+- `src/lib/launchMode.ts` décide, à part de l’interface, si un geste d’ouverture (`launch`, `handoff`, `dialog`, `drop`) doit activer le mode immersion.
 - `src/lib/files.ts` charge les documents via Tauri ou File API, impose les limites de taille et enregistre le texte éditable.
 - `src/lib/fileOperations.ts` effectue renommage/déplacement uniquement dans le shell desktop, après sélection utilisateur et extension temporaire du scope Tauri.
 - `src/lib/archiveReader.ts` extrait les chaînes XML/images des formats PPTX, ODP, DOCX, ODT et EPUB en mémoire avec limites par entrée et totales ; RTF est converti en texte. Aucun élément Office n’est exécuté.

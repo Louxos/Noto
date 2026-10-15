@@ -1,9 +1,10 @@
 # Feuille de route de Noto
 
-Cette feuille ne garde que les travaux **non terminés** ou les validations encore manquantes. Les fonctionnalités déjà réalisées ont été retirées. Mise à jour : 14 octobre 2026.
+Cette feuille ne garde que les travaux **non terminés** ou les validations encore manquantes. Les fonctionnalités déjà réalisées ont été retirées. Mise à jour : 15 octobre 2026.
 
 ## Obligatoire avant une version stable — P0
 
+- [ ] **Constater les icônes par type dans l’Explorateur Windows** : le registre, les fichiers `.ico` et la désinstallation sont contrôlés automatiquement par le workflow **Windows installers**, mais l’apparence réelle (petites tailles 16/24 px, mise à l’échelle 125–200 %, contraste sur fond clair/sombre) et la restitution des associations d’origine après une mise à jour 0.2.0 → 0.3.0 demandent une machine Windows avec une version antérieure installée. Aperçu de référence : `docs/assets/icons-fichiers.png`.
 - [ ] **Signature Authenticode finale** : configurer les secrets du certificat de publication, valider la signature de l’installeur NSIS et surveiller la réputation SmartScreen avant la première release stable. Les sommes SHA-256 et l’explication des avertissements sont déjà générées/documentées. (Le paquet MSI n’existe plus : le NSIS est l’unique installeur.)
 
 ## Prioritaire — P1
@@ -16,6 +17,7 @@ Cette feuille ne garde que les travaux **non terminés** ou les validations enco
 
 ### Lecture et édition
 
+- [ ] **Coloration chargée à la demande** : les 30 grammaires sont aujourd’hui embarquées d’avance (+73 ko, +20 ko compressés, mesurés) pour que la coloration soit immédiate ; un chargement par langage, à l’ouverture d’un fichier, réduirait le paquet au prix d’un premier rendu sans couleurs.
 - [ ] Markdown : sommaire cliquable, copie du code en un clic et largeur de lecture réglable.
 - [ ] JSON : actions explicites pour formater/indenter et minifier, sans modifier la source sans confirmation.
 - [ ] Texte/code : replier les blocs et copier le code avec son formatage.

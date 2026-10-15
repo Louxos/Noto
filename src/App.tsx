@@ -34,6 +34,7 @@ import { defaultPreferences, loadPreferences, loadRecentFiles, savePreferences, 
 import type { BrowserFileHandle, OpenDocument } from './types';
 import { APP_VERSION } from './lib/version';
 import { detectFullscreenKind, enterFullscreen, exitFullscreen, fullscreenSupport, onDocumentFullscreenChange, type FullscreenKind } from './lib/fullscreen';
+import { immersiveOpenNotice, opensInImmersive, type OpenGesture } from './lib/launchMode';
 import { topbarFitClasses } from './lib/topbarLayout';
 import { useTopbarFit } from './components/useTopbarFit';
 import type { StudioRequest } from './studio/StudioScreen';
@@ -577,6 +578,18 @@ export default function App() {
     } else clearDesktopSession();
   }, [activeGroupId, activeId, documents, page, preferences.restoreSession]);
 
+  /** Un fichier venu de Windows n’active le mode immersion qu’une seule fois
+   *  par lancement, même si cet effet est rejoué après un changement de réglage. */
+  const immersiveHandshakeApplied = useRef(false);
+
+  const requestImmersiveForWindows = useCallback((gesture: OpenGesture, fileCount: number) => {
+    if (!opensInImmersive(gesture, preferences.immersiveOnFileOpen)) return;
+    if (immersiveHandshakeApplied.current) return;
+    immersiveHandshakeApplied.current = true;
+    setImmersive(true);
+    notify(immersiveOpenNotice(fileCount));
+  }, [notify, preferences.immersiveOnFileOpen]);
+
   useEffect(() => {
     if (!isTauri()) return;
     let cancelled = false;
@@ -585,21 +598,30 @@ export default function App() {
       try {
         unlisten = await listen<string[]>('noto-open-files', (event) => {
           void invoke<string[]>('take_pending_open_files')
-            .then((pending) => openTauriPaths(pending.length ? pending : event.payload))
-            .catch(() => openTauriPaths(event.payload));
+            .then((pending) => {
+              const paths = pending.length ? pending : event.payload;
+              requestImmersiveForWindows('handoff', paths.length);
+              return openTauriPaths(paths);
+            })
+            .catch(() => {
+              requestImmersiveForWindows('handoff', event.payload.length);
+              return openTauriPaths(event.payload);
+            });
         });
         if (cancelled) { unlisten(); return; }
         const [startupPaths, pendingPaths] = await Promise.all([
           invoke<string[]>('startup_paths').catch(() => []),
           invoke<string[]>('take_pending_open_files').catch(() => []),
         ]);
+        // Double-clic sur un fichier associé à Noto : le document s’affiche seul.
+        if (startupPaths.length) requestImmersiveForWindows('launch', startupPaths.length);
         if (!cancelled) await openTauriPaths([...startupPaths, ...pendingPaths]);
       } catch {
         // Ordinary file opening remains available even if the optional hand-off cannot be initialized.
       }
     })();
     return () => { cancelled = true; unlisten?.(); };
-  }, [openTauriPaths]);
+  }, [openTauriPaths, requestImmersiveForWindows]);
 
   useEffect(() => {
     if (!isTauri()) return;
@@ -1975,6 +1997,7 @@ export function SettingsModal({ preferences, onChange, onClose, onClearRecents, 
         </section>
         <section className="settings-section"><div className="settings-section-title"><span>WINDOWS & ASSOCIATIONS</span><small>Gardez le contrôle des applications par défaut.</small></div>
           <div className="setting-row windows-defaults-row"><div className="setting-label"><strong>Applications par défaut</strong><small>Noto peut être proposé pour les formats pris en charge. Windows vous laisse choisir, sans remplacer silencieusement vos associations actuelles.</small></div><button className="subtle-button" type="button" disabled={!isTauri()} onClick={onOpenWindowsDefaults}><Globe2 size={14} />Ouvrir les paramètres Windows</button></div>
+          <div className="setting-row"><div className="setting-label"><strong>Ouvrir en mode immersion depuis Windows</strong><small>Double-clic sur un fichier associé à Noto, ou « Ouvrir avec » : le document s’affiche seul, sans barre latérale, menus ni onglets. Échap ou Ctrl+Maj+F rétablit l’interface.</small></div><button className={`toggle ${preferences.immersiveOnFileOpen ? 'on' : ''}`} type="button" role="switch" aria-checked={preferences.immersiveOnFileOpen} onClick={() => onChange('immersiveOnFileOpen', !preferences.immersiveOnFileOpen)}><i /></button></div>
           <div className="integration-format-list" aria-label="Formats déclarés par Noto"><span><strong>Texte & code</strong><small>TXT · MD · JSON · JS · CSS · YAML…</small></span><span><strong>Lecture</strong><small>PDF · images · EPUB</small></span><span><strong>Données & documents</strong><small>CSV · TSV · DOCX · ODT · PPTX · ODP</small></span></div>
           <div className="settings-inline-note"><ShieldCheck size={14} />Noto ne modifie pas les applications par défaut sans votre accord. Les préférences se gèrent dans Windows.</div>
         </section>
