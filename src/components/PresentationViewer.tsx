@@ -3,13 +3,15 @@ import { ChevronLeft, ChevronRight, Maximize2, Minimize2, MonitorPlay, Play, X }
 import { extractPresentation, type PresentationSlide } from '../lib/archiveReader';
 import type { OpenDocument } from '../types';
 import { ContextMenu, type MenuEntry } from './WorkspaceTools';
+import type { StatRow } from '../lib/fileStats';
 
 interface PresentationViewerProps {
   document: OpenDocument;
   fileContextItems: MenuEntry[];
+  onReadout?: (rows: StatRow[]) => void;
 }
 
-export function PresentationViewer({ document, fileContextItems }: PresentationViewerProps) {
+export function PresentationViewer({ document, fileContextItems, onReadout }: PresentationViewerProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [slides, setSlides] = useState<PresentationSlide[]>([]);
   const [activeSlide, setActiveSlide] = useState(0);
@@ -95,6 +97,15 @@ export function PresentationViewer({ document, fileContextItems }: PresentationV
   }
 
   const slide = slides[activeSlide];
+
+  // Relevé pour la barre d’état : nombre de diapositives et position affichée.
+  useEffect(() => {
+    if (!onReadout) return;
+    onReadout([
+      { label: 'Diapositives', value: slides.length ? slides.length.toLocaleString('fr-FR') : '—' },
+      { label: 'Diapositive affichée', value: slides.length ? `${Math.min(activeSlide + 1, slides.length)} / ${slides.length}` : '—', raw: activeSlide + 1 },
+    ]);
+  }, [onReadout, slides.length, activeSlide]);
   const menuItems: MenuEntry[] = [
     ...fileContextItems,
     { id: 'previous', label: 'Diapositive précédente', shortcut: '←', disabled: activeSlide === 0, onSelect: () => setActiveSlide((index) => Math.max(0, index - 1)) },

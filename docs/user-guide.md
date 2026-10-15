@@ -45,6 +45,37 @@ Le presse-papiers reste soumis aux autorisations du navigateur ou du système. U
 
 Les archives Office/EPUB sont lues en mémoire ; la taille de l’archive et le volume décompressé des XML/images sont plafonnés. Les macros et pièces jointes exécutables ne sont pas lancées.
 
+## Imprimer
+
+L’impression se lance depuis le bouton **Imprimer** de la barre d’outils, le bouton **Imprimer** de la barre d’état, le menu **Fichier → Imprimer…**, la palette de commandes ou `Ctrl+P`. La fenêtre propose d’abord ce qui sera réellement imprimé, puis ouvre la boîte de dialogue d’impression de votre système — c’est elle qui choisit l’imprimante, le nombre de copies et l’aperçu.
+
+| Fichier ouvert | Ce qui est imprimé |
+| --- | --- |
+| Texte, code, configuration, Markdown source | Le contenu affiché, mis en page par Noto ; les numéros de ligne sont facultatifs. |
+| Markdown, HTML en aperçu | Le rendu affiché, copié tel quel. Pour le HTML, le balisage est d’abord assaini : scripts retirés, images distantes non imprimées (elles ne sont pas chargées hors ligne, comme dans l’aperçu). |
+| CSV/TSV | Un tableau, dans la limite de 2 000 lignes, avec en-tête répété. La fenêtre annonce le nombre de lignes imprimées. |
+| PDF | Les pages rendues en images, page affichée ou document entier, à 96, 150 ou 300 ppp (150 par défaut), dans la limite de 200 pages par impression. Le texte imprimé n’est alors pas sélectionnable : c’est le prix d’une impression fidèle au rendu de Noto. |
+| Image | L’image affichée, ajustée à la largeur de la page ; les formats que le navigateur ne décode pas (TIFF) sont imprimés sous leur forme convertie, et la rotation choisie à l’écran est conservée. |
+| PPTX/ODP | Une diapositive par page, à partir du texte extrait ; la mise en page d’origine et les images ne sont pas reproduites, comme dans le diaporama. |
+| DOCX/ODT/RTF/EPUB | Une partie par page, dans l’ordre du document. |
+
+Rien n’est envoyé en ligne : la page imprimée est construite sur votre appareil, et aucune ressource distante n’y est chargée.
+
+## Informations et mesures
+
+`Ctrl+I`, le bouton **Informations** de la barre d’outils ou de la barre d’état ouvrent la fenêtre **Informations sur le fichier**. Tout y est mesuré sur l’appareil, et rien n’y est deviné :
+
+- **Fichier** : nom, type, extension, taille (octets et unité lisible), emplacement, date de modification, encodage du texte, part chargée si le fichier est très volumineux.
+- **Texte** : caractères, caractères hors espaces, mots, lignes (une dernière ligne vide compte comme une ligne, comme dans l’éditeur), paragraphes, ligne la plus longue, nature des fins de ligne (LF, CRLF, CR, ou mélange), saut de ligne final.
+- **Tableau (CSV/TSV)** : lignes, colonnes, cellules et séparateur détecté.
+- **Document PDF** : pages, dimensions et orientation de la première page, titre, auteur, producteur, logiciel d’origine, dates de création et de modification, signalement d’un document chiffré et du texte sélectionnable. Un fichier de plus de 200 Mo n’est pas analysé ici : la fenêtre l’explique et renvoie au lecteur PDF, qui affiche toujours le nombre de pages.
+- **Image** : format, dimensions, nombre de pixels, dimensions lues dans l’en-tête (sans décodage complet). Pour un SVG, ce sont les dimensions déclarées.
+- **Présentation** : diapositives, paragraphes, caractères, images intégrées.
+- **Document ou livre** : parties ou sections, paragraphes, caractères, mots.
+- **Affichage en cours** : ce que le lecteur affiché sait déjà mieux que quiconque (page courante d’un PDF, diapositive affichée…).
+
+Le bouton **Copier** place ces informations au format Markdown dans le presse-papiers. Une mesure impossible est expliquée — jamais remplacée par une valeur inventée. La **barre d’état** affiche en permanence les mesures essentielles du fichier ouvert.
+
 ## Éditer et enregistrer
 
 Markdown, texte, code, HTML source, CSV et TSV peuvent être édités lorsque l’aperçu n’est pas tronqué. Le champ de saisie natif reste au-dessus d’une couche colorée : le clic, la sélection et le curseur suivent exactement la position affichée, tandis que le texte apparaît coloré. `Tab` insère deux espaces et `Maj+Tab` retire l’indentation courante ; `Entrée` conserve l’indentation de la ligne précédente.
@@ -56,6 +87,7 @@ Markdown, texte, code, HTML source, CSV et TSV peuvent être édités lorsque l�
 - Avant d’écraser un fichier modifié en dehors de Noto, Noto demande confirmation lorsque le système expose la date de modification.
 - La récupération locale des brouillons est désactivée par défaut. Si vous l’activez dans les paramètres, Noto conserve les modifications des fichiers texte sur cet appareil pendant 1, 7 ou 30 jours et demande confirmation avant de les restaurer ; Noto avertit aussi si le fichier source semble avoir changé. Choisir **Annuler** dans l’invite de restauration supprime ce brouillon. La limite est de 750 000 caractères par brouillon et 1,5 million au total ; les réglages permettent d’effacer les brouillons. Désactiver la récupération demande confirmation et efface les brouillons locaux.
 - Les viewers Office et EPUB sont en lecture seule : utilisez **Enregistrer sous** uniquement depuis un format éditable.
+- **Renommer** (menu contextuel d’un fichier → **Renommer…**) modifie le nom **et l’extension** : le dialogue les présente séparément, prévient avant d’écrire quand le nouveau nom est impossible sous Windows (caractères interdits, nom réservé, point final, longueur), et annonce lorsque l’extension change de nature — un `notes.txt` renommé en `notes.md` n’est pas converti, il change simplement de lecteur.
 
 ## Affichage : plein écran et immersion
 

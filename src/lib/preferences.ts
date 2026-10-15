@@ -1,6 +1,6 @@
 export type Theme = 'light' | 'dark';
 export type AccentColor = 'violet' | 'blue' | 'mint' | 'rose';
-export type ToolbarAction = 'search' | 'edit' | 'save' | 'group' | 'close';
+export type ToolbarAction = 'search' | 'edit' | 'save' | 'print' | 'info' | 'group' | 'close';
 export type RecentLimit = 4 | 8 | 12 | 20;
 export type DraftRetentionDays = 1 | 7 | 30;
 
@@ -34,7 +34,7 @@ export interface RecentFile {
   source?: 'browser' | 'desktop';
 }
 
-export const TOOLBAR_ACTIONS: ToolbarAction[] = ['search', 'edit', 'save', 'group', 'close'];
+export const TOOLBAR_ACTIONS: ToolbarAction[] = ['search', 'edit', 'save', 'print', 'info', 'group', 'close'];
 const PREFERENCES_KEY = 'noto.preferences.v1';
 const RECENTS_KEY = 'noto.recents.v1';
 

@@ -17,6 +17,10 @@ Noto est une application locale composée d’une interface React/Vite et d’un
 - `src/lib/fileOperations.ts` effectue renommage/déplacement uniquement dans le shell desktop, après sélection utilisateur et extension temporaire du scope Tauri.
 - `src/lib/archiveReader.ts` extrait les chaînes XML/images des formats PPTX, ODP, DOCX, ODT et EPUB en mémoire avec limites par entrée et totales ; RTF est converti en texte. Aucun élément Office n’est exécuté.
 - `src/lib/csv.ts`, `src/lib/highlighting.ts`, `src/lib/security.ts` et `src/lib/textFormat.ts` centralisent parsing CSV, coloration, règles de sécurité et formatage.
+- `src/lib/fileName.ts` valide les noms de fichiers selon les règles de Windows (caractères interdits, noms réservés, point final, longueur) et décrit ce qu’un renommage change réellement, extension et lecteur compris. Le dialogue de renommage refuse un nom impossible **avant** l’écriture.
+- `src/lib/fileStats.ts` mesure ce qui se lit directement (texte, tableau, en-tête d’image) ; `src/lib/fileAnalysis.ts` complète avec ce qui demande une lecture (PDF via `pdf-lib`, présentation et document via `archiveReader`) et agrège les groupes de mesures. Chaque mesure impossible est annoncée dans le groupe concerné, jamais remplacée par une valeur inventée.
+- `src/lib/printing.ts` construit la page imprimée (en-tête, styles, échappement, politique de sécurité sans script), copie le contenu déjà rendu à l’écran et pilote l’iframe d’impression ; `src/lib/printJobs.ts` choisit ce qui est imprimé selon le format (texte, tableau, HTML assaini, image, pages de PDF rendues à la résolution demandée, diapositives, parties de document). Les formats lourds sont chargés à la demande.
+- `src/components/FileTools.tsx` porte la fenêtre **Informations sur le fichier** et la fenêtre **Imprimer** ; la barre d’état (`viewerReadout`) reçoit ses chiffres des lecteurs eux-mêmes, qui seuls connaissent la page ou la diapositive affichée.
 - `src/lib/preferences.ts`, `src/lib/groups.ts` et `src/lib/session.ts` stockent localement les préférences, références de groupes et, si activée, les chemins de session (sans contenu de document). `src/lib/drafts.ts` conserve séparément les brouillons texte uniquement sur activation explicite, avec rétention et plafonds de taille.
 - `src-tauri/` contient le shell, les commandes d’accès au scope, les permissions et associations Windows. `tauri-plugin-single-instance` remet les fichiers ouverts par une seconde instance à la fenêtre existante ; la page Windows par défaut reste contrôlée par l’utilisateur.
 
@@ -28,6 +32,12 @@ Noto est une application locale composée d’une interface React/Vite et d’un
 4. Les archives bureautiques sont filtrées pendant la décompression : seuls les XML et images raster utiles sont lus, avec plafonds de taille. Les diaporamas sont reconstruits de façon simplifiée, les documents bureautiques sont en lecture seule.
 5. L’édition ne s’applique qu’aux familles texte annoncées ; l’enregistrement est explicite et détecte les changements externes lorsque métadonnées système sont disponibles.
 6. La recherche de dossier n’accorde un scope récursif qu’après sélection explicite ; nombre de fichiers, profondeur, taille par fichier, volume total et résultats sont plafonnés.
+
+## Impression et mesures
+
+L’impression ne quitte jamais l’appareil : `printJobs` transforme le document affiché en sections HTML, `printing` les assemble dans une page autonome (CSP `default-src 'none'`, images `blob:`/`data:` uniquement) et l’écrit dans une iframe hors écran, puis demande l’impression au système. Aucun aperçu n’est simulé : celui qui s’affiche est celui du système. Les PDF sont rendus en images à la résolution choisie par `pdf/pdfEngine`, les archives bureautiques ne sont décompressées que si l’on imprime réellement, et le HTML est assaini (scripts, formulaires, ressources distantes retirés) avant d’entrer dans la page.
+
+Les mesures suivent la même règle : `fileStats` lit ce qui est immédiatement disponible, `fileAnalysis` ajoute ce qui demande un décodage à la demande. Chaque groupe expose ce qu’il ne mesure pas, et une mesure en échec (PDF illisible, en-tête tronqué, fichier au-dessus du plafond d’analyse) est expliquée au lieu d’être arrondie ou inventée.
 
 ## Éditeur
 

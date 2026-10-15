@@ -5,6 +5,7 @@ import {
   Save, Table2, TextCursorInput, Trash2, X,
 } from 'lucide-react';
 import { getFormatLabel } from '../lib/fileTypes';
+import { MAX_FILE_NAME_LENGTH, composeFileName, describeNameChange, splitFileName, validateExtension, validateFileName } from '../lib/fileName';
 import { GROUP_COLORS, type FileGroup, type GroupColor } from '../lib/groups';
 import type { RecentFile } from '../lib/preferences';
 import type { OpenDocument } from '../types';
@@ -165,7 +166,7 @@ export function AppMenuBar({ menus, onOpenPalette, collapsed = false }: {
           </div>)}
         </div>}
       </div>
-      <button className="command-trigger" type="button" onClick={onOpenPalette} title="Ouverture rapide (Ctrl+P)">
+      <button className="command-trigger" type="button" onClick={onOpenPalette} title="Ouverture rapide (Ctrl+Maj+P)">
         <Search size={14} /><span>Commandes</span><kbd>Ctrl ⇧ P</kbd>
       </button>
     </nav>;
@@ -185,7 +186,7 @@ export function AppMenuBar({ menus, onOpenPalette, collapsed = false }: {
         </div>}
       </div>)}
     </div>
-    <button className="command-trigger" type="button" onClick={onOpenPalette} title="Ouverture rapide (Ctrl+P)">
+    <button className="command-trigger" type="button" onClick={onOpenPalette} title="Ouverture rapide (Ctrl+Maj+P)">
       <Search size={14} /><span>Commandes</span><kbd>Ctrl ⇧ P</kbd>
     </button>
   </nav>;
@@ -283,24 +284,63 @@ export function GroupDialog({ group, onClose, onSave }: { group?: FileGroup; onC
 }
 
 export function RenameFileDialog({ file, onClose, onRename }: { file: RecentFile; onClose: () => void; onRename: (nextName: string) => void }) {
-  const extensionIndex = file.name.lastIndexOf('.');
-  const extension = extensionIndex > 0 ? file.name.slice(extensionIndex) : '';
-  const initialName = extension ? file.name.slice(0, extensionIndex) : file.name;
-  const [name, setName] = useState(initialName);
-  const inputRef = useRef<HTMLInputElement>(null);
-  useEffect(() => { inputRef.current?.focus(); inputRef.current?.select(); }, []);
+  const parts = splitFileName(file.name);
+  const [name, setName] = useState(parts.base);
+  const [extension, setExtension] = useState(parts.extension);
+  const nameRef = useRef<HTMLInputElement>(null);
+  useEffect(() => { nameRef.current?.focus(); nameRef.current?.select(); }, []);
+
+  const nameCheck = validateFileName(name);
+  // Sans extension, le fichier reste sans extension : c’est un choix valide.
+  const extensionError = extension.trim() ? validateExtension(extension) : '';
+  const nextName = composeFileName(nameCheck.ok ? nameCheck.name : name, extensionError ? '' : extension);
+  const change = describeNameChange(file.name, nextName || file.name);
+  const error = !nameCheck.ok ? nameCheck.error : extensionError;
+  const unchanged = !nextName || nextName === file.name;
+
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const trimmed = name.trim();
-    if (trimmed && trimmed !== initialName) onRename(`${trimmed}${extension}`);
+    if (error || unchanged || !nextName) return;
+    onRename(nextName);
   }
+
   return <div className="modal-backdrop group-modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <form className="group-dialog rename-file-dialog" role="dialog" aria-modal="true" aria-labelledby="rename-file-title" onSubmit={submit}>
       <header className="group-dialog-header"><span className="group-dialog-icon"><Pencil size={17} /></span><div><h2 id="rename-file-title">Renommer le fichier</h2><p>Le fichier original sera renommé sur votre appareil.</p></div><button className="icon-action" type="button" aria-label="Fermer" onClick={onClose}><X size={17} /></button></header>
-      <label className="group-name-label" htmlFor="rename-file-name">{extension ? 'Nouveau nom (extension conservée)' : 'Nouveau nom'}</label>
-      <div className="rename-name-field"><input ref={inputRef} id="rename-file-name" className="group-name-input" maxLength={260} value={name} onChange={(event) => setName(event.target.value)} required />{extension && <span>{extension}</span>}</div>
+      <label className="group-name-label" htmlFor="rename-file-name">Nom du fichier</label>
+      <div className="rename-name-field">
+        <input
+          ref={nameRef}
+          id="rename-file-name"
+          className="group-name-input"
+          maxLength={MAX_FILE_NAME_LENGTH}
+          value={name}
+          aria-invalid={!nameCheck.ok}
+          aria-describedby={error ? 'rename-file-error' : undefined}
+          onChange={(event) => setName(event.target.value)}
+          required
+        />
+        <span className="rename-extension-separator" aria-hidden="true">.</span>
+        <input
+          id="rename-file-extension"
+          className="group-name-input rename-extension-input"
+          aria-label="Extension du fichier, sans le point"
+          title="Extension du fichier, sans le point"
+          maxLength={16}
+          value={extension}
+          placeholder="ex. md"
+          onChange={(event) => setExtension(event.target.value.replace(/^\.+/u, ''))}
+        />
+      </div>
+      {error && <p className="rename-file-message is-error" id="rename-file-error" role="alert">{error}</p>}
+      {!error && change.changesExtension && <p className={`rename-file-message ${change.opensWithDifferentReader ? 'is-warning' : ''}`} role="status">
+        {change.opensWithDifferentReader
+          ? `Attention : l’extension change de « .${change.previousExtension || 'aucune'} » à « .${change.nextExtension || 'aucune'} ». Le fichier restera identique, mais c’est désormais le lecteur « ${getFormatLabel(change.nextKind)} » qui l’ouvrira.`
+          : `Extension modifiée : « .${change.previousExtension || 'aucune'} » devient « .${change.nextExtension || 'aucune'} ».`}
+      </p>}
+      {!error && !change.changesExtension && change.changesName && <p className="rename-file-message">Nouveau nom complet : {nextName}</p>}
       <small className="rename-file-path">{file.path}</small>
-      <footer className="group-dialog-footer"><button className="secondary-button" type="button" onClick={onClose}>Annuler</button><button className="primary-button" type="submit"><Check size={15} />Renommer</button></footer>
+      <footer className="group-dialog-footer"><button className="secondary-button" type="button" onClick={onClose}>Annuler</button><button className="primary-button" type="submit" disabled={Boolean(error) || unchanged}><Check size={15} />Renommer</button></footer>
     </form>
   </div>;
 }
@@ -400,12 +440,12 @@ export function CommandPalette({ commands, onClose }: { commands: CommandOption[
 }
 
 const shortcutSections = [
-  { title: 'Fichiers', rows: [['Ouvrir un fichier', 'Ctrl + O'], ['Enregistrer', 'Ctrl + S'], ['Enregistrer sous', 'Ctrl + Maj + S'], ['Fermer le fichier actif', 'Ctrl + W'], ['Onglet suivant / précédent', 'Ctrl + Tab / Ctrl + Maj + Tab'], ['Aller à un onglet (1 à 9)', 'Ctrl + 1…9']] },
+  { title: 'Fichiers', rows: [['Ouvrir un fichier', 'Ctrl + O'], ['Enregistrer', 'Ctrl + S'], ['Enregistrer sous', 'Ctrl + Maj + S'], ['Imprimer le fichier', 'Ctrl + P'], ['Informations sur le fichier (mesures)', 'Ctrl + I'], ['Fermer le fichier actif', 'Ctrl + W'], ['Onglet suivant / précédent', 'Ctrl + Tab / Ctrl + Maj + Tab'], ['Aller à un onglet (1 à 9)', 'Ctrl + 1…9']] },
   { title: 'Édition & recherche', rows: [['Basculer lecture / édition', 'Ctrl + E'], ['Rechercher', 'Ctrl + F'], ['Rechercher / remplacer', 'Ctrl + H'], ['Aller à la ligne', 'Ctrl + G'], ['Résultat suivant / précédent', 'F3 / Maj + F3']] },
   { title: 'Organisation', rows: [['Créer un groupe', 'Ctrl + Maj + N'], ['Classer le fichier actif', 'Ctrl + Maj + G'], ['Renommer le groupe affiché', 'F2']] },
   { title: 'Diaporamas & livres', rows: [['Diapositive / chapitre suivant ou précédent', '← / →'], ['Plein écran dans un diaporama', 'F'], ['Quitter le plein écran', 'Échap']] },
   { title: 'Affichage', rows: [['Plein écran de la fenêtre', 'F11'], ['Mode immersion (sans barre latérale ni menus)', 'Ctrl + Maj + F'], ['Quitter l’immersion', 'Échap']] },
-  { title: 'Application', rows: [['Ouvrir les commandes, onglets et fichiers récents', 'Ctrl + P'], ['Ouvrir les paramètres', 'Ctrl + ,'], ['Fermer la fenêtre ou le panneau', 'Échap']] },
+  { title: 'Application', rows: [['Ouvrir les commandes, onglets et fichiers récents', 'Ctrl + Maj + P'], ['Ouvrir les paramètres', 'Ctrl + ,'], ['Fermer la fenêtre ou le panneau', 'Échap']] },
 ];
 
 export function ShortcutsDialog({ onClose }: { onClose: () => void }) {

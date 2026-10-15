@@ -7,7 +7,7 @@ import {
   Copy, ClipboardPaste, Download, File, FileCode2, FileDiff, FileImage, FileText, FileType2, FileUp, FolderInput, FolderPlus, FolderSearch, Globe2, Presentation, Upload,
   Expand, Image as ImageIcon, Keyboard, LayoutGrid, LoaderCircle, Maximize2, Minimize2, Moon, MoreHorizontal,
   PanelLeft, Pencil, Plus, RotateCcw, Scissors, Search, Settings2, ShieldCheck, Sun, Table2,
-  TextCursorInput, X, Save, Replace, Sparkles, Trash2, Pin, Wrench,
+  TextCursorInput, X, Save, Replace, Sparkles, Trash2, Pin, Wrench, Printer, FileSearch,
 } from 'lucide-react';
 import { CodeViewer } from './components/CodeViewer';
 import { CsvViewer } from './components/CsvViewer';
@@ -19,6 +19,7 @@ import { AppMenuBar, CommandPalette, ContextMenu, GoToLineDialog, GroupAssignmen
 import { FolderSearchDialog } from './components/FolderSearchDialog';
 import { TextDiffDialog } from './components/TextDiffDialog';
 import { WelcomeDialog } from './components/WelcomeDialog';
+import { FileInfoDialog, PrintDialog } from './components/FileTools';
 import { formatBytes, loadBrowserFile, openDesktopFiles, pickBrowserFiles, readDesktopPath, saveDocument, type SaveAsOptions } from './lib/files';
 import { moveDesktopFile, pathFileName, renameDesktopFile } from './lib/fileOperations';
 import { getExtension, getFileKind, getFormatLabel, mimeTypeFor } from './lib/fileTypes';
@@ -36,6 +37,8 @@ import { APP_VERSION } from './lib/version';
 import { detectFullscreenKind, enterFullscreen, exitFullscreen, fullscreenSupport, onDocumentFullscreenChange, type FullscreenKind } from './lib/fullscreen';
 import { immersiveOpenNotice, opensInImmersive, type OpenGesture } from './lib/launchMode';
 import { topbarFitClasses } from './lib/topbarLayout';
+import { cloneRenderedForPrint, extractRenderedImage } from './lib/printing';
+import { countLines, type StatRow } from './lib/fileStats';
 import { useTopbarFit } from './components/useTopbarFit';
 import type { StudioRequest } from './studio/StudioScreen';
 import './styles.css';
@@ -121,6 +124,12 @@ export default function App() {
   const [activeSmartGroup, setActiveSmartGroup] = useState<'pdf' | 'image' | null>(null);
   const [groupDialog, setGroupDialog] = useState<{ groupId: string | null } | null>(null);
   const [renameTarget, setRenameTarget] = useState<RecentFile | null>(null);
+  // Mesures rapportées par le lecteur affiché (pages d’un PDF, dimensions d’une image…)
+  const [viewerReadout, setViewerReadout] = useState<StatRow[]>([]);
+  const [fileInfoOpen, setFileInfoOpen] = useState(false);
+  const [printOpen, setPrintOpen] = useState(false);
+  const [printHtml, setPrintHtml] = useState('');
+  const viewerPrintRef = useRef<HTMLDivElement | null>(null);
   const [groupAssignmentTarget, setGroupAssignmentTarget] = useState<RecentFile | null>(null);
   const [contextMenu, setContextMenu] = useState<{ position: { x: number; y: number }; items: MenuEntry[] } | null>(null);
   const [groupPickerOpen, setGroupPickerOpen] = useState(false);
@@ -172,7 +181,7 @@ export default function App() {
   }, []);
   const activeDoc = documents.find((document) => document.id === activeId) ?? null;
   const comparableDocuments = documents.filter(isComparableDocument);
-  const activeModalId = commandPaletteOpen ? 'palette' : shortcutsOpen ? 'shortcuts' : textDiffOpen ? 'text-diff' : folderSearchOpen ? 'folder-search' : welcomeOpen ? 'welcome' : saveAsDialogOpen ? 'save-as' : goToLineOpen ? 'go-to-line' : renameTarget ? 'rename-file' : groupAssignmentTarget ? 'group-assignment' : groupDialog ? 'group' : settingsOpen ? 'settings' : null;
+  const activeModalId = commandPaletteOpen ? 'palette' : shortcutsOpen ? 'shortcuts' : textDiffOpen ? 'text-diff' : folderSearchOpen ? 'folder-search' : welcomeOpen ? 'welcome' : saveAsDialogOpen ? 'save-as' : goToLineOpen ? 'go-to-line' : renameTarget ? 'rename-file' : groupAssignmentTarget ? 'group-assignment' : groupDialog ? 'group' : settingsOpen ? 'settings' : fileInfoOpen ? 'file-info' : printOpen ? 'print' : null;
   const searchResults = useMemo(() => {
     const searchDocuments = searchAllTabs
       ? [...(activeDoc ? [activeDoc] : []), ...documents.filter((document) => document.id !== activeDoc?.id)]
@@ -1105,6 +1114,60 @@ export default function App() {
     setEditorMode(activeDoc.kind === 'markdown' ? 'split' : 'source');
   }, [activeDoc, canEdit]);
 
+  /**
+   * Ouvre la fenêtre d’impression.
+   *
+   * Le contenu déjà rendu à l’écran (Markdown, aperçu HTML, image affichée avec
+   * ses réglages) est copié à cet instant : Noto imprime ce que vous voyez, et
+   * non une deuxième mise en page approximative.
+   */
+  const openPrintDialog = useCallback(() => {
+    if (!activeDoc) {
+      notify('Ouvrez d’abord un fichier pour l’imprimer.', 'error');
+      return;
+    }
+    let html = '';
+    try {
+      const rendered = viewerPrintRef.current;
+      if (rendered && activeDoc.kind === 'image') html = extractRenderedImage(rendered) ?? '';
+      else if (rendered && activeDoc.kind === 'markdown') html = cloneRenderedForPrint(rendered);
+    } catch (error) {
+      notify(`Le contenu affiché n’a pas pu être préparé : ${error instanceof Error ? error.message : 'erreur inconnue'}`, 'error');
+      return;
+    }
+    setPrintHtml(html);
+    setPrintOpen(true);
+  }, [activeDoc, notify]);
+
+  const openFileInfoDialog = useCallback(() => {
+    if (!activeDoc) {
+      notify('Ouvrez d’abord un fichier pour voir ses informations.', 'error');
+      return;
+    }
+    setFileInfoOpen(true);
+  }, [activeDoc, notify]);
+
+  // Le relevé du lecteur appartient au fichier affiché : on repart de zéro à
+  // chaque changement d’onglet, pour ne jamais mélanger deux fichiers.
+  useEffect(() => { setViewerReadout([]); }, [activeId]);
+  /** Page du PDF actuellement affichée, rapportée par le lecteur lui-même. */
+  const viewerPage = viewerReadout.find((row) => row.label === 'Page affichée')?.raw ?? 1;
+  /**
+   * Relevé de repli pour les fichiers texte : leurs lecteurs ne rapportent rien,
+   * ces deux mesures se lisent directement dans le contenu chargé.
+   */
+  const textReadout = useMemo<StatRow[]>(() => {
+    if (!activeDoc || !['markdown', 'text', 'code', 'html', 'unknown'].includes(activeDoc.kind)) return [];
+    const content = activeDoc.content;
+    if (!content) return [{ label: 'Caractères', value: '0' }];
+    return [
+      { label: 'Caractères', value: content.length.toLocaleString('fr-FR') },
+      { label: 'Lignes', value: countLines(content).toLocaleString('fr-FR') },
+    ];
+  }, [activeDoc]);
+  /** Ce que la barre d’état affiche : le relevé du lecteur, sinon celui du texte. */
+  const statusReadout = viewerReadout.length ? viewerReadout : textReadout;
+
   useEffect(() => onDocumentFullscreenChange(() => {
     void detectFullscreenKind().then((kind) => setFullscreenKind((current) => (current === kind ? current : kind)));
   }), []);
@@ -1133,6 +1196,8 @@ export default function App() {
         else if (settingsOpen) setSettingsOpen(false);
         else if (saveAsDialogOpen) setSaveAsDialogOpen(false);
         else if (goToLineOpen) setGoToLineOpen(false);
+        else if (fileInfoOpen) setFileInfoOpen(false);
+        else if (printOpen) setPrintOpen(false);
         else if (groupPickerOpen) setGroupPickerOpen(false);
         else if (searchOpen) setSearchOpen(false);
         else if (immersive) setImmersive(false);
@@ -1178,8 +1243,14 @@ export default function App() {
           setIsEditing(false);
         }
       } else if (key === 'p') {
+        // Convention des suites documentaires : Ctrl+P imprime, Ctrl+Maj+P ouvre
+        // la palette de commandes.
         event.preventDefault();
-        setCommandPaletteOpen(true);
+        if (event.shiftKey) setCommandPaletteOpen(true);
+        else openPrintDialog();
+      } else if (key === 'i') {
+        event.preventDefault();
+        openFileInfoDialog();
       } else if (key === 'n' && event.shiftKey) {
         event.preventDefault();
         setGroupDialog({ groupId: null });
@@ -1221,7 +1292,7 @@ export default function App() {
     }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [activeDoc, activeId, canEdit, closeDocument, closeWelcome, commandPaletteOpen, currentGroup, documents, findInDocument, folderSearchOpen, fullscreen.supported, goToLineOpen, groupDialog, groupPickerOpen, handleOpen, handleSave, immersive, openGoToLine, page, query, saveAsDialogOpen, searchOpen, settingsOpen, shortcutsOpen, textDiffOpen, toggleEditMode, toggleImmersive, toggleWindowFullscreen, welcomeOpen]);
+  }, [activeDoc, activeId, canEdit, closeDocument, closeWelcome, commandPaletteOpen, currentGroup, documents, fileInfoOpen, findInDocument, folderSearchOpen, fullscreen.supported, goToLineOpen, printOpen, groupDialog, groupPickerOpen, handleOpen, handleSave, immersive, openFileInfoDialog, openGoToLine, openPrintDialog, page, query, saveAsDialogOpen, searchOpen, settingsOpen, shortcutsOpen, textDiffOpen, toggleEditMode, toggleImmersive, toggleWindowFullscreen, welcomeOpen]);
 
   useEffect(() => {
     if (!activeModalId) {
@@ -1327,6 +1398,8 @@ export default function App() {
         <button className="group-picker-create" type="button" onClick={() => { setGroupPickerOpen(false); openGroupDialog(); }}><Plus size={14} />Nouveau groupe</button>
       </div>}
     </div>,
+    print: activeDoc && <button className="icon-action" type="button" title="Imprimer ce fichier (Ctrl+P)" aria-label="Imprimer ce fichier" onClick={openPrintDialog}><Printer size={16} /></button>,
+    info: activeDoc && <button className="icon-action" type="button" title="Informations sur le fichier (Ctrl+I)" aria-label="Informations sur le fichier" onClick={openFileInfoDialog}><FileSearch size={16} /></button>,
     close: activeDoc && <button className="icon-action close-current" type="button" title="Fermer le fichier (Ctrl+W)" aria-label="Fermer le fichier" onClick={() => closeDocument(activeDoc.id)}><X size={17} /></button>,
   };
   const toolbar = preferences.toolbarOrder
@@ -1347,6 +1420,8 @@ export default function App() {
       { id: 'compare-text', label: 'Comparer des fichiers texte…', icon: <FileDiff size={15} />, onSelect: () => setTextDiffOpen(true) },
       { id: 'save', label: 'Enregistrer', shortcut: 'Ctrl+S', icon: <Save size={15} />, disabled: !dirty || !canEdit, onSelect: () => void handleSave() },
       { id: 'save-as', label: 'Enregistrer sous…', shortcut: 'Ctrl+Maj+S', icon: <FileText size={15} />, disabled: !canEdit, onSelect: () => void handleSave(true) },
+      { id: 'print', label: 'Imprimer…', shortcut: 'Ctrl+P', icon: <Printer size={15} />, disabled: !activeDoc, dividerBefore: true, onSelect: openPrintDialog },
+      { id: 'file-info', label: 'Informations sur le fichier…', shortcut: 'Ctrl+I', icon: <FileSearch size={15} />, disabled: !activeDoc, onSelect: openFileInfoDialog },
       { id: 'close', label: 'Fermer le fichier actif', shortcut: 'Ctrl+W', icon: <X size={15} />, disabled: !activeDoc, dividerBefore: true, onSelect: () => { if (activeId) closeDocument(activeId); } },
       { id: 'new-group', label: 'Créer un groupe…', shortcut: 'Ctrl+Maj+N', icon: <FolderPlus size={15} />, dividerBefore: true, disabled: groups.length >= 30, onSelect: () => openGroupDialog() },
       { id: 'rename-group', label: 'Renommer le groupe actuel…', shortcut: 'F2', icon: <Pencil size={15} />, disabled: !currentGroup, onSelect: () => { if (currentGroup) openGroupDialog(currentGroup.id); } },
@@ -1392,6 +1467,8 @@ export default function App() {
     { id: 'studio-ocr-open', label: 'OCR et scans', detail: 'Reconnaître le texte, créer un PDF interrogeable', keywords: 'ocr texte scan numérisation tesseract', icon: <BookOpen size={16} />, onSelect: () => openStudio({ operationId: 'ocr.image' }) },
     { id: 'compare-text', label: 'Comparer des fichiers texte', detail: 'Afficher les différences de deux onglets', keywords: 'diff comparaison code texte', icon: <FileDiff size={16} />, onSelect: () => setTextDiffOpen(true) },
     { id: 'save', label: 'Enregistrer', detail: 'Sauvegarder les modifications', shortcut: 'Ctrl+S', keywords: 'sauvegarde fichier', icon: <Save size={16} />, disabled: !dirty || !canEdit, onSelect: () => void handleSave() },
+    { id: 'print', label: 'Imprimer le fichier', detail: activeDoc ? `Envoyer « ${activeDoc.name} » à l’imprimante` : 'Ouvrez d’abord un fichier', shortcut: 'Ctrl+P', keywords: 'imprimer imprimante papier impression', icon: <Printer size={16} />, disabled: !activeDoc, onSelect: openPrintDialog },
+    { id: 'file-info', label: 'Informations sur le fichier', detail: 'Pages, caractères, mots, dimensions, métadonnées', shortcut: 'Ctrl+I', keywords: 'informations statistiques mesures pages caractères mots taille métadonnées', icon: <FileSearch size={16} />, disabled: !activeDoc, onSelect: openFileInfoDialog },
     { id: 'find', label: 'Rechercher', detail: 'Trouver du texte dans le fichier actif', shortcut: 'Ctrl+F', keywords: 'chercher trouver', icon: <Search size={16} />, disabled: !canReadText, onSelect: () => { setSearchOpen(true); setReplaceOpen(false); } },
     { id: 'replace', label: 'Rechercher et remplacer', detail: 'Remplacer plusieurs occurrences', shortcut: 'Ctrl+H', keywords: 'édition texte', icon: <Replace size={16} />, disabled: !canEdit, onSelect: () => { setSearchOpen(true); setReplaceOpen(true); } },
     { id: 'go-to-line', label: 'Aller à la ligne', detail: 'Placer le curseur sur une ligne précise', shortcut: 'Ctrl+G', keywords: 'éditeur numéro navigation', icon: <TextCursorInput size={16} />, disabled: !canEdit, onSelect: openGoToLine },
@@ -1754,6 +1831,8 @@ export default function App() {
                 fileContextItems={fileContextActions(recentFromDocument(activeDoc))}
                 onOpenPath={navigateImageSibling}
                 onProgressiveContent={commitProgressiveContent}
+                onReadout={setViewerReadout}
+                printRef={viewerPrintRef}
               />
             )}
           </div>}
@@ -1762,6 +1841,11 @@ export default function App() {
 
         {page === 'file' && activeDoc && <footer className="document-statusbar">
           <div className="status-left"><span className="status-dot" />{dirty ? 'Modifications non enregistrées' : 'À jour'}<span className="status-separator">·</span><span>{activeDoc.extension ? `.${activeDoc.extension.toUpperCase()}` : getFormatLabel(activeDoc.kind)}</span></div>
+          <div className="status-measures" aria-live="polite">{statusReadout.map((row) => <span className="status-measure" key={row.label} title={`${row.label} : ${row.value}`}>{row.label} : {row.value}</span>)}</div>
+          <div className="status-actions">
+            <button className="status-button" type="button" title="Informations sur le fichier (Ctrl+I)" aria-label="Informations sur le fichier" onClick={openFileInfoDialog}><FileSearch size={14} /><span>Informations</span></button>
+            <button className="status-button" type="button" title="Imprimer ce fichier (Ctrl+P)" aria-label="Imprimer ce fichier" onClick={openPrintDialog}><Printer size={14} /><span>Imprimer</span></button>
+          </div>
           <div className="status-right"><span>{formatBytes(activeDoc.size)}</span>{activeDoc.kind === 'markdown' && <><span className="status-separator">·</span><span>Markdown</span></>}{activeDoc.source === 'desktop' && <><span className="status-separator">·</span><span>Local</span></>}</div>
         </footer>}
       </main>
@@ -1772,6 +1856,8 @@ export default function App() {
       {settingsOpen && <SettingsModal preferences={preferences} onChange={updatePreference} onClose={() => setSettingsOpen(false)} onClearRecents={() => { setRecents([]); notify('La liste des fichiers récents a été effacée.'); }} onResetDefaults={resetPreferences} onClearDrafts={clearDraftRecoveryData} onMoveToolbar={moveToolbarAction} onToggleToolbar={toggleToolbarAction} onOpenShortcuts={() => { setSettingsOpen(false); setShortcutsOpen(true); }} onOpenWindowsDefaults={() => void openWindowsDefaults()} onExportBackup={exportLocalSettings} onImportBackup={(file) => void importLocalSettings(file)} />}
       {folderSearchOpen && <FolderSearchDialog hidePaths={preferences.hidePaths} onOpenFile={(path, line, query) => { setFolderSearchOpen(false); void openTauriPath(path, { line, query }); }} onClose={() => setFolderSearchOpen(false)} />}
       {textDiffOpen && <TextDiffDialog documents={documents} initialLeftId={activeDoc?.id ?? null} onOpenFile={() => void handleOpen()} onClose={() => setTextDiffOpen(false)} />}
+      {fileInfoOpen && activeDoc && <FileInfoDialog document={activeDoc} readout={viewerReadout} onClose={() => setFileInfoOpen(false)} notify={notify} />}
+      {printOpen && activeDoc && <PrintDialog document={activeDoc} currentPage={viewerPage} renderedHtml={printHtml || undefined} onClose={() => { setPrintOpen(false); setPrintHtml(''); }} notify={notify} />}
       {welcomeOpen && <WelcomeDialog onOpenFile={() => { closeWelcome(); void handleOpen(); }} onPinFolder={() => void pinWelcomeFolder()} onIntegrations={() => { closeWelcome(); setSettingsOpen(true); }} onClose={closeWelcome} />}
       {groupDialog && <GroupDialog group={groupDialog.groupId ? groups.find((group) => group.id === groupDialog.groupId) : undefined} onClose={() => setGroupDialog(null)} onSave={saveGroupDialog} />}
       {goToLineOpen && activeDoc && <GoToLineDialog lineCount={activeDoc.content.split('\\n').length} onGo={navigateToLine} onClose={() => setGoToLineOpen(false)} />}
@@ -1885,7 +1971,7 @@ function UnsupportedFile({ document, onOpenText }: { document: OpenDocument; onO
 }
 
 function ViewerContent({
-  document, documents, isEditing, editorMode, htmlMode, preferences, onChange, editorRef, searchQuery, pdfSearchRequest, fileContextItems, onOpenPath, onProgressiveContent,
+  document, documents, isEditing, editorMode, htmlMode, preferences, onChange, editorRef, searchQuery, pdfSearchRequest, fileContextItems, onOpenPath, onProgressiveContent, onReadout, printRef,
 }: {
   document: OpenDocument;
   documents: OpenDocument[];
@@ -1900,6 +1986,8 @@ function ViewerContent({
   fileContextItems: MenuEntry[];
   onOpenPath: (path: string) => void;
   onProgressiveContent: (documentId: string, content: string, loadedBytes: number) => void;
+  onReadout: (rows: StatRow[]) => void;
+  printRef: React.MutableRefObject<HTMLDivElement | null>;
 }) {
   const isMarkdown = document.kind === 'markdown';
   const showSource = isEditing && (isMarkdown ? editorMode !== 'preview' : true);
@@ -1922,21 +2010,21 @@ function ViewerContent({
     return <ProgressiveTextViewer document={document} lineNumbers={preferences.lineNumbers} wordWrap={preferences.wordWrap} fontSize={preferences.textSize} onContentLoaded={onProgressiveContent} />;
   }
 
-  if (document.kind === 'markdown') return <div className="reader-scroll"><Suspense fallback={<div className="viewer-empty">Préparation du rendu…</div>}><MarkdownViewer source={document.content} document={document} documents={documents} /></Suspense></div>;
+  if (document.kind === 'markdown') return <div className="reader-scroll" ref={printRef}><Suspense fallback={<div className="viewer-empty">Préparation du rendu…</div>}><MarkdownViewer source={document.content} document={document} documents={documents} /></Suspense></div>;
   if (document.kind === 'code' || document.kind === 'text' || (document.kind === 'unknown' && (document.content.length > 0 || document.size === 0))) {
     const displayContent = document.extension === 'json' ? formatJsonForDisplay(document.content) : document.content;
     const jsonError = document.extension === 'json' ? validateJson(document.content) : null;
     const validationMessage = jsonError ? `JSON invalide · ligne ${jsonError.line}, colonne ${jsonError.column} · ${jsonError.message}` : undefined;
     return <CodeViewer content={displayContent} extension={document.extension} lineNumbers={preferences.lineNumbers} wordWrap={preferences.wordWrap} fontSize={preferences.textSize} validationMessage={validationMessage} />;
   }
-  if (document.kind === 'csv') return <CsvViewer content={document.content} fileName={document.name} />;
+  if (document.kind === 'csv') return <CsvViewer content={document.content} fileName={document.name} onReadout={onReadout} />;
   if (document.kind === 'html') return htmlMode === 'preview'
     ? <HtmlViewer source={document.content} mode="preview" />
     : <CodeViewer content={document.content} extension="html" lineNumbers={preferences.lineNumbers} wordWrap={preferences.wordWrap} fontSize={preferences.textSize} />;
-  if (document.kind === 'pdf') return <Suspense fallback={<div className="viewer-empty">Chargement du lecteur PDF…</div>}><PdfViewer document={document} searchQuery={searchQuery} searchRequest={pdfSearchRequest} fileContextItems={fileContextItems} /></Suspense>;
-  if (document.kind === 'image') return <Suspense fallback={<div className="viewer-empty">Chargement de l’image…</div>}><ImageViewer document={document} fileContextItems={fileContextItems} onOpenPath={onOpenPath} /></Suspense>;
-  if (document.kind === 'presentation') return <Suspense fallback={<div className="viewer-empty">Préparation du diaporama…</div>}><PresentationViewer document={document} fileContextItems={fileContextItems} /></Suspense>;
-  if (document.kind === 'document' || document.kind === 'ebook') return <Suspense fallback={<div className="viewer-empty">Préparation du document…</div>}><OfficeDocumentViewer document={document} fileContextItems={fileContextItems} /></Suspense>;
+  if (document.kind === 'pdf') return <Suspense fallback={<div className="viewer-empty">Chargement du lecteur PDF…</div>}><PdfViewer document={document} searchQuery={searchQuery} searchRequest={pdfSearchRequest} fileContextItems={fileContextItems} onReadout={onReadout} /></Suspense>;
+  if (document.kind === 'image') return <div className="image-viewer-host" ref={printRef}><Suspense fallback={<div className="viewer-empty">Chargement de l’image…</div>}><ImageViewer document={document} fileContextItems={fileContextItems} onOpenPath={onOpenPath} onReadout={onReadout} /></Suspense></div>;
+  if (document.kind === 'presentation') return <Suspense fallback={<div className="viewer-empty">Préparation du diaporama…</div>}><PresentationViewer document={document} fileContextItems={fileContextItems} onReadout={onReadout} /></Suspense>;
+  if (document.kind === 'document' || document.kind === 'ebook') return <Suspense fallback={<div className="viewer-empty">Préparation du document…</div>}><OfficeDocumentViewer document={document} fileContextItems={fileContextItems} onReadout={onReadout} /></Suspense>;
   return <UnsupportedFile document={document} onOpenText={() => onChange(document.content)} />;
 }
 
@@ -1955,8 +2043,8 @@ export function SettingsModal({ preferences, onChange, onClose, onClearRecents, 
   onImportBackup: (file: File) => void;
 }) {
   const backupInputRef = useRef<HTMLInputElement>(null);
-  const toolbarLabels: Record<ToolbarAction, string> = { search: 'Rechercher', edit: 'Éditer', save: 'Enregistrer', group: 'Classer dans un groupe', close: 'Fermer le fichier' };
-  const toolbarIcons: Record<ToolbarAction, ReactNode> = { search: <Search size={14} />, edit: <Pencil size={14} />, save: <Save size={14} />, group: <FolderPlus size={14} />, close: <X size={14} /> };
+  const toolbarLabels: Record<ToolbarAction, string> = { search: 'Rechercher', edit: 'Éditer', save: 'Enregistrer', print: 'Imprimer', info: 'Informations du fichier', group: 'Classer dans un groupe', close: 'Fermer le fichier' };
+  const toolbarIcons: Record<ToolbarAction, ReactNode> = { search: <Search size={14} />, edit: <Pencil size={14} />, save: <Save size={14} />, print: <Printer size={14} />, info: <FileSearch size={14} />, group: <FolderPlus size={14} />, close: <X size={14} /> };
   const orderedActions = [...preferences.toolbarOrder, ...TOOLBAR_ACTIONS.filter((action) => !preferences.toolbarOrder.includes(action))];
   const accents: { value: Preferences['accent']; label: string }[] = [
     { value: 'violet', label: 'Violet' }, { value: 'blue', label: 'Bleu' }, { value: 'mint', label: 'Menthe' }, { value: 'rose', label: 'Rose' },

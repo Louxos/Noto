@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, ImageOff } from 'lucide-react';
 import * as UTIF from 'utif';
 import type { OpenDocument } from '../types';
+import type { StatRow } from '../lib/fileStats';
 import { formatBytes } from '../lib/files';
 import { findAdjacentImagePaths } from '../lib/imageNavigation';
 import { ContextMenu, type MenuEntry } from './WorkspaceTools';
@@ -21,7 +22,7 @@ function makeTiffPreview(bytes: Uint8Array): string {
   return canvas.toDataURL('image/png');
 }
 
-export function ImageViewer({ document, fileContextItems, onOpenPath }: { document: OpenDocument; fileContextItems: MenuEntry[]; onOpenPath: (path: string) => void }) {
+export function ImageViewer({ document, fileContextItems, onOpenPath, onReadout }: { document: OpenDocument; fileContextItems: MenuEntry[]; onOpenPath: (path: string) => void; onReadout?: (rows: StatRow[]) => void }) {
   const [zoom, setZoom] = useState(1);
   const [fit, setFit] = useState(true);
   const [rotation, setRotation] = useState(0);
@@ -75,6 +76,17 @@ export function ImageViewer({ document, fileContextItems, onOpenPath }: { docume
   }, [document, isTiff]);
 
   const dimensions = `${naturalSize.width && naturalSize.height ? `${naturalSize.width} × ${naturalSize.height} px · ` : ''}${formatBytes(document.size)}`;
+
+  // Relevé pour la barre d’état et la fenêtre d’informations. Les dimensions
+  // viennent du décodage réel de l’image, jamais d’une supposition.
+  useEffect(() => {
+    if (!onReadout || !naturalSize.width || !naturalSize.height) return;
+    onReadout([
+      { label: 'Dimensions', value: `${naturalSize.width} × ${naturalSize.height} px` },
+      { label: 'Zoom', value: fit ? 'ajusté à la fenêtre' : `${Math.round(zoom * 100)} %` },
+      ...(rotation % 360 !== 0 ? [{ label: 'Rotation', value: `${rotation % 360}°` }] : []),
+    ]);
+  }, [onReadout, naturalSize, zoom, fit, rotation]);
   const imageContextItems: MenuEntry[] = [
     ...fileContextItems,
     { id: 'rotate-image-left', label: 'Pivoter à gauche', icon: <RotateCcw size={15} />, dividerBefore: true, onSelect: () => setRotation((value) => value - 90) },

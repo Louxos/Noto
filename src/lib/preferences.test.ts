@@ -19,7 +19,7 @@ describe('preferences', () => {
     const preferences = loadPreferences();
     expect(preferences.theme).toBe('light');
     expect(preferences.accent).toBe('violet');
-    expect(preferences.toolbarOrder).toEqual(['search', 'edit', 'save', 'group', 'close']);
+    expect(preferences.toolbarOrder).toEqual(['search', 'edit', 'save', 'print', 'info', 'group', 'close']);
     expect(preferences.hiddenToolbarActions).toEqual([]);
     expect(preferences.restoreSession).toBe(false);
     expect(preferences.recentLimit).toBe(8);
@@ -43,7 +43,9 @@ describe('preferences', () => {
     });
     const preferences = loadPreferences();
     expect(preferences).toMatchObject({ theme: 'dark', accent: 'mint', compactToolbar: true, sidebarCollapsed: true, recentLimit: 12, hidePaths: true, draftRecoveryEnabled: true, draftRetentionDays: 30 });
-    expect(preferences.toolbarOrder).toEqual(['close', 'search', 'edit', 'save', 'group']);
+    // Les commandes enregistrées gardent leur ordre, et les commandes plus
+    // récentes de l’application (impression, informations) sont ajoutées à la fin.
+    expect(preferences.toolbarOrder).toEqual(['close', 'search', 'edit', 'save', 'print', 'info', 'group']);
     expect(preferences.hiddenToolbarActions).toEqual(['save']);
   });
 
