@@ -1,6 +1,6 @@
 # Rapport d’exécution — évolution de Noto en suite documentaire
 
-Date : 14 octobre 2026 · Branche : `arena/30f013fe-noto` · Dépôt : `Louxos/Noto`
+Date : 15 octobre 2026 · Branche : `arena/30f013fe-noto` · Dépôt : `Louxos/Noto`
 
 Ce rapport décrit **ce qui fonctionne réellement**, ce qui est partiel et ce qui reste à faire. Aucune fonctionnalité n’est annoncée comme terminée sans interface, traitement réel, gestion d’erreur, résultat exploitable et test.
 
@@ -28,6 +28,9 @@ Ce rapport décrit **ce qui fonctionne réellement**, ce qui est partiel et ce q
 - **Atelier** (`src/studio/`) accessible depuis la barre latérale, le menu **Affichage** (Atelier, Atelier PDF, Atelier images, OCR et nettoyage de scans, Conversion de documents), la **palette de commandes** et le **menu contextuel d’un fichier** (« Ouvrir dans l’atelier »).
 - Trois colonnes : outils réellement applicables aux fichiers présents, fichiers + réglages (avancés masqués par défaut) + nature du travail et limites, traitement (progression, annulation, détail par fichier, mesures avant/après, avertissements, rapport, confidentialité, historique).
 - **Panneau Modèles OCR** : langue, taille estimée, origine exacte et licence affichées avant tout téléchargement ; accord explicite obligatoire, révocable.
+- **Barre supérieure adaptative** : les zones fixes (menus, actions) ne peuvent plus être comprimées sous leur largeur naturelle, donc **plus aucun chevauchement d’icônes**. Quand la place manque, un `ResizeObserver` mesure la mise en page réelle et réduit l’affichage par étapes — libellés remplacés par les icônes (infobulle et libellé accessible conservés), puis menus regroupés dans un bouton **Tous les menus** où chaque commande et son raccourci restent disponibles. Le retour en arrière demande une marge réelle, ce qui évite tout clignotement.
+- **Plein écran** : `F11`, bouton en haut à droite, menu **Affichage** et palette. Niveau « fenêtre » (`setFullscreen` Tauri, permissions `core:window:allow-set-fullscreen` et `allow-is-fullscreen` ajoutées ; API plein écran du document dans un navigateur). L’état est relu du système (`isFullscreen`, `fullscreenchange`, retour de focus) ; la commande n’apparaît pas quand l’environnement ne la propose pas, et un refus affiche une erreur explicite.
+- **Mode immersion** : `Ctrl+Maj+F` retire barre latérale, menus, onglets et sous-titre, laisse une sortie visible et répond à `Échap`.
 
 ### Application et installeur
 
@@ -36,19 +39,33 @@ Ce rapport décrit **ce qui fonctionne réellement**, ce qui est partiel et ce q
 - **Installeur** : NSIS uniquement (`bundle.targets: ["nsis"]`), en français, `currentUser` (sans élévation), compression LZMA, visuels NSIS, crochets `installerHooks` qui vérifient réellement l’installation et confirment avant désinstallation, sans aucun dialogue en mode silencieux. Le gabarit NSIS de Tauri 2.12.3 place le panneau latéral sur la page d’accueil et la page finale (`MUI_WELCOMEFINISHPAGE_BITMAP`) et le bandeau sur les autres pages (`MUI_HEADERIMAGE_BITMAP`), et insère les quatre crochets déclarés (`!ifmacrodef` / `!insertmacro`) : les visuels du logo, du nom et du slogan apparaissent donc bien sur l’assistant, même si leur rendu final ne s’observe que sous Windows.
 - **MSI supprimé** partout : configuration, assets WiX, générateur d’images, tests de fumée, signature, empreintes, artefacts et fichiers publiés de la CI. Détail complet dans [`docs/inventaire-et-migration.md`](docs/inventaire-et-migration.md).
 
+### Dépôt et vérifications continues
+
+- **Analyse statique ESLint** (`npm run lint`) en configuration « flat » : erreurs réelles uniquement (`no-explicit-any` interdit, dépendances de hooks, variables inutilisées, promesses), aucune règle de style. Le dépôt est propre : 0 erreur, 0 avertissement.
+- **Couverture** (`npm run coverage`, `@vitest/coverage-v8`) et commande unique **`npm run verify`** (ESLint + types + tests + construction).
+- **Workflow Checks** : lint, types, tests, couverture et construction sur chaque poussée et chaque pull request ; rapport de couverture conservé 7 jours.
+- **Workflow Security** : analyse CodeQL (JavaScript/TypeScript) et `npm audit --audit-level=high`.
+- **Dependabot** : npm, Cargo et GitHub Actions, propositions groupées, hebdomadaires ou mensuelles.
+- **Vie du dépôt** : `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1), modèles d’issue (bug, idée) et de pull request, `CODEOWNERS`, `.editorconfig`, `.gitattributes` (binaires et fins de ligne), `.nvmrc`, convention des notes de version rédigées.
+- **Métadonnées de `package.json`** : description, licence MIT, dépôt, signaux d’anomalie, mots-clés, Node requis.
+
 ### Documentation mise à jour
 
-`README.md`, `CHANGELOG.md`, `INSTALLATION.md`, `docs/build-windows.md`, `docs/installation.md`, `docs/atelier.md` (nouveau), `docs/inventaire-et-migration.md` (nouveau), `ROADMAP.md`, `src-tauri/windows/installer/README.md`.
+`README.md` (badges de vérification), `CHANGELOG.md` (section « Non publié »), `INSTALLATION.md`, `docs/build-windows.md`, `docs/installation.md`, `docs/atelier.md`, `docs/inventaire-et-migration.md`, `docs/tests.md` (nouveau : ce qui est vérifié, comment, et ce qui ne peut l’être que sous Windows), `docs/user-guide.md` (plein écran et immersion), `docs/contributing.md`, `docs/README.md`, `ROADMAP.md`, `src-tauri/windows/installer/README.md`.
 
 ## 2. Commandes exécutées et résultats
 
 | Commande | Résultat |
 | --- | --- |
-| `npm run check` (`tsc -b` + `vitest run`) | ✅ **38 fichiers de tests, 169 tests réussis** |
+| `npm run check` (`tsc -b` + `vitest run`) | ✅ **43 fichiers de tests, 192 tests réussis** |
+| `npm run lint` (ESLint) | ✅ **0 erreur, 0 avertissement** sur tout le dépôt |
+| `npm run coverage` | ✅ rapport produit dans `coverage/` — couverture des lignes de `src/` : **34,07 %** (concentrée sur les moteurs ; voir §5) |
+| `npm run verify` | ✅ les trois vérifications enchaînées, terminées sans échec |
 | `npm run build` | ✅ succès (bundle produit dans `dist/`) |
 | `npx tsc -b` seul | ✅ aucune erreur (mode strict, `noUnusedLocals`, `verbatimModuleSyntax`) |
 | Vitest ciblés | ✅ `operations/registry.test.ts` 7/7 · `pdfOperations.test.ts` 19/19 · `jobs/analysis.test.ts` 8/8 · `archiveWriter.test.ts` 7/7 · `image/scanCleanup.test.ts` 5/5 · `ocr/ocrConsent.test.ts` 7/7 · `ocr/ocrEngine.test.ts` 2/2 · `studio/*` 10/10 |
-| CI Windows — runs `38562975186`, `38565457534` puis `38566768987` sur `arena/30f013fe-noto` (dernier commit `774b151`) | ✅ **succès** : `npm ci`, `npm run check`, `npm run build`, commandes Windows natives, **construction de l’installeur avec les crochets NSIS**, test de fumée (installation silencieuse, ouverture de fichier, associations, désinstallation), empreintes SHA-256, dépôt de l’artefact `noto-windows-installers` |
+| CI — workflow **Checks**, exécution `38743804838` (commit `61a24ea`) | ✅ **succès** : ESLint, types, 192 tests, couverture, construction |
+| CI Windows — runs `38562975186`, `38565457534` puis `38566768987` sur `arena/30f013fe-noto` | ✅ **succès** : `npm ci`, `npm run check`, `npm run build`, commandes Windows natives, **construction de l’installeur avec les crochets NSIS**, test de fumée (installation silencieuse, ouverture de fichier, associations, désinstallation), empreintes SHA-256, dépôt de l’artefact `noto-windows-installers` |
 | CI Windows — run `38563865106` sur le tag `v0.2.0` | ✅ **tous les pas verts** : mêmes vérifications, puis sélection des notes rédigées (`generate_release_notes: false`), publication du release avec `Noto_0.2.0_x64-setup.exe` et `SHA256SUMS.txt` |
 | `gh release view v0.2.0` / `v0.1.0` (API GitHub) | ✅ titres, dates et **tailles réelles des fichiers publiés** relevés (ex. `Noto_0.2.0_x64-setup.exe` = 3 442 384 octets) ; les pages de version ne contiennent plus aucun texte généré en anglais |
 | `gh run download … --name noto-windows-installers` | ❌ **impossible dans cet environnement** (échec `EOF` du service d’artefacts, 3 tentatives) : l’installeur de la CI n’a **pas** pu être inspecté localement, seuls les pas de la CI et les métadonnées publiées font foi |
@@ -65,7 +82,16 @@ Ces tests vérifient des artefacts réels : PDF relus avec pdf.js (octets, pages
 | `exifr` | 7.1.3 | MIT | gratuit, 100 % local |
 | `tesseract.js` | 5.1.1 | Apache-2.0 | gratuit ; **modèles téléchargés une seule fois après accord explicite**, puis cache local |
 
-Aucun service payant, aucun compte, aucune API distante, aucune télémétrie. Seul téléchargement possible de toute l’application : les modèles OCR, après consentement (voir §5).
+Dépendances de développement ajoutées (jamais embarquées dans l’application) :
+
+| Dépendance | Version | Licence | Usage |
+| --- | --- | --- | --- |
+| `eslint`, `@eslint/js`, `typescript-eslint` | 9.39.5 / 9.39.5 / 8.71.2 | MIT | analyse statique |
+| `eslint-plugin-react-hooks` | 5.2.0 | MIT | dépendances de hooks |
+| `globals` | 16.5.0 | MIT | environnement des scripts navigateur |
+| `@vitest/coverage-v8` | 5.0.4 | MIT | rapport de couverture |
+
+Aucun service payant, aucun compte, aucune API distante, aucune télémétrie. Seule connexion initiée par l’application : le moteur et les modèles OCR, après consentement (voir §5).
 
 ## 4. Fichiers clés modifiés ou ajoutés
 
@@ -73,7 +99,10 @@ Aucun service payant, aucun compte, aucune API distante, aucune télémétrie. S
 - Interface : `src/studio/{useStudio.ts,StudioScreen.tsx,StudioPanels.tsx,StudioRunPanel.tsx,OcrModelsPanel.tsx,studio.css}` ; branchement dans `src/App.tsx`.
 - Démarrage : `index.html`, `public/boot.css`, `public/boot.js`.
 - Tauri : `src-tauri/src/main.rs` (commande `reveal_path` + test Rust), `src-tauri/tauri.conf.json`, `src-tauri/windows/installer/{hooks.nsh,render_assets.py,README.md}` (+ visuels NSIS régénérés, visuels WiX supprimés).
-- CI : `.github/workflows/release.yml` (MSI retiré, NSIS seul).
+- CI et vie du dépôt : `.github/workflows/{release,ci,security}.yml`, `.github/dependabot.yml`, `.github/CODEOWNERS`, `.github/ISSUE_TEMPLATE/*`, `.github/PULL_REQUEST_TEMPLATE.md`, `.github/release-notes/`.
+- Barre supérieure et affichage : `src/lib/topbarLayout.ts`, `src/components/useTopbarFit.ts`, `src/lib/fullscreen.ts`, `src/components/WorkspaceTools.tsx` (menu regroupé), `src/App.tsx` (immersion et plein écran), `src/styles.css`.
+- Outillage : `eslint.config.js`, `vite.config.ts` (couverture), `package.json` (scripts `lint`, `coverage`, `verify`).
+- Fichiers racine : `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, `.editorconfig`, `.gitattributes`, `.nvmrc`, `docs/tests.md`.
 - Documentation : voir §1.
 
 ## 5. Limites connues, assumées et documentées
@@ -86,7 +115,10 @@ Aucun service payant, aucun compte, aucune API distante, aucune télémétrie. S
 6. **Tests de l’interface graphique sur canevas** : les opérations d’image dépendent du canevas du navigateur/webview ; leur logique pure est testée (redressement, contraste, détection de marges), mais le rendu complet se vérifie dans l’application.
 7. **Comparaison visuelle et ressemblance** : jamais présentée comme une preuve d’identité ; seuls les doublons SHA-256 sont qualifiés d’identiques.
 8. **Signature de code** : l’installeur reste **non signé** tant que les secrets de certificat ne sont pas configurés. Aucune signature n’est revendiquée.
-9. **Fonctions du cahier des charges non commencées** : éditeur visuel de workflows, écran de paramètres OCR dédié hors atelier, gestionnaire de fichiers avancé (recherche/filtres sur arborescence), comparaison de documents non textuels au-delà des images et PDF, et fonctionnalités intelligentes optionnelles (§14). Le registre d’opérations, le runner et l’écriture vérifiée sont déjà en place pour les accueillir.
+9. **Vérification visuelle** : les tests s’exécutent sans moteur de rendu et aucun navigateur n’est disponible dans l’environnement de développement utilisé. La correction du chevauchement de la barre supérieure est donc garantie par construction (zones non compressibles) et vérifiée par la mesure, la machine à états et un garde-fou sur la feuille de style — mais elle n’a pas été observée à l’écran ici. Le rendu final de l’application et de l’installeur se contrôle sous Windows.
+10. **Couverture de tests de 34 % des lignes** : le chiffre est publié tel quel. Les modules dépendant du canevas ou du WebAssembly (rasterisation PDF, encodage d’images, OCR) et les écrans de l’atelier restent à 0 % faute d’environnement d’exécution ; aucun seuil artificiel n’est imposé.
+11. **Workflow Security** : CodeQL et `npm audit` s’exécutent sur les poussées de `main` et `arena/**` et sur les pull requests. Ils ne sont pas bloquants par choix (un avis publié sur une dépendance transitive ne doit pas bloquer les corrections).
+12. **Fonctions du cahier des charges non commencées** : éditeur visuel de workflows, écran de paramètres OCR dédié hors atelier, gestionnaire de fichiers avancé (recherche/filtres sur arborescence), comparaison de documents non textuels au-delà des images et PDF, et fonctionnalités intelligentes optionnelles (§14). Le registre d’opérations, le runner et l’écriture vérifiée sont déjà en place pour les accueillir.
 
 ## 6. Livrable installeur
 
