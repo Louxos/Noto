@@ -59,7 +59,7 @@ L’impression se lance depuis le bouton **Imprimer** de la barre d’outils, le
 | PPTX/ODP | Une diapositive par page, à partir du texte extrait ; la mise en page d’origine et les images ne sont pas reproduites, comme dans le diaporama. |
 | DOCX/ODT/RTF/EPUB | Une partie par page, dans l’ordre du document. |
 
-Rien n’est envoyé en ligne : la page imprimée est construite sur votre appareil, et aucune ressource distante n’y est chargée.
+Rien n’est envoyé en ligne : la page imprimée est construite sur votre appareil, et aucune ressource distante n’y est chargée. Dans l’application de bureau comme dans un navigateur, c’est la boîte de dialogue d’impression du système qui choisit l’imprimante, les copies et l’aperçu — Noto n’en fabrique aucun.
 
 ## Informations et mesures
 
