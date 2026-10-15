@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import {
-  BookOpen, BookOpenText, Check, ChevronRight, Code2, File, FileImage, FileText,
+  BookOpen, BookOpenText, Check, ChevronRight, Code2, File, FileImage, FileText, Menu,
   FileType2, FileUp, FolderOpen, Globe2, Keyboard, Pencil, Plus, Presentation, Search, ShieldCheck,
   Save, Table2, TextCursorInput, Trash2, X,
 } from 'lucide-react';
@@ -113,7 +113,16 @@ function formatDate(timestamp: number): string {
   return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: date.getFullYear() === today.getFullYear() ? undefined : 'numeric' });
 }
 
-export function AppMenuBar({ menus, onOpenPalette }: { menus: MenuDefinition[]; onOpenPalette: () => void }) {
+export function AppMenuBar({ menus, onOpenPalette, collapsed = false }: {
+  menus: MenuDefinition[];
+  onOpenPalette: () => void;
+  /**
+   * Quand la place manque dans la barre supérieure, les menus sont
+   * regroupés derrière un seul bouton. Aucune commande ne disparaît :
+   * le panneau reprend chaque menu avec ses entrées.
+   */
+  collapsed?: boolean;
+}) {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const menuRef = useRef<HTMLElement>(null);
 
@@ -132,6 +141,35 @@ export function AppMenuBar({ menus, onOpenPalette }: { menus: MenuDefinition[]; 
       document.removeEventListener('keydown', closeOnEscape);
     };
   }, [openMenu]);
+
+  if (collapsed) {
+    return <nav className={`app-menubar app-menubar-collapsed ${openMenu ? 'open' : ''}`} aria-label="Menus de l’application" ref={menuRef}>
+      <div className="menu-root">
+        <button
+          className={`menu-trigger menu-trigger-all ${openMenu === 'all' ? 'open' : ''}`}
+          type="button"
+          title="Tous les menus de Noto"
+          aria-label="Tous les menus de Noto"
+          aria-haspopup="menu"
+          aria-expanded={openMenu === 'all'}
+          onClick={() => setOpenMenu((current) => current === 'all' ? null : 'all')}
+        >
+          <Menu size={14} /><span>Tous les menus</span>
+        </button>
+        {openMenu === 'all' && <div className="menu-popover menu-popover-all" role="menu" aria-label="Tous les menus de Noto">
+          {menus.map((menu) => <div className="menu-group" key={menu.id}>
+            <div className="menu-group-title">{menu.label}</div>
+            {menu.items.map((item) => <button className="menu-item" type="button" role="menuitem" key={`${menu.id}-${item.id}`} disabled={item.disabled} onClick={() => { setOpenMenu(null); item.onSelect(); }}>
+              <span className="menu-item-icon">{item.icon}</span><span className="menu-item-label">{item.label}</span>{item.shortcut && <kbd>{item.shortcut}</kbd>}
+            </button>)}
+          </div>)}
+        </div>}
+      </div>
+      <button className="command-trigger" type="button" onClick={onOpenPalette} title="Ouverture rapide (Ctrl+P)">
+        <Search size={14} /><span>Commandes</span><kbd>Ctrl ⇧ P</kbd>
+      </button>
+    </nav>;
+  }
 
   return <nav className="app-menubar" aria-label="Menus de l’application" ref={menuRef}>
     <div className="menu-list">
@@ -366,6 +404,7 @@ const shortcutSections = [
   { title: 'Édition & recherche', rows: [['Basculer lecture / édition', 'Ctrl + E'], ['Rechercher', 'Ctrl + F'], ['Rechercher / remplacer', 'Ctrl + H'], ['Aller à la ligne', 'Ctrl + G'], ['Résultat suivant / précédent', 'F3 / Maj + F3']] },
   { title: 'Organisation', rows: [['Créer un groupe', 'Ctrl + Maj + N'], ['Classer le fichier actif', 'Ctrl + Maj + G'], ['Renommer le groupe affiché', 'F2']] },
   { title: 'Diaporamas & livres', rows: [['Diapositive / chapitre suivant ou précédent', '← / →'], ['Plein écran dans un diaporama', 'F'], ['Quitter le plein écran', 'Échap']] },
+  { title: 'Affichage', rows: [['Plein écran de la fenêtre', 'F11'], ['Mode immersion (sans barre latérale ni menus)', 'Ctrl + Maj + F'], ['Quitter l’immersion', 'Échap']] },
   { title: 'Application', rows: [['Ouvrir les commandes, onglets et fichiers récents', 'Ctrl + P'], ['Ouvrir les paramètres', 'Ctrl + ,'], ['Fermer la fenêtre ou le panneau', 'Échap']] },
 ];
 

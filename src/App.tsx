@@ -5,7 +5,7 @@ import { getCurrentWebview } from '@tauri-apps/api/webview';
 import {
   ArrowDown, ArrowUp, BookOpen, BookOpenText, Check, ChevronDown, CircleHelp, Clock3, Code2, Command,
   Copy, ClipboardPaste, Download, File, FileCode2, FileDiff, FileImage, FileText, FileType2, FileUp, FolderInput, FolderPlus, FolderSearch, Globe2, Presentation, Upload,
-  Image as ImageIcon, Keyboard, LayoutGrid, LoaderCircle, Maximize2, Moon, MoreHorizontal,
+  Expand, Image as ImageIcon, Keyboard, LayoutGrid, LoaderCircle, Maximize2, Minimize2, Moon, MoreHorizontal,
   PanelLeft, Pencil, Plus, RotateCcw, Scissors, Search, Settings2, ShieldCheck, Sun, Table2,
   TextCursorInput, X, Save, Replace, Sparkles, Trash2, Pin, Wrench,
 } from 'lucide-react';
@@ -33,6 +33,9 @@ import { loadPinnedSearchFolders, savePinnedSearchFolders, togglePinnedSearchFol
 import { defaultPreferences, loadPreferences, loadRecentFiles, savePreferences, saveRecentFiles, upsertRecent, TOOLBAR_ACTIONS, type Preferences, type RecentFile, type ToolbarAction } from './lib/preferences';
 import type { BrowserFileHandle, OpenDocument } from './types';
 import { APP_VERSION } from './lib/version';
+import { detectFullscreenKind, enterFullscreen, exitFullscreen, fullscreenSupport, onDocumentFullscreenChange, type FullscreenKind } from './lib/fullscreen';
+import { topbarFitClasses } from './lib/topbarLayout';
+import { useTopbarFit } from './components/useTopbarFit';
 import type { StudioRequest } from './studio/StudioScreen';
 import './styles.css';
 
@@ -149,6 +152,8 @@ export default function App() {
   const [loadingSlow, setLoadingSlow] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('Ouverture du fichier…');
   const [dragging, setDragging] = useState(false);
+  const [immersive, setImmersive] = useState(false);
+  const [fullscreenKind, setFullscreenKind] = useState<FullscreenKind | null>(null);
   const [toast, setToast] = useState('');
   const [toastKind, setToastKind] = useState<'success' | 'error'>('success');
   const documentsRef = useRef<OpenDocument[]>([]);
@@ -157,6 +162,7 @@ export default function App() {
   const modalReturnFocusRef = useRef<HTMLElement | null>(null);
   const draftStorageErrorShown = useRef(false);
   const editorRef = useRef<HTMLTextAreaElement | null>(null);
+  const topbarRef = useRef<HTMLElement | null>(null);
   const browserHandles = useRef<Map<string, BrowserFileHandle>>(new Map());
   const sessionRestoreStarted = useRef(false);
   const commitDocuments = useCallback((next: OpenDocument[]) => {
@@ -301,6 +307,39 @@ export default function App() {
     setToast(message);
     setToastKind(kind);
   }, []);
+
+  const fullscreen = useMemo(() => fullscreenSupport(), []);
+
+  /** Bascule le plein écran de la fenêtre (niveau système) et rend compte de l’état réel. */
+  const toggleWindowFullscreen = useCallback(async () => {
+    try {
+      if (fullscreenKind) {
+        await exitFullscreen(fullscreenKind);
+        setFullscreenKind(null);
+        notify('Plein écran désactivé.');
+        return;
+      }
+      const kind = await enterFullscreen();
+      setFullscreenKind(kind);
+      notify(kind === 'window'
+        ? 'Fenêtre en plein écran. F11 ou Échap dans le menu Affichage pour en sortir.'
+        : 'Affichage en plein écran. F11 pour en sortir.');
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      notify(`Plein écran refusé : ${detail}`, 'error');
+    }
+  }, [fullscreenKind, notify]);
+
+  /** Mode immersion : la fenêtre garde sa taille, l’interface se retire. */
+  const toggleImmersive = useCallback(() => {
+    setImmersive((current) => {
+      const next = !current;
+      notify(next
+        ? 'Mode immersion : barre latérale, menus et onglets sont masqués. Échap ou Ctrl+Maj+F pour revenir.'
+        : 'Mode immersion désactivé.');
+      return next;
+    });
+  }, [notify]);
 
   function closeWelcome() {
     try { localStorage.setItem(FIRST_RUN_KEY, 'done'); } catch { /* First-run dismissal is best-effort in private storage. */ }
@@ -1044,6 +1083,22 @@ export default function App() {
     setEditorMode(activeDoc.kind === 'markdown' ? 'split' : 'source');
   }, [activeDoc, canEdit]);
 
+  useEffect(() => onDocumentFullscreenChange(() => {
+    void detectFullscreenKind().then((kind) => setFullscreenKind((current) => (current === kind ? current : kind)));
+  }), []);
+
+  useEffect(() => {
+    // Le plein écran peut aussi être quitté autrement (raccourci du système,
+    // touche Échap). On relit alors l’état réel au lieu de le supposer.
+    const sync = () => { if (document.visibilityState === 'visible') void detectFullscreenKind().then(setFullscreenKind); };
+    window.addEventListener('focus', sync);
+    document.addEventListener('visibilitychange', sync);
+    return () => {
+      window.removeEventListener('focus', sync);
+      document.removeEventListener('visibilitychange', sync);
+    };
+  }, []);
+
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
@@ -1058,6 +1113,7 @@ export default function App() {
         else if (goToLineOpen) setGoToLineOpen(false);
         else if (groupPickerOpen) setGroupPickerOpen(false);
         else if (searchOpen) setSearchOpen(false);
+        else if (immersive) setImmersive(false);
         return;
       }
 
@@ -1066,6 +1122,11 @@ export default function App() {
       if (!modifier) {
         const target = event.target;
         const isTyping = target instanceof HTMLElement && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName));
+        if (event.key === 'F11' && fullscreen.supported) {
+          event.preventDefault();
+          void toggleWindowFullscreen();
+          return;
+        }
         if (event.key === 'F3' && query && activeDoc && !isTyping) {
           event.preventDefault();
           findInDocument(event.shiftKey);
@@ -1117,6 +1178,9 @@ export default function App() {
       } else if (key === 's') {
         event.preventDefault();
         void handleSave(event.shiftKey);
+      } else if (key === 'f' && event.shiftKey) {
+        event.preventDefault();
+        toggleImmersive();
       } else if (key === 'f') {
         event.preventDefault();
         setSearchOpen(true);
@@ -1135,7 +1199,7 @@ export default function App() {
     }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [activeDoc, activeId, canEdit, closeDocument, closeWelcome, commandPaletteOpen, currentGroup, documents, findInDocument, folderSearchOpen, goToLineOpen, groupDialog, groupPickerOpen, handleOpen, handleSave, openGoToLine, page, query, saveAsDialogOpen, searchOpen, settingsOpen, shortcutsOpen, textDiffOpen, toggleEditMode, welcomeOpen]);
+  }, [activeDoc, activeId, canEdit, closeDocument, closeWelcome, commandPaletteOpen, currentGroup, documents, findInDocument, folderSearchOpen, fullscreen.supported, goToLineOpen, groupDialog, groupPickerOpen, handleOpen, handleSave, immersive, openGoToLine, page, query, saveAsDialogOpen, searchOpen, settingsOpen, shortcutsOpen, textDiffOpen, toggleEditMode, toggleImmersive, toggleWindowFullscreen, welcomeOpen]);
 
   useEffect(() => {
     if (!activeModalId) {
@@ -1247,6 +1311,13 @@ export default function App() {
     .filter((action) => !preferences.hiddenToolbarActions.includes(action) && Boolean(toolbarActions[action]))
     .map((action) => <span className="toolbar-action-slot" key={action}>{toolbarActions[action]}</span>);
 
+  const topbarStage = useTopbarFit(
+    topbarRef,
+    [page, activeDoc?.id ?? '', activeDoc?.kind ?? '', isEditing, editorMode, htmlMode, dirty,
+      preferences.compactToolbar, preferences.toolbarOrder.join(','), preferences.hiddenToolbarActions.join(','),
+      comparableDocuments.length, immersive].join('|'),
+  );
+
   const menuDefinitions: MenuDefinition[] = [
     { id: 'file', label: 'Fichier', items: [
       { id: 'open', label: 'Ouvrir un fichier…', shortcut: 'Ctrl+O', icon: <FileUp size={15} />, onSelect: () => void handleOpen() },
@@ -1278,6 +1349,8 @@ export default function App() {
       { id: 'studio-convert', label: 'Conversion de documents', icon: <Download size={15} />, onSelect: () => openStudio({ operationId: 'office.to-pdf' }) },
       { id: 'sidebar', label: preferences.sidebarCollapsed ? 'Déployer la barre latérale' : 'Réduire la barre latérale', icon: <MoreHorizontal size={15} />, dividerBefore: true, onSelect: () => updatePreference('sidebarCollapsed', !preferences.sidebarCollapsed) },
       { id: 'toolbar-density', label: preferences.compactToolbar ? 'Aérer la barre d’outils' : 'Compacter la barre d’outils', icon: <PanelLeft size={15} />, onSelect: () => updatePreference('compactToolbar', !preferences.compactToolbar) },
+      { id: 'fullscreen-window', label: fullscreenKind ? 'Quitter le plein écran de la fenêtre' : 'Plein écran de la fenêtre', shortcut: 'F11', icon: fullscreenKind ? <Minimize2 size={15} /> : <Maximize2 size={15} />, disabled: !fullscreen.supported, onSelect: () => void toggleWindowFullscreen() },
+      { id: 'immersive', label: immersive ? 'Quitter le mode immersion' : 'Mode immersion (document seul)', shortcut: 'Ctrl+Maj+F', icon: immersive ? <Minimize2 size={15} /> : <Expand size={15} />, onSelect: toggleImmersive },
       { id: 'theme', label: preferences.theme === 'light' ? 'Activer le thème sombre' : 'Activer le thème clair', icon: preferences.theme === 'light' ? <Moon size={15} /> : <Sun size={15} />, onSelect: () => updatePreference('theme', preferences.theme === 'light' ? 'dark' : 'light') },
       { id: 'settings', label: 'Paramètres…', shortcut: 'Ctrl+,', icon: <Settings2 size={15} />, dividerBefore: true, onSelect: () => setSettingsOpen(true) },
     ] },
@@ -1303,6 +1376,8 @@ export default function App() {
     { id: 'edit', label: isEditing ? 'Terminer la modification' : 'Modifier le fichier', detail: 'Basculer lecture et édition', shortcut: 'Ctrl+E', keywords: 'écrire éditer modifier', icon: <Pencil size={16} />, disabled: !canEdit, onSelect: toggleEditMode },
     { id: 'group-new', label: 'Créer un groupe', detail: 'Rassembler des fichiers sans les déplacer', shortcut: 'Ctrl+Maj+N', keywords: 'organisation collection dossier', icon: <FolderPlus size={16} />, disabled: groups.length >= 30, onSelect: () => openGroupDialog() },
     { id: 'group-rename', label: 'Renommer le groupe actuel', detail: currentGroup?.name ?? 'Sélectionnez un groupe d’abord', shortcut: 'F2', keywords: 'nom collection', icon: <Pencil size={16} />, disabled: !currentGroup, onSelect: () => { if (currentGroup) openGroupDialog(currentGroup.id); } },
+    { id: 'fullscreen-window', label: fullscreenKind ? 'Quitter le plein écran' : 'Passer en plein écran', detail: fullscreen.supported ? 'Fenêtre entière sur tout l’écran' : 'Indisponible dans cet environnement', shortcut: 'F11', keywords: 'plein écran fullscreen agrandir écran entier', icon: fullscreenKind ? <Minimize2 size={16} /> : <Maximize2 size={16} />, disabled: !fullscreen.supported, onSelect: () => void toggleWindowFullscreen() },
+    { id: 'immersive', label: immersive ? 'Quitter le mode immersion' : 'Mode immersion', detail: 'Masquer la barre latérale, les menus et les onglets', shortcut: 'Ctrl+Maj+F', keywords: 'immersion concentration lecture seule document', icon: immersive ? <Minimize2 size={16} /> : <Expand size={16} />, onSelect: toggleImmersive },
     { id: 'theme', label: 'Changer de thème', detail: `Passer au thème ${preferences.theme === 'light' ? 'sombre' : 'clair'}`, keywords: 'personnalisation apparence', icon: preferences.theme === 'light' ? <Moon size={16} /> : <Sun size={16} />, onSelect: () => updatePreference('theme', preferences.theme === 'light' ? 'dark' : 'light') },
     { id: 'settings', label: 'Ouvrir les paramètres', detail: 'Apparence, barre d’outils et éditeur', shortcut: 'Ctrl+,', keywords: 'options personnaliser', icon: <Settings2 size={16} />, onSelect: () => setSettingsOpen(true) },
     { id: 'welcome-guide', label: 'Afficher le guide de prise en main', detail: 'Revoir les premières étapes de Noto', keywords: 'aide bienvenue premier démarrage', icon: <BookOpenText size={16} />, onSelect: () => setWelcomeOpen(true) },
@@ -1456,7 +1531,7 @@ export default function App() {
   }
 
   return (
-    <div className={`app-shell theme-${preferences.theme} ${preferences.sidebarCollapsed ? 'sidebar-collapsed' : ''} ${preferences.compactToolbar ? 'toolbar-compact' : ''}`} style={{ '--reader-size': `${preferences.textSize}px` } as CSSProperties} onDragEnter={onDragOver} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop} onContextMenu={handleAppContextMenu}>
+    <div className={`app-shell theme-${preferences.theme} ${preferences.sidebarCollapsed ? 'sidebar-collapsed' : ''} ${preferences.compactToolbar ? 'toolbar-compact' : ''} ${immersive ? 'immersive' : ''} ${topbarFitClasses(topbarStage)}`} style={{ '--reader-size': `${preferences.textSize}px` } as CSSProperties} onDragEnter={onDragOver} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop} onContextMenu={handleAppContextMenu}>
       <input ref={inputRef} className="visually-hidden" type="file" multiple onChange={onInputFiles} aria-label="Sélectionner des fichiers" />
       <aside className="sidebar">
         <div className="brand-lockup" onClick={() => { setPage('home'); setActiveId(null); }} role="button" tabIndex={0}>
@@ -1528,7 +1603,7 @@ export default function App() {
       </aside>
 
       <main className="workspace">
-        <header className="topbar">
+        <header className="topbar" ref={topbarRef}>
           <div className="topbar-title">
             <span className="topbar-icon">{activeDoc && page === 'file' ? kindIcon(activeDoc.kind, 16) : <span className="mini-logo">N</span>}</span>
             <div className="topbar-heading">
@@ -1540,22 +1615,24 @@ export default function App() {
             </div>
           </div>
 
-          <AppMenuBar menus={menuDefinitions} onOpenPalette={() => setCommandPaletteOpen(true)} />
+          <AppMenuBar menus={menuDefinitions} onOpenPalette={() => setCommandPaletteOpen(true)} collapsed={topbarStage === 'menu-button'} />
 
           <div className="topbar-actions">
             {page === 'file' && activeDoc && <>
               {activeDoc.kind === 'html' && !isEditing && <div className="segmented-control html-mode-toggle" aria-label="Mode HTML">
-                <button className={htmlMode === 'code' ? 'selected' : ''} type="button" onClick={() => setHtmlMode('code')}><Code2 size={14} />Code</button>
-                <button className={htmlMode === 'preview' ? 'selected' : ''} type="button" onClick={() => setHtmlMode('preview')}><Maximize2 size={13} />Aperçu</button>
+                <button className={htmlMode === 'code' ? 'selected' : ''} type="button" title="Afficher le code HTML" aria-label="Afficher le code HTML" onClick={() => setHtmlMode('code')}><Code2 size={14} /><span>Code</span></button>
+                <button className={htmlMode === 'preview' ? 'selected' : ''} type="button" title="Afficher l’aperçu isolé" aria-label="Afficher l’aperçu isolé" onClick={() => setHtmlMode('preview')}><Maximize2 size={13} /><span>Aperçu</span></button>
               </div>}
               {isEditing && activeDoc.kind === 'markdown' && <div className="segmented-control editor-mode-toggle" aria-label="Mode de lecture">
-                <button className={editorMode === 'source' ? 'selected' : ''} type="button" onClick={() => setEditorMode('source')}><TextCursorInput size={14} />Édition</button>
-                <button className={editorMode === 'split' ? 'selected' : ''} type="button" onClick={() => setEditorMode('split')}><PanelLeft size={14} />Côte à côte</button>
-                <button className={editorMode === 'preview' ? 'selected' : ''} type="button" onClick={() => setEditorMode('preview')}><BookOpenText size={14} />Aperçu</button>
+                <button className={editorMode === 'source' ? 'selected' : ''} type="button" title="Éditer la source" aria-label="Éditer la source" onClick={() => setEditorMode('source')}><TextCursorInput size={14} /><span>Édition</span></button>
+                <button className={editorMode === 'split' ? 'selected' : ''} type="button" title="Édition et aperçu côte à côte" aria-label="Édition et aperçu côte à côte" onClick={() => setEditorMode('split')}><PanelLeft size={14} /><span>Côte à côte</span></button>
+                <button className={editorMode === 'preview' ? 'selected' : ''} type="button" title="Afficher uniquement l’aperçu" aria-label="Afficher uniquement l’aperçu" onClick={() => setEditorMode('preview')}><BookOpenText size={14} /><span>Aperçu</span></button>
               </div>}
               {toolbar}
               {comparableDocuments.length > 1 && <button className="secondary-button topbar-compare-button" type="button" title="Comparer les fichiers texte ouverts" onClick={() => setTextDiffOpen(true)}><FileDiff size={14} /><span>Comparer</span></button>}
             </>}
+            {immersive && <button className="icon-action immersive-exit" type="button" title="Quitter le mode immersion (Échap)" aria-label="Quitter le mode immersion" onClick={toggleImmersive}><Minimize2 size={17} /></button>}
+            {fullscreen.supported && <button className="icon-action" type="button" title={fullscreenKind ? 'Quitter le plein écran (F11)' : 'Plein écran (F11)'} aria-label={fullscreenKind ? 'Quitter le plein écran' : 'Passer en plein écran'} aria-pressed={Boolean(fullscreenKind)} onClick={() => void toggleWindowFullscreen()}>{fullscreenKind ? <Minimize2 size={17} /> : <Maximize2 size={17} />}</button>}
             <button className="icon-action settings-top-action" type="button" title="Paramètres (Ctrl+,)" aria-label="Paramètres" onClick={() => setSettingsOpen(true)}><Settings2 size={17} /></button>
           </div>
         </header>

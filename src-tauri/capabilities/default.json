@@ -1,8 +1,10 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Permissions nécessaires à l’ouverture et à la sauvegarde de fichiers choisis par l’utilisateur.",
-  "windows": ["main"],
+  "description": "Permissions nécessaires à l’ouverture et à la sauvegarde de fichiers choisis par l’utilisateur, ainsi qu’au basculement de la fenêtre en plein écran.",
+  "windows": [
+    "main"
+  ],
   "permissions": [
     "core:default",
     "dialog:allow-open",
@@ -15,6 +17,8 @@
     "fs:allow-write-text-file",
     "fs:allow-stat",
     "fs:allow-rename",
-    "fs:allow-exists"
+    "fs:allow-exists",
+    "core:window:allow-set-fullscreen",
+    "core:window:allow-is-fullscreen"
   ]
 }

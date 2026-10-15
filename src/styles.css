@@ -131,7 +131,7 @@ button:disabled { opacity: .4; cursor: not-allowed !important; }
 .topbar-heading h1 { margin: 0; max-width: min(49vw, 540px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-strong); font: 650 13px/1.35 'Manrope', 'Segoe UI', sans-serif; letter-spacing: -.15px; }
 .topbar-subtitle { display: block; max-width: min(55vw, 600px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 10px; line-height: 1.2; }
 .unsaved-indicator, .tab-unsaved { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: #d2a261; }
-.topbar-actions { display: flex; flex: 0 0 auto; align-items: center; justify-content: flex-end; gap: 8px; }
+.topbar-actions { display: flex; flex: 0 0 auto; align-items: center; justify-content: flex-end; gap: 8px; flex-shrink: 0; }
 .icon-action, .tool-button { display: grid; place-items: center; width: 31px; height: 31px; flex: 0 0 31px; color: #777987; background: transparent; border: 1px solid transparent; border-radius: 6px; cursor: pointer; transition: background .14s, color .14s, border-color .14s; }
 .icon-action:hover, .tool-button:hover:not(:disabled) { color: var(--text); background: var(--surface-hover); border-color: var(--line); }
 .edit-action, .save-action { display: flex; align-items: center; justify-content: center; gap: 7px; height: 32px; padding: 0 11px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--text); font-size: 11px; font-weight: 600; cursor: pointer; transition: .15s; }
@@ -537,6 +537,10 @@ button.zoom-label { border: 0; background: transparent; cursor: pointer; }
 :root[data-theme='dark'][data-accent='rose'] { --accent: #e29aac; --accent-strong: #efb0bf; --accent-soft: #442f38; --accent-line: #66414f; }
 
 .app-menubar { position: relative; z-index: 8; display: flex; flex: 1 1 auto; align-items: center; justify-content: flex-start; gap: 10px; min-width: 0; }
+/* Les menus et les actions conservent leur largeur naturelle : sans cela, le
+   contenu des menus déborderait par-dessus les actions (superposition d’icônes).
+   Quand la place manque, l’affichage est réduit par étapes (voir plus bas). */
+.app-menubar { flex-shrink: 0; }
 .menu-list { display: flex; align-items: center; gap: 2px; }
 .menu-root { position: relative; }
 .menu-trigger { height: 29px; padding: 0 8px; color: var(--muted); background: transparent; border: 1px solid transparent; border-radius: 5px; font-size: 10px; font-weight: 550; cursor: pointer; }
@@ -554,6 +558,42 @@ button.zoom-label { border: 0; background: transparent; cursor: pointer; }
 .command-trigger svg { flex: 0 0 auto; }
 .topbar-actions { gap: 5px; }
 .toolbar-action-slot { display: contents; }
+
+/* Réduction progressive de la barre supérieure.
+   Étape 1 (`topbar-compact-actions`) : les libellés laissent la place aux
+   icônes, dont l’infobulle et le libellé accessible restent intacts.
+   Étape 2 (`topbar-menu-button`) : les menus sont regroupés dans un seul
+   bouton, sans perdre une seule commande. */
+.topbar-compact-actions .topbar-actions > .toolbar-action-slot .edit-action,
+.topbar-compact-actions .topbar-actions > .toolbar-action-slot .save-action,
+.topbar-compact-actions .group-toolbar-action { width: 31px; min-width: 31px; padding: 0; justify-content: center; }
+.topbar-compact-actions .topbar-actions > .toolbar-action-slot .edit-action span,
+.topbar-compact-actions .topbar-actions > .toolbar-action-slot .save-action span,
+.topbar-compact-actions .group-toolbar-action span,
+.topbar-compact-actions .command-trigger span,
+.topbar-compact-actions .command-trigger kbd,
+.topbar-compact-actions .topbar-compare-button span,
+.topbar-compact-actions .editor-mode-toggle button span,
+.topbar-compact-actions .html-mode-toggle button span { display: none; }
+.topbar-compact-actions .segmented-control button { padding: 0 6px; }
+.topbar-compact-actions .topbar-compare-button { width: 31px; min-width: 31px; padding: 0; justify-content: center; }
+.topbar-compact-actions .command-trigger { min-width: 31px; justify-content: center; }
+.menu-trigger-all { display: inline-flex; align-items: center; gap: 6px; }
+.menu-trigger-all svg { flex: 0 0 auto; }
+.topbar-menu-button .menu-trigger-all span { display: none; }
+.topbar-menu-button .menu-trigger-all { width: 31px; justify-content: center; padding: 0; }
+.menu-popover-all { min-width: min(320px, 76vw); max-height: min(72vh, 620px); overflow: auto; }
+.menu-group { padding: 2px 0 4px; }
+.menu-group-title { padding: 6px 8px 4px; color: var(--muted); font-size: 8.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+
+/* Mode immersion : la fenêtre garde sa taille, l’interface se retire. */
+.app-shell.immersive .sidebar,
+.app-shell.immersive .tab-strip,
+.app-shell.immersive .app-menubar,
+.app-shell.immersive .topbar-subtitle { display: none; }
+.app-shell.immersive .topbar { border-bottom-color: transparent; box-shadow: none; padding: 0 14px; height: 53px; flex-basis: 53px; }
+.app-shell.immersive .immersive-exit { color: var(--accent-strong); background: var(--accent-soft); border-color: var(--accent-line); }
+.app-shell.immersive .workspace { background: var(--surface); }
 .group-toolbar-action { display: flex; flex: 0 0 auto; align-items: center; justify-content: center; gap: 5px; width: auto; min-width: 31px; padding: 0 7px; color: var(--muted); font-size: 9px; }
 .group-toolbar-action.has-group { color: var(--accent-strong); background: var(--accent-soft); border-color: var(--accent-line); }
 .toolbar-compact .topbar-actions > .toolbar-action-slot .edit-action span,
