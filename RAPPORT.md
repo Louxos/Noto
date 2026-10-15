@@ -61,6 +61,7 @@ Ce rapport décrit **ce qui fonctionne réellement**, ce qui est partiel et ce q
 | `npm run lint` (ESLint) | ✅ **0 erreur, 0 avertissement** sur tout le dépôt |
 | `npm run coverage` | ✅ rapport produit dans `coverage/` — couverture des lignes de `src/` : **34,07 %** (concentrée sur les moteurs ; voir §5) |
 | `npm run verify` | ✅ les trois vérifications enchaînées, terminées sans échec |
+| CI — workflow **Windows installers**, exécution `38745773040` (commit `a729a1c`) | ❌ **échec réel, puis corrigé** : le test « divise un PDF en une page par fichier » dépassait le délai par défaut de 5 s sur un exécuteur Windows. Le rapporteur `github-actions` ajouté au workflow a permis de lire l’annotation exacte (`Error: Test timed out in 5000ms`) malgré un journal inaccessible par l’API ; le délai des tests est désormais explicite (20 s) |
 | `npm run build` | ✅ succès (bundle produit dans `dist/`) |
 | `npx tsc -b` seul | ✅ aucune erreur (mode strict, `noUnusedLocals`, `verbatimModuleSyntax`) |
 | Vitest ciblés | ✅ `operations/registry.test.ts` 7/7 · `pdfOperations.test.ts` 19/19 · `jobs/analysis.test.ts` 8/8 · `archiveWriter.test.ts` 7/7 · `image/scanCleanup.test.ts` 5/5 · `ocr/ocrConsent.test.ts` 7/7 · `ocr/ocrEngine.test.ts` 2/2 · `studio/*` 10/10 |
@@ -117,8 +118,9 @@ Aucun service payant, aucun compte, aucune API distante, aucune télémétrie. S
 8. **Signature de code** : l’installeur reste **non signé** tant que les secrets de certificat ne sont pas configurés. Aucune signature n’est revendiquée.
 9. **Vérification visuelle** : les tests s’exécutent sans moteur de rendu et aucun navigateur n’est disponible dans l’environnement de développement utilisé. La correction du chevauchement de la barre supérieure est donc garantie par construction (zones non compressibles) et vérifiée par la mesure, la machine à états et un garde-fou sur la feuille de style — mais elle n’a pas été observée à l’écran ici. Le rendu final de l’application et de l’installeur se contrôle sous Windows.
 10. **Couverture de tests de 34 % des lignes** : le chiffre est publié tel quel. Les modules dépendant du canevas ou du WebAssembly (rasterisation PDF, encodage d’images, OCR) et les écrans de l’atelier restent à 0 % faute d’environnement d’exécution ; aucun seuil artificiel n’est imposé.
-11. **Workflow Security** : CodeQL et `npm audit` s’exécutent sur les poussées de `main` et `arena/**` et sur les pull requests. Ils ne sont pas bloquants par choix (un avis publié sur une dépendance transitive ne doit pas bloquer les corrections).
-12. **Fonctions du cahier des charges non commencées** : éditeur visuel de workflows, écran de paramètres OCR dédié hors atelier, gestionnaire de fichiers avancé (recherche/filtres sur arborescence), comparaison de documents non textuels au-delà des images et PDF, et fonctionnalités intelligentes optionnelles (§14). Le registre d’opérations, le runner et l’écriture vérifiée sont déjà en place pour les accueillir.
+11. **Délai des tests** : porté à 20 s par configuration, parce que la suite construit et relit de vrais documents et que les exécuteurs d’intégration continue sont plus lents qu’un poste de développement. Un test réellement bloqué échoue donc plus tard, mais échoue quand même.
+12. **Workflow Security** : CodeQL et `npm audit` s’exécutent sur les poussées de `main` et `arena/**` et sur les pull requests. Ils ne sont pas bloquants par choix (un avis publié sur une dépendance transitive ne doit pas bloquer les corrections).
+13. **Fonctions du cahier des charges non commencées** : éditeur visuel de workflows, écran de paramètres OCR dédié hors atelier, gestionnaire de fichiers avancé (recherche/filtres sur arborescence), comparaison de documents non textuels au-delà des images et PDF, et fonctionnalités intelligentes optionnelles (§14). Le registre d’opérations, le runner et l’écriture vérifiée sont déjà en place pour les accueillir.
 
 ## 6. Livrable installeur
 

@@ -15,6 +15,7 @@ Les changements notables sont consignés ici, selon une version simplifiée de K
 ### Corrigé
 - **Icônes superposées dans la barre du haut** : la zone des menus pouvait être comprimée sous sa largeur naturelle, et son contenu débordait par-dessus les actions — surtout en édition, avec le sélecteur de mode et toute la barre d’outils. Les zones fixes conservent désormais leur largeur (plus aucun chevauchement possible), et l’adaptation repose sur une mesure réelle de la mise en page, avec un retour en arrière prudent qui évite tout clignotement.
 - Dépendances de hooks signalées par ESLint (`closeWelcome` mémoïsé, lignes de comparaison mémoïsées).
+- Délai des tests rendu explicite (20 s) : le délai par défaut de 5 s était trop court sur un exécuteur Windows pour le test de division d’un PDF page par page, qui construit et relit de vrais documents.
 
 ### Modifié
 - `package.json` documenté : description, licence, dépôt, signaux d’anomalie, mots-clés, version de Node requise.

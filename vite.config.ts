@@ -16,6 +16,13 @@ export default defineConfig({
     chunkSizeWarningLimit: 1100,
   },
   test: {
+    // Ces tests traitent de vrais documents (PDF, DOCX, XLSX, images) : la
+    // première exécution initialise les moteurs, et un exécuteur d’intégration
+    // continue est plus lent qu’un poste de développement. Le délai par défaut
+    // de 5 s s’est révélé trop court sur Windows pour « diviser un PDF en une
+    // page par fichier » ; il est donc explicite ici plutôt que subi.
+    testTimeout: 20_000,
+    hookTimeout: 20_000,
     // Le rapport de couverture sert de repère, jamais de condition de réussite :
     // une fonction non testée doit être corrigée, pas masquée par un seuil.
     coverage: {
