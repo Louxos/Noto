@@ -7,7 +7,7 @@ import {
   Copy, ClipboardPaste, Download, File, FileCode2, FileDiff, FileImage, FileText, FileType2, FileUp, FolderInput, FolderPlus, FolderSearch, Globe2, Presentation, Upload,
   Expand, Image as ImageIcon, Keyboard, LayoutGrid, LoaderCircle, Maximize2, Minimize2, Moon, MoreHorizontal,
   PanelLeft, Pencil, Plus, RotateCcw, Scissors, Search, Settings2, ShieldCheck, Sun, Table2,
-  TextCursorInput, X, Save, Replace, Sparkles, Trash2, Pin, Wrench, Printer, FileSearch,
+  TextCursorInput, X, Save, Replace, Sparkles, Trash2, Pin, Wrench, Printer, FileSearch, Link2, CircleAlert,
 } from 'lucide-react';
 import { CodeViewer } from './components/CodeViewer';
 import { CsvViewer } from './components/CsvViewer';
@@ -39,6 +39,7 @@ import { immersiveOpenNotice, opensInImmersive, type OpenGesture } from './lib/l
 import { topbarFitClasses } from './lib/topbarLayout';
 import { cloneRenderedForPrint, extractRenderedImage } from './lib/printing';
 import { countLines, type StatRow } from './lib/fileStats';
+import { describeLinkKind, previewForAnchor, setLinkPreview, useLinkPreview } from './lib/linkPreview';
 import { useTopbarFit } from './components/useTopbarFit';
 import type { StudioRequest } from './studio/StudioScreen';
 import './styles.css';
@@ -129,6 +130,9 @@ export default function App() {
   const [fileInfoOpen, setFileInfoOpen] = useState(false);
   const [printOpen, setPrintOpen] = useState(false);
   const [printHtml, setPrintHtml] = useState('');
+  // Adresse du lien survolé, publiée par le lecteur : affichée en bas de la
+  // fenêtre, comme le fait un navigateur.
+  const linkPreview = useLinkPreview();
   const viewerPrintRef = useRef<HTMLDivElement | null>(null);
   const [groupAssignmentTarget, setGroupAssignmentTarget] = useState<RecentFile | null>(null);
   const [contextMenu, setContextMenu] = useState<{ position: { x: number; y: number }; items: MenuEntry[] } | null>(null);
@@ -1149,7 +1153,7 @@ export default function App() {
 
   // Le relevé du lecteur appartient au fichier affiché : on repart de zéro à
   // chaque changement d’onglet, pour ne jamais mélanger deux fichiers.
-  useEffect(() => { setViewerReadout([]); }, [activeId]);
+  useEffect(() => { setViewerReadout([]); setLinkPreview(null); }, [activeId]);
   /** Page du PDF actuellement affichée, rapportée par le lecteur lui-même. */
   const viewerPage = viewerReadout.find((row) => row.label === 'Page affichée')?.raw ?? 1;
   /**
@@ -1167,6 +1171,26 @@ export default function App() {
   }, [activeDoc]);
   /** Ce que la barre d’état affiche : le relevé du lecteur, sinon celui du texte. */
   const statusReadout = viewerReadout.length ? viewerReadout : textReadout;
+
+  /**
+   * Survol des liens, écouté au niveau du document.
+   *
+   * Un seul écouteur couvre tous les lecteurs présents et futurs : le lien
+   * survolé est décrit (adresse, ancre résolue ou introuvable) puis affiché en
+   * bas de la fenêtre ; survoler autre chose le retire, comme dans un
+   * navigateur. L’écouteur est posé sur le document plutôt que sur la racine de
+   * l’application, sans quoi quitter la fenêtre par le bas laisserait l’aperçu
+   * affiché.
+   */
+  useEffect(() => {
+    const onHover = (event: MouseEvent) => {
+      const target = event.target;
+      const anchor = target instanceof Element ? target.closest('a[href]') : null;
+      setLinkPreview(anchor instanceof HTMLAnchorElement ? previewForAnchor(anchor) : null);
+    };
+    document.addEventListener('mouseover', onHover);
+    return () => document.removeEventListener('mouseover', onHover);
+  }, []);
 
   useEffect(() => onDocumentFullscreenChange(() => {
     void detectFullscreenKind().then((kind) => setFullscreenKind((current) => (current === kind ? current : kind)));
@@ -1840,11 +1864,17 @@ export default function App() {
         </section>
 
         {page === 'file' && activeDoc && <footer className="document-statusbar">
-          <div className="status-left"><span className="status-dot" />{dirty ? 'Modifications non enregistrées' : 'À jour'}<span className="status-separator">·</span><span>{activeDoc.extension ? `.${activeDoc.extension.toUpperCase()}` : getFormatLabel(activeDoc.kind)}</span></div>
+          {/* Comme dans un navigateur, l’adresse du lien survolé prend la place
+              du statut à gauche pendant le survol. */}
+          {linkPreview ? <div className={`status-link is-${linkPreview.kind}`} role="status" title={linkPreview.href}>
+            {linkPreview.kind === 'anchor-missing' ? <CircleAlert size={13} /> : <Link2 size={13} />}
+            <span className="status-link-address">{linkPreview.label}</span>
+            <span className="status-link-kind">{describeLinkKind(linkPreview.kind)}</span>
+          </div> : <div className="status-left"><span className="status-dot" />{dirty ? 'Modifications non enregistrées' : 'À jour'}<span className="status-separator">·</span><span>{activeDoc.extension ? `.${activeDoc.extension.toUpperCase()}` : getFormatLabel(activeDoc.kind)}</span></div>}
           <div className="status-measures" aria-live="polite">{statusReadout.map((row) => <span className="status-measure" key={row.label} title={`${row.label} : ${row.value}`}>{row.label} : {row.value}</span>)}</div>
           <div className="status-actions">
-            <button className="status-button" type="button" title="Informations sur le fichier (Ctrl+I)" aria-label="Informations sur le fichier" onClick={openFileInfoDialog}><FileSearch size={14} /><span>Informations</span></button>
-            <button className="status-button" type="button" title="Imprimer ce fichier (Ctrl+P)" aria-label="Imprimer ce fichier" onClick={openPrintDialog}><Printer size={14} /><span>Imprimer</span></button>
+            {activeDoc && <button className="status-button" type="button" title="Informations sur le fichier (Ctrl+I)" aria-label="Informations sur le fichier" onClick={openFileInfoDialog}><FileSearch size={14} /><span>Informations</span></button>}
+            {activeDoc && <button className="status-button" type="button" title="Imprimer ce fichier (Ctrl+P)" aria-label="Imprimer ce fichier" onClick={openPrintDialog}><Printer size={14} /><span>Imprimer</span></button>}
           </div>
           <div className="status-right"><span>{formatBytes(activeDoc.size)}</span>{activeDoc.kind === 'markdown' && <><span className="status-separator">·</span><span>Markdown</span></>}{activeDoc.source === 'desktop' && <><span className="status-separator">·</span><span>Local</span></>}</div>
         </footer>}

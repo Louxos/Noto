@@ -7,7 +7,7 @@ Ce document décrit ce qui est réellement vérifié, avec quelle commande, et c
 | Commande | Contenu | Durée indicative |
 | --- | --- | --- |
 | `npm run lint` | ESLint sur tout le dépôt (erreurs réelles : variables inutilisées, promesses non attendues, dépendances de hooks, `any` interdit). Aucune règle de style. | ~5 s |
-| `npm run check` | `tsc -b` puis `vitest run` (54 fichiers, 278 tests au moment de la rédaction). Délai de 60 s par test : la suite construit et relit de vrais documents, et les exécuteurs d’intégration continue sont plus lents qu’un poste de développement. | ~26 s |
+| `npm run check` | `tsc -b` puis `vitest run` (57 fichiers, 298 tests au moment de la rédaction). Délai de 60 s par test : la suite construit et relit de vrais documents, et les exécuteurs d’intégration continue sont plus lents qu’un poste de développement. | ~26 s |
 | `npm run coverage` | Les mêmes tests avec rapport de couverture dans `coverage/`. | ~25 s |
 | `npm run build` | Construction de l’interface (`dist/`), qui échoue si les types ne passent pas. | ~15 s |
 | `npm run verify` | Les trois commandes ci-dessus, dans l’ordre. À exécuter avant toute pull request. | ~45 s |
@@ -31,6 +31,7 @@ Les tests ne se contentent pas de constater l’absence d’exception : ils reli
 - **Impression** : la page produite est relue (titre, contenu échappé, aucune balise `script`, politique de sécurité empêchant tout chargement), l’impression est déclenchée sur le vrai chemin de code — `window.print()` de l’iframe d’impression — et un échec de préparation de l’iframe est vérifié comme annoncé à l’utilisateur. Le papier imprimé, lui, ne s’observe que sur une machine avec une imprimante.
 - **Mesures** : chaque famille de mesures est testée sur des données construites à la main (en-têtes PNG, GIF, BMP, WebP dans ses trois variantes, JPEG, ICO, TIFF, dimensions SVG, fins de ligne, tableaux), y compris les cas qui doivent **échouer** — en-tête tronqué, format inconnu, PDF illisible, fichier énorme — pour vérifier qu’une mesure impossible est annoncée au lieu d’être inventée.
 - **Renommage** : le dialogue est piloté comme un utilisateur (nom, extension, validation, avertissement de changement de lecteur) et l’on vérifie qu’un nom refusé ou un renommage sans changement n’écrit **rien**.
+- **Liens et sections** : les identifiants de titres sont comparés à la règle de GitHub (accents, ponctuation, doublons, caractères non latins), la résolution d’une ancre est éprouvée sur un document réel (identifiant exact, écriture indulgente, section absente), et le clic est vérifié sur le lecteur monté : défilement demandé une fois, focus sur le titre, repère affiché, adresse du document inchangée. L’aperçu du survol est testé de bout en bout dans l’application — le lien externe, le renvoi interne résolu et le renvoi introuvable affichent chacun ce qu’ils annoncent.
 - **Icônes par type de fichier** : les `.ico` livrés sont relus octet par octet (en-tête, 7 tailles de 16 à 256 px, profondeur 32 bits, PNG à partir de 48 px), puis confrontés à la table du crochet NSIS et aux classes déclarées dans `tauri.conf.json` : aucune classe sans icône, aucune icône orpheline, aucune extension sans reprise de sauvegarde d’association.
 
 ## Ce qui ne peut pas être vérifié ici

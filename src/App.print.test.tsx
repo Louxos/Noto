@@ -47,6 +47,39 @@ async function openTextFile(name: string, body: string) {
   await waitFor(() => expect(screen.getAllByText(name).length).toBeGreaterThan(0), ATTENTE);
 }
 
+describe('aperçu du lien survolé', () => {
+  it('affiche l’adresse du lien en bas de la fenêtre, comme un navigateur', { timeout: 20_000 }, async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await openTextFile('liens.md', '[Documentation](https://noto.example/docs)\n\n[Voir la section](#notes)\n\n# Notes\n');
+
+    // La zone d’aperçu de lien est celle de la barre d’état, pas une autre
+    // zone « status » de l’application (toast, chargement).
+    const linkZone = () => document.querySelector('.status-link');
+    const external = await screen.findByRole('link', { name: 'Documentation' });
+    await user.hover(external);
+    await waitFor(() => expect(linkZone()?.textContent).toContain('https://noto.example/docs'), ATTENTE);
+    expect(linkZone()?.textContent).toContain('site web');
+
+    const anchor = screen.getByRole('link', { name: 'Voir la section' });
+    await user.hover(anchor);
+    await waitFor(() => expect(linkZone()?.textContent).toContain('#notes'), ATTENTE);
+    expect(linkZone()?.textContent).toContain('section de ce document');
+
+    await user.unhover(anchor);
+    await waitFor(() => expect(linkZone()).toBeNull(), ATTENTE);
+  });
+
+  it('signale une section introuvable au lieu d’une adresse qui ne mène nulle part', { timeout: 20_000 }, async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await openTextFile('liens.md', '[Vers la conclusion](#conclusion)\n\n# Notes\n');
+    await user.hover(await screen.findByRole('link', { name: 'Vers la conclusion' }));
+    await waitFor(() => expect(document.querySelector('.status-link')?.textContent).toContain('#conclusion'), ATTENTE);
+    expect(document.querySelector('.status-link')?.textContent).toContain('introuvable');
+  });
+});
+
 describe('boutons d’impression et d’informations', () => {
   it('propose les deux boutons dans la barre d’outils et la barre d’état du fichier ouvert', { timeout: 20_000 }, async () => {
     render(<App />);

@@ -76,6 +76,14 @@ Rien n’est envoyé en ligne : la page imprimée est construite sur votre appar
 
 Le bouton **Copier** place ces informations au format Markdown dans le presse-papiers. Une mesure impossible est expliquée — jamais remplacée par une valeur inventée. La **barre d’état** affiche en permanence les mesures essentielles du fichier ouvert.
 
+## Liens et sections d’un document
+
+- **Aperçu au survol** : passer la souris sur un lien affiche son adresse en bas à gauche de la fenêtre, à la place du statut, exactement comme dans un navigateur — l’adresse complète pour un site, l’adresse telle qu’écrite pour un fichier local, et pour un renvoi interne la section visée. La nature du lien est nommée à côté (*site web*, *fichier local*, *section de ce document*) et l’adresse complète reste accessible par l’infobulle.
+- **Un renvoi vers une section est vérifié** : si le titre visé n’existe pas dans le document, l’aperçu l’annonce (*section introuvable dans ce document*) au lieu d’afficher une adresse qui ne mènerait nulle part.
+- **Les liens internes fonctionnent** : chaque titre reçoit un identifiant unique, fabriqué selon la règle de GitHub — minuscules, ponctuation retirée, espaces remplacés par des tirets, accents conservés (`## Introduction générale` → `introduction-générale`). Deux titres qui se ressemblent sont distingués par un suffixe (`notes`, `notes-1`). Cliquer sur `[voir](#introduction-générale)` amène au titre dans le lecteur, lui donne le focus (utile au clavier) et le signale brièvement : la page n’est jamais rechargée.
+- **Écriture indulgente** : `#Introduction générale`, `#introduction-generale` (sans accents) ou `#INTRODUCTION-GENERALE` mènent tous au même titre. Seule différence assumée avec GitHub : les tirets de bord sont retirés, `Questions ?` donnant `questions` plutôt que `questions-`.
+- **Limites** : les liens vers une autre section d’un **autre** document, et les liens à l’intérieur de l’**aperçu HTML** (qui s’exécute dans un cadre isolé, sans script), ne sont pas interceptés. Ils restent des liens ordinaires.
+
 ## Éditer et enregistrer
 
 Markdown, texte, code, HTML source, CSV et TSV peuvent être édités lorsque l’aperçu n’est pas tronqué. Le champ de saisie natif reste au-dessus d’une couche colorée : le clic, la sélection et le curseur suivent exactement la position affichée, tandis que le texte apparaît coloré. `Tab` insère deux espaces et `Maj+Tab` retire l’indentation courante ; `Entrée` conserve l’indentation de la ligne précédente.

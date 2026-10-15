@@ -1255,3 +1255,17 @@ button.zoom-label { border: 0; background: transparent; cursor: pointer; }
 .rename-file-message.is-error { padding: 8px 10px; color: var(--danger); background: color-mix(in srgb, var(--danger), var(--surface) 94%); border-left: 3px solid var(--danger); border-radius: 5px; }
 .rename-extension-separator { flex: 0 0 auto; color: var(--muted); font: 12px 'Cascadia Code', Consolas, monospace; }
 .rename-extension-input { flex: 0 0 108px !important; min-width: 0; }
+
+/* Aperçu du lien survolé, en bas de la fenêtre ------------------------------ */
+.status-link { display: flex; align-items: center; gap: 7px; flex: 1 1 auto; min-width: 0; max-width: 62%; color: var(--text); font-size: 9px; }
+.status-link svg { flex: 0 0 auto; color: var(--muted); }
+.status-link-address { min-width: 0; overflow: hidden; font-family: 'Cascadia Code', Consolas, monospace; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; direction: ltr; }
+.status-link-kind { flex: 0 0 auto; color: var(--muted); font-size: 8.5px; }
+.status-link.is-anchor svg { color: var(--accent-strong); }
+.status-link.is-anchor-missing { color: var(--warning); }
+.status-link.is-anchor-missing svg { color: var(--warning); }
+.status-link.is-anchor-missing .status-link-kind { color: var(--warning); }
+
+/* Titre atteint par un lien interne ----------------------------------------- */
+.markdown-document .is-anchor-target { background: var(--accent-soft); box-shadow: 0 0 0 6px var(--accent-soft); border-radius: 3px; transition: background .3s ease-out, box-shadow .3s ease-out; }
+.markdown-document :is(h1, h2, h3, h4, h5, h6):focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 4px; }
