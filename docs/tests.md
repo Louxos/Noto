@@ -7,7 +7,7 @@ Ce document décrit ce qui est réellement vérifié, avec quelle commande, et c
 | Commande | Contenu | Durée indicative |
 | --- | --- | --- |
 | `npm run lint` | ESLint sur tout le dépôt (erreurs réelles : variables inutilisées, promesses non attendues, dépendances de hooks, `any` interdit). Aucune règle de style. | ~5 s |
-| `npm run check` | `tsc -b` puis `vitest run` (53 fichiers, 274 tests au moment de la rédaction). Délai de 60 s par test : la suite construit et relit de vrais documents, et les exécuteurs d’intégration continue sont plus lents qu’un poste de développement. | ~26 s |
+| `npm run check` | `tsc -b` puis `vitest run` (54 fichiers, 278 tests au moment de la rédaction). Délai de 60 s par test : la suite construit et relit de vrais documents, et les exécuteurs d’intégration continue sont plus lents qu’un poste de développement. | ~26 s |
 | `npm run coverage` | Les mêmes tests avec rapport de couverture dans `coverage/`. | ~25 s |
 | `npm run build` | Construction de l’interface (`dist/`), qui échoue si les types ne passent pas. | ~15 s |
 | `npm run verify` | Les trois commandes ci-dessus, dans l’ordre. À exécuter avant toute pull request. | ~45 s |

@@ -71,7 +71,7 @@ Ce rapport décrit **ce qui fonctionne réellement**, ce qui est partiel et ce q
 
 | Commande | Résultat |
 | --- | --- |
-| `npm run check` (`tsc -b` + `vitest run`) | ✅ **53 fichiers de tests, 274 tests réussis** (dont 6 nouveaux fichiers et 52 nouveaux tests pour l’impression, les mesures et le renommage) |
+| `npm run check` (`tsc -b` + `vitest run`) | ✅ **54 fichiers de tests, 278 tests réussis** (dont 7 nouveaux fichiers et 56 nouveaux tests pour l’impression, les mesures et le renommage) |
 | `npm run lint` (ESLint) | ✅ **0 erreur, 0 avertissement** sur tout le dépôt |
 | `npm run coverage` | ✅ rapport produit dans `coverage/` — couverture des lignes de `src/` : **34,07 %** (concentrée sur les moteurs ; voir §5) |
 | `npm run verify` | ✅ les trois vérifications enchaînées, terminées sans échec |
@@ -80,14 +80,14 @@ Ce rapport décrit **ce qui fonctionne réellement**, ce qui est partiel et ce q
 | `npm run build` avant/après cette étape | ✅ **616,19 ko** (179,52 ko compressés) pour le paquet principal, contre **579,27 ko** (167,36 ko) avant : **+36,9 ko** (+12,2 ko compressés) pour l’impression, les mesures et le deuxième champ de renommage. Les archives bureautiques et `pdf-lib` restent chargés à la demande — vérifié dans le bundle produit, où `pdf-lib` apparaît dans un morceau séparé (`index-2H5-1tJ5.js`, 391,65 ko) |
 | `npx tsc -b` seul | ✅ aucune erreur (mode strict, `noUnusedLocals`, `verbatimModuleSyntax`) |
 | `npm run check` après l’ajout des icônes, de l’immersion à l’ouverture et de la coloration | ✅ **47 fichiers, 222 tests** (dont 7 nouveaux fichiers/30 nouveaux tests) |
-| Tests ciblés de cette étape | ✅ `fileStats.test.ts` 13/13 · `fileName.test.ts` 7/7 · `printing.test.ts` 15/15 · `fileAnalysis.test.ts` 6/6 · `FileTools.test.tsx` 7/7 · `App.print.test.tsx` 4/4 |
+| Tests ciblés de cette étape | ✅ `fileStats.test.ts` 13/13 · `fileName.test.ts` 7/7 · `printing.test.ts` 15/15 · `printJobs.pdf.test.ts` 4/4 · `fileAnalysis.test.ts` 6/6 · `FileTools.test.tsx` 7/7 · `App.print.test.tsx` 4/4 |
 | `npm run dev` puis `curl http://127.0.0.1:1420/` | ✅ serveur de développement Vite servi sur `0.0.0.0:1420` (HTTP 200, écran de démarrage autonome présent) — l’aperçu interactif a été ouvert pour la vérification visuelle |
 | `python3 src-tauri/icons/filetypes/generate_filetype_icons.py` | ✅ 21 `.ico` écrits puis relus (7 tailles, profondeur 32 bits, PNG à partir de 48 px) — environ 300 ko au total, aperçu `docs/assets/icons-fichiers.png` |
 | CI — workflow **Windows installers**, exécution `38752510667` (commit `a664372`) | ✅ **succès complet**, y compris les nouveaux contrôles d’icônes : l’installeur NSIS est compilé avec les crochets d’icônes et de reprise d’associations, installé réellement (`/S`), puis le test de fumée vérifie dans le registre que `Document Markdown`, `Document PDF`, `Fichier JSON`, `Image` et `Script en ligne de commande` portent bien leur `.ico` et que les fichiers existent dans `$INSTDIR\filetypes` ; après désinstallation, les icônes ont disparu et les commandes d’ouverture de Noto aussi |
-| CI — workflow **Checks**, exécution `38763550524` (commit `6acdb24`) | ✅ ESLint, types, **274 tests**, couverture, construction — sur les mêmes sources que l’exécution Windows ci-dessous |
+| CI — workflow **Checks**, exécution `38763550524` (commit `6acdb24`) | ✅ ESLint, types, **278 tests**, couverture, construction — sur les mêmes sources que l’exécution Windows ci-dessous |
 | CI — workflow **Security**, exécution `38763550458` (commit `6acdb24`) | ✅ CodeQL et contrôle des avis de dépendances |
 | CI — workflow **Windows installers**, exécution `38762851675` (commit `fbaf951`) | ❌ **échec réel** : le test « divise un PDF en une page par fichier » (`src/lib/operations/pdfOperations.test.ts:72`) interrompu à 20 s. Le même test passe en 1 s dans cet environnement et le job Ubuntu réussissait sur le même commit : l’exécuteur Windows était simplement trop lent à initialiser ses moteurs PDF. Correctif : délai porté à 60 s (`vite.config.ts`), vérifié par l’exécution suivante |
-| CI — workflow **Windows installers**, exécution `38763550463` (commit `6acdb24`) | ✅ **succès complet** en 6 min 13 s : `npm ci`, types et 274 tests, `npm run build`, commandes Windows natives, **construction de l’installeur NSIS**, test de fumée (« install, file opening, associations and uninstall »), sommes SHA-256 et dépôt de l’artefact |
+| CI — workflow **Windows installers**, exécution `38763550463` (commit `6acdb24`) | ✅ **succès complet** en 6 min 13 s : `npm ci`, types et tests, `npm run build`, commandes Windows natives, **construction de l’installeur NSIS**, test de fumée (« install, file opening, associations and uninstall »), sommes SHA-256 et dépôt de l’artefact |
 | CI — workflow **Checks**, exécution `38752510658` (commit `a664372`) | ✅ ESLint, types, 222 tests, couverture, construction |
 | CI — workflow **Security**, exécution `38752510441` (commit `a664372`) | ✅ CodeQL et contrôle des avis de dépendances |
 | Vitest ciblés | ✅ `operations/registry.test.ts` 7/7 · `pdfOperations.test.ts` 19/19 · `jobs/analysis.test.ts` 8/8 · `archiveWriter.test.ts` 7/7 · `image/scanCleanup.test.ts` 5/5 · `ocr/ocrConsent.test.ts` 7/7 · `ocr/ocrEngine.test.ts` 2/2 · `studio/*` 10/10 |
@@ -132,7 +132,7 @@ Aucun service payant, aucun compte, aucune API distante, aucune télémétrie. S
 - Barre supérieure et affichage : `src/lib/topbarLayout.ts`, `src/components/useTopbarFit.ts`, `src/lib/fullscreen.ts`, `src/components/WorkspaceTools.tsx` (menu regroupé), `src/App.tsx` (immersion et plein écran), `src/styles.css`.
 - Impression et mesures : `src/lib/printing.ts`, `src/lib/printJobs.ts`, `src/lib/fileStats.ts`, `src/lib/fileAnalysis.ts`, `src/components/FileTools.tsx`, `src/lib/security.ts` (`sanitizeHtmlForPrint`), `src/components/{PdfViewer,ImageViewer,CsvViewer,PresentationViewer,OfficeDocumentViewer}.tsx` (relevé du lecteur), `src/App.tsx` (boutons, menus, palette, barre d’état, raccourcis), `src/styles.css`.
 - Renommage : `src/lib/fileName.ts` (+ test), `src/components/WorkspaceTools.tsx` (`RenameFileDialog`).
-- Tests : `src/lib/{fileStats,fileName,printing,fileAnalysis}.test.ts`, `src/components/FileTools.test.tsx`, `src/App.print.test.tsx`.
+- Tests : `src/lib/{fileStats,fileName,printing,fileAnalysis}.test.ts`, `src/lib/printJobs.pdf.test.ts`, `src/components/FileTools.test.tsx`, `src/App.print.test.tsx`.
 - Outillage : `eslint.config.js`, `vite.config.ts` (couverture), `package.json` (scripts `lint`, `coverage`, `verify`).
 - Fichiers racine : `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, `.editorconfig`, `.gitattributes`, `.nvmrc`, `docs/tests.md`.
 - Documentation : voir §1.
