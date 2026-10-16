@@ -4,7 +4,7 @@
 
 | Version | Corrigée |
 | --- | --- |
-| 0.2.x | ✅ |
+| 0.2.x | ✅ (la 0.2.1 est la dernière publiée) |
 | 0.1.x | ⛔ (mise à jour recommandée ; les fichiers restent publiés tels quels) |
 
 Seule la dernière version publiée reçoit des correctifs de sécurité.
