@@ -4,7 +4,13 @@ Les changements notables sont consignés ici, selon une version simplifiée de K
 
 ## [Non publié]
 
-_Aucun changement depuis la 0.2.1._
+_Aucun changement depuis la 1.0.0._
+
+## [1.0.0] — 2026-10-16
+
+**Première version stable.** Aucun changement de code depuis la 0.2.1 : la 1.0.0 marque l’engagement de stabilité — ce qui fonctionne dans cette version continuera de fonctionner, les corrections arrivent en 1.0.x sans rien casser, et seuls des changements incompatibles donneraient une version majeure supérieure.
+
+Contenu depuis la 0.2.0 publiée : impression réelle par la boîte de dialogue du système, informations et mesures sur tout fichier ouvert, renommage du nom **et** de l’extension, aperçu de la destination d’un lien au survol et renvois vers une section du Markdown, test relisant la documentation du dépôt.
 
 ## [0.2.1] — 2026-10-16
 

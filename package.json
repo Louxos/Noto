@@ -1,7 +1,7 @@
 {
   "name": "noto",
   "private": true,
-  "version": "0.2.1",
+  "version": "1.0.0",
   "type": "module",
   "description": "Suite documentaire locale : lire, éditer, convertir et traiter vos fichiers sur votre appareil, sans compte ni envoi en ligne.",
   "scripts": {

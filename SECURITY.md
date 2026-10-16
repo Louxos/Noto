@@ -4,10 +4,11 @@
 
 | Version | Corrigée |
 | --- | --- |
-| 0.2.x | ✅ (la 0.2.1 est la dernière publiée) |
+| 1.0.x | ✅ |
+| 0.2.x | ⛔ (mise à jour recommandée ; les fichiers restent publiés tels quels) |
 | 0.1.x | ⛔ (mise à jour recommandée ; les fichiers restent publiés tels quels) |
 
-Seule la dernière version publiée reçoit des correctifs de sécurité.
+Seule la dernière version stable reçoit des correctifs de sécurité.
 
 ## Signaler une vulnérabilité
 

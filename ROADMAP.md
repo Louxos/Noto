@@ -4,8 +4,8 @@ Cette feuille ne garde que les travaux **non terminés** ou les validations enco
 
 ## Obligatoire avant une version stable — P0
 
-- [ ] **Constater les icônes par type dans l’Explorateur Windows** : le registre, les fichiers `.ico` et la désinstallation sont contrôlés automatiquement par le workflow **Windows installers**, mais l’apparence réelle (petites tailles 16/24 px, mise à l’échelle 125–200 %, contraste sur fond clair/sombre) et la restitution des associations d’origine après une mise à jour 0.2.0 → 0.3.0 demandent une machine Windows avec une version antérieure installée. Aperçu de référence : `docs/assets/icons-fichiers.png`.
-- [ ] **Signature Authenticode finale** : configurer les secrets du certificat de publication, valider la signature de l’installeur NSIS et surveiller la réputation SmartScreen avant la première release stable. Les sommes SHA-256 et l’explication des avertissements sont déjà générées/documentées. (Le paquet MSI n’existe plus : le NSIS est l’unique installeur.)
+- [ ] **Constater les icônes par type dans l’Explorateur Windows** : le registre, les fichiers `.ico` et la désinstallation sont contrôlés automatiquement par le workflow **Windows installers**, mais l’apparence réelle (petites tailles 16/24 px, mise à l’échelle 125–200 %, contraste sur fond clair/sombre) et la restitution des associations d’origine après une mise à jour 0.2.0 → 1.0.0 demandent une machine Windows avec une version antérieure installée. Aperçu de référence : `docs/assets/icons-fichiers.png`.
+- [ ] **Signature Authenticode** : configurer les secrets du certificat de publication, signer et valider l’installeur NSIS, puis surveiller la réputation SmartScreen. Si aucun certificat n’est configuré, l’installeur publié reste non signé et Windows affiche un avertissement d’éditeur inconnu — `Get-AuthenticodeSignature` le confirme sur le poste. Les sommes SHA-256 et l’explication des avertissements sont, elles, déjà en place. (Le paquet MSI n’existe plus : le NSIS est l’unique installeur.)
 
 ## Prioritaire — P1
 
