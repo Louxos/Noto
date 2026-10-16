@@ -4,6 +4,12 @@ Les changements notables sont consignés ici, selon une version simplifiée de K
 
 ## [Non publié]
 
+_Aucun changement depuis la 0.2.1._
+
+## [0.2.1] — 2026-10-16
+
+Impression réelle, mesures sur tout fichier, renommage avec l’extension, liens cliquables, documentation vérifiée : une version d’essai avant la 1.0.0.
+
 ### Ajouté
 - **Aperçu du lien survolé** : l’adresse du lien apparaît en bas à gauche de la fenêtre pendant le survol, comme dans un navigateur — adresse complète pour un site, adresse écrite pour un fichier local, section visée pour un renvoi interne. La nature du lien est nommée et l’infobulle porte l’adresse complète. Un écouteur unique couvre tous les lecteurs : Markdown aujourd’hui, tout futur lecteur de texte enrichi ensuite.
 - **Liens vers une section du Markdown** : chaque titre reçoit un identifiant unique selon la règle de GitHub (accents conservés, ponctuation retirée, doublons suffixés `-1`, `-2`), et cliquer sur un renvoi interne amène réellement au titre — défilement dans le lecteur, focus sur le titre, repère visuel temporaire, sans rechargement. L’écriture reste indulgente (casse, accents, espaces) et un renvoi vers une section inexistante est **annoncé** dans l’aperçu du survol au lieu de passer inaperçu.
