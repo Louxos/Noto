@@ -1,8 +1,8 @@
 # Langues de l’interface
 
-Cette branche ajoute une première base d’internationalisation `fr` / `en`, avec catalogues JSON centralisés dans `src/i18n/`, préférence persistante et choix manuel **Paramètres → Apparence → Langue**. Le français reste la langue par défaut.
+Noto propose une première base d’internationalisation `fr` / `en`, avec catalogues JSON centralisés dans `src/i18n/`, préférence persistante et choix manuel **Paramètres → Apparence → Langue**. Le français reste la langue par défaut.
 
-La version actuelle traduit les principaux écrans de navigation et d’accueil, la liste des fichiers récents et le panneau Paramètres. Les menus contextuels, commandes, lecteurs et l’atelier restent encore majoritairement en français ; la traduction est donc **partielle**, et non une couverture anglaise complète. Les documents ouverts ne sont jamais traduits ni modifiés par ce réglage.
+Les principaux écrans de navigation et d’accueil, la liste des fichiers récents et le panneau Paramètres disposent d’une traduction anglaise initiale. Les menus contextuels, commandes, lecteurs et l’atelier restent encore majoritairement en français ; la traduction est donc **partielle**, et non une couverture anglaise complète. Les documents ouverts ne sont jamais traduits ni modifiés par ce réglage.
 
 Pour ajouter une chaîne :
 

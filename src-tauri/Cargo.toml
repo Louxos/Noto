@@ -1,6 +1,6 @@
 [package]
 name = "noto"
-version = "1.0.1"
+version = "1.1.0"
 description = "Suite documentaire locale Noto : lire, éditer et traiter vos fichiers"
 authors = ["Louxos Corporation", "Noto contributors"]
 edition = "2021"

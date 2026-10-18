@@ -1,6 +1,6 @@
 # Recherche indexée locale
 
-La recherche indexée est préparée dans cette branche comme une option **à la demande**, depuis **Paramètres → Recherche indexée**. Elle ne remplace pas la recherche de dossier existante et ne parcourt jamais le disque automatiquement.
+Noto propose une recherche indexée **à la demande** depuis **Paramètres → Recherche indexée**. Elle complète la recherche ponctuelle dans un dossier : seuls les répertoires choisis explicitement sont parcourus, et aucun index n’est construit en arrière-plan.
 
 ## Créer et utiliser un index
 

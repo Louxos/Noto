@@ -1,6 +1,6 @@
 # Vérifier une mise à jour
 
-Cette branche ajoute dans **Paramètres → Général** une vérification manuelle des versions stables. Elle compare la version locale à la dernière publication publique du dépôt, puis propose d’ouvrir la page officielle des téléchargements dans le navigateur par défaut.
+Dans **Paramètres → Général**, Noto propose une vérification manuelle des versions stables. Elle compare la version locale à la dernière publication publique du dépôt, puis propose d’ouvrir la page officielle des téléchargements dans le navigateur par défaut.
 
 La vérification n’est lancée que lorsque l’utilisateur clique sur le bouton. Elle demande les métadonnées publiques de `https://api.github.com/repos/Louxos/Noto/releases/latest` ; elle ne transmet ni document, ni chemin, ni nom de fichier. L’application n’installe rien en arrière-plan et ne télécharge pas silencieusement un binaire. L’installeur et `SHA256SUMS.txt` se récupèrent depuis GitHub Releases ; l’empreinte doit être vérifiée avant d’exécuter l’installeur.
 

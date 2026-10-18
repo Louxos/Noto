@@ -2,7 +2,7 @@
 
 Les changements notables sont consignés ici, selon une version simplifiée de Keep a Changelog.
 
-## [Non publié]
+## [1.1.0] — 2026-10-18
 
 ### Ajouté
 - **Recherche indexée locale à la demande** : choix explicite d’un dossier, index conservé localement dans IndexedDB, recherche par nom et contenu, limites de parcours et effacement manuel. L’index ne stocke pas le corps complet ; pour le moment, les 16 000 premiers caractères de chaque fichier sont recherchés.

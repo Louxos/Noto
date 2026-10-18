@@ -15,7 +15,8 @@ Noto lit les fichiers localement. L’ouverture ou la sauvegarde d’un document
 
 ## Recherche locale et comparaison
 
-- **Fichier → Rechercher dans un dossier** lance une recherche à la demande dans un dossier choisi. Noto ne parcourt pas le disque sans votre action et n’indexe rien en arrière-plan. Les dossiers épinglés ne conservent que leurs chemins dans le stockage local ; cliquez de nouveau sur l’épingle pour les retirer.
+- **Fichier → Rechercher dans un dossier** lance une recherche ponctuelle dans un dossier choisi. Noto ne parcourt pas le disque sans votre action et n’indexe rien en arrière-plan. Les dossiers épinglés ne conservent que leurs chemins dans le stockage local ; cliquez de nouveau sur l’épingle pour les retirer.
+- **Paramètres → Recherche indexée** permet de construire manuellement un index local d’un dossier, puis de rechercher par nom et contenu. L’index est conservé sur cet appareil, n’enregistre pas le corps complet des fichiers et peut être actualisé ou effacé. Les plafonds et formats sont détaillés dans le [guide de recherche indexée](local-search.md).
 - La recherche couvre les formats texte, code, Markdown, HTML et CSV. Pour préserver la réactivité, elle ignore les dossiers de dépendances/générés, descend au plus à 10 niveaux, lit au plus 5 000 fichiers et 64 Mo au total, et ignore les fichiers de plus de 1 Mo. Les résultats sont limités à 200 fichiers ; les limites et fichiers ignorés sont signalés.
 - **Fichier → Comparer des fichiers texte** affiche deux onglets texte/code côte à côte. Vous pouvez ouvrir un deuxième fichier depuis la fenêtre de comparaison. Les différences d’ajout, de suppression et de modification sont distinguées ; les volets défilent ensemble. La comparaison n’écrit jamais dans les originaux et est limitée à 3 000 lignes par fichier et à une taille de calcul raisonnable.
 
