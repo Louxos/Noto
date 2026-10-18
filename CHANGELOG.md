@@ -4,7 +4,12 @@ Les changements notables sont consignés ici, selon une version simplifiée de K
 
 ## [Non publié]
 
-_Aucun changement depuis la 1.0.0._
+_Aucun changement depuis la 1.0.1._
+
+## [1.0.1] — 2026-10-16
+
+Mise à jour de correction : retrait du badge **BÊTA** de la barre latérale (1.0 stable) et ajout d’une section **Remerciements** dans les paramètres — présentation de **Louis — Louxos** / Louxos Corporation avec liens vers [louxos-corporation.netlify.app](https://louxos-corporation.netlify.app) et [l’équipe](https://louxos-corporation.netlify.app/#equipe). Aucun changement de fonctionnalité, de dépendance ou de format.
+
 
 ## [1.0.0] — 2026-10-16
 
