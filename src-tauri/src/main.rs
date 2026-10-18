@@ -21,6 +21,38 @@ fn take_pending_open_files(state: State<'_, PendingOpenFiles>) -> Vec<String> {
     state.0.lock().map(|mut paths| std::mem::take(&mut *paths)).unwrap_or_default()
 }
 
+const RELEASES_URL: &str = "https://github.com/Louxos/Noto/releases/latest";
+
+#[tauri::command]
+fn open_release_page() -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        std::process::Command::new("explorer.exe")
+            .arg(RELEASES_URL)
+            .creation_flags(0x08000000)
+            .spawn()
+            .map_err(|error| format!("Impossible d’ouvrir la page des versions : {error}"))?;
+        Ok(())
+    }
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(RELEASES_URL)
+            .spawn()
+            .map_err(|error| format!("Impossible d’ouvrir la page des versions : {error}"))?;
+        Ok(())
+    }
+    #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(RELEASES_URL)
+            .spawn()
+            .map_err(|error| format!("Impossible d’ouvrir la page des versions : {error}"))?;
+        Ok(())
+    }
+}
+
 #[tauri::command]
 fn open_default_apps_settings() -> Result<(), String> {
     #[cfg(target_os = "windows")]
@@ -202,6 +234,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             startup_paths,
             take_pending_open_files,
+            open_release_page,
             open_default_apps_settings,
             allow_file_access,
             allow_directory_access,

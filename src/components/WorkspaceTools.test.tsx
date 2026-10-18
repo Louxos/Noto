@@ -97,6 +97,8 @@ describe('workspace keyboard and menu integration', () => {
       onToggleToolbar={onToggleToolbar}
       onOpenShortcuts={vi.fn()}
       onOpenWindowsDefaults={vi.fn()}
+      onOpenReleasePage={vi.fn()}
+      onOpenIndexedResult={vi.fn()}
       onExportBackup={vi.fn()}
       onImportBackup={vi.fn()}
     />);

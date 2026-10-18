@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.1",
   "type": "module",
-  "description": "Suite documentaire locale : lire, éditer, convertir et traiter vos fichiers sur votre appareil, sans compte ni envoi en ligne.",
+  "description": "Noto — suite documentaire locale pour Windows : lire, éditer, imprimer et traiter vos fichiers, sans compte ni cloud. Gratuit et open source (MIT).",
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 1420 --strictPort",
     "build": "tsc -b && vite build",
@@ -26,6 +26,7 @@
     "fflate": "^0.8.3",
     "highlight.js": "^11.11.1",
     "lucide-react": "^0.468.0",
+    "minisearch": "^7.1.0",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "4.10.38",
     "react": "^18.3.1",

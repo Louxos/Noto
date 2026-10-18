@@ -17,7 +17,9 @@ import { TextEditor } from './components/TextEditor';
 import { ProgressiveTextViewer } from './components/ProgressiveTextViewer';
 import { SmartGroupScreen } from './components/SmartGroupScreen';
 import { AppMenuBar, CommandPalette, ContextMenu, GoToLineDialog, GroupAssignmentDialog, GroupDialog, GroupScreen, RenameFileDialog, SaveAsDialog, ShortcutsDialog, type CommandOption, type MenuDefinition, type MenuEntry } from './components/WorkspaceTools';
+import { localizeCommands, localizeMenus } from './i18n/workspace';
 import { FolderSearchDialog } from './components/FolderSearchDialog';
+import { LocalSearchPanel } from './components/LocalSearchPanel';
 import { TextDiffDialog } from './components/TextDiffDialog';
 import { WelcomeDialog } from './components/WelcomeDialog';
 import { FileInfoDialog, PrintDialog } from './components/FileTools';
@@ -35,6 +37,8 @@ import { loadPinnedSearchFolders, savePinnedSearchFolders, togglePinnedSearchFol
 import { defaultPreferences, loadPreferences, loadRecentFiles, savePreferences, saveRecentFiles, upsertRecent, TOOLBAR_ACTIONS, type Preferences, type RecentFile, type ToolbarAction } from './lib/preferences';
 import type { BrowserFileHandle, OpenDocument } from './types';
 import { APP_VERSION } from './lib/version';
+import { checkForUpdate, type UpdateInfo } from './lib/updater';
+import { setLanguage, tLang } from './lib/i18n';
 import { detectFullscreenKind, enterFullscreen, exitFullscreen, fullscreenSupport, onDocumentFullscreenChange, type FullscreenKind } from './lib/fullscreen';
 import { immersiveOpenNotice, opensInImmersive, type OpenGesture } from './lib/launchMode';
 import { topbarFitClasses } from './lib/topbarLayout';
@@ -104,11 +108,11 @@ function recentFromDocument(document: OpenDocument): RecentFile {
   };
 }
 
-function OpenDialogButton({ onClick, compact = false }: { onClick: () => void; compact?: boolean }) {
+function OpenDialogButton({ onClick, compact = false, language = 'fr' }: { onClick: () => void; compact?: boolean; language?: Preferences['language'] }) {
   return (
     <button className={compact ? 'open-side-button' : 'primary-button'} type="button" onClick={onClick}>
       <Plus size={16} strokeWidth={2.1} />
-      <span>Ouvrir un fichier</span>
+      <span>{tLang(language, 'home.openFile')}</span>
       {!compact && <kbd>Ctrl O</kbd>}
     </button>
   );
@@ -241,6 +245,10 @@ export default function App() {
   }, [preferences]);
 
   useEffect(() => {
+    setLanguage(preferences.language);
+  }, [preferences.language]);
+
+  useEffect(() => {
     saveRecentFiles(recents, preferences.recentLimit);
     if (recents.length > preferences.recentLimit) setRecents((current) => current.slice(0, preferences.recentLimit));
   }, [preferences.recentLimit, recents]);
@@ -371,6 +379,18 @@ export default function App() {
       notify('Paramètres Windows ouverts. Windows vous laisse choisir les associations de Noto.');
     } catch (error) {
       notify(error instanceof Error ? error.message : 'Impossible d’ouvrir les paramètres Windows.', 'error');
+    }
+  }, [notify]);
+
+  const openReleasePage = useCallback(async () => {
+    if (!isTauri()) {
+      window.open('https://github.com/Louxos/Noto/releases/latest', '_blank', 'noopener,noreferrer');
+      return;
+    }
+    try {
+      await invoke('open_release_page');
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'Impossible d’ouvrir les téléchargements de Noto.', 'error');
     }
   }, [notify]);
 
@@ -1482,6 +1502,7 @@ export default function App() {
       { id: 'shortcuts', label: 'Raccourcis clavier', icon: <Keyboard size={15} />, onSelect: () => setShortcutsOpen(true) },
     ] },
   ];
+  const localizedMenus = localizeMenus(menuDefinitions, preferences.language);
 
   const commands: CommandOption[] = [
     { id: 'open', label: 'Ouvrir un fichier', detail: 'Parcourir votre appareil', shortcut: 'Ctrl+O', keywords: 'parcourir importer', icon: <FileUp size={16} />, onSelect: () => void handleOpen() },
@@ -1526,6 +1547,7 @@ export default function App() {
       onSelect: () => { void handleRecent(recent); },
     })),
   );
+  const localizedCommands = localizeCommands(commands, preferences.language);
 
   function fileContextActions(contextFile: RecentFile): MenuEntry[] {
     const openContextDocument = documents.find((document) => document.source === contextFile.source && document.path === contextFile.path);
@@ -1663,45 +1685,45 @@ export default function App() {
           <span className="brand-name">noto</span>
         </div>
 
-        <div className="sidebar-main-action"><OpenDialogButton onClick={() => void handleOpen()} compact /></div>
+        <div className="sidebar-main-action"><OpenDialogButton onClick={() => void handleOpen()} compact language={preferences.language} /></div>
 
         <nav className="sidebar-nav" aria-label="Navigation principale">
           <button className={`nav-item ${page === 'home' ? 'active' : ''}`} type="button" onClick={() => { setPage('home'); setActiveId(null); setActiveGroupId(null); }}>
-            <LayoutGrid size={17} /><span>Accueil</span>
+            <LayoutGrid size={17} /><span>{tLang(preferences.language, 'nav.home')}</span>
           </button>
           <button className={`nav-item ${page === 'recents' ? 'active' : ''}`} type="button" onClick={() => { setPage('recents'); setActiveId(null); setActiveGroupId(null); }}>
-            <Clock3 size={17} /><span>Récents</span><span className="nav-count">{recents.length || ''}</span>
+            <Clock3 size={17} /><span>{tLang(preferences.language, 'nav.recents')}</span><span className="nav-count">{recents.length || ''}</span>
           </button>
           <button className={`nav-item ${page === 'studio' ? 'active' : ''}`} type="button" title="Atelier : traiter, convertir et analyser vos fichiers" onClick={() => openStudio(null)}>
-            <Wrench size={17} /><span>Atelier</span>
+            <Wrench size={17} /><span>{tLang(preferences.language, 'nav.atelier')}</span>
           </button>
         </nav>
 
         <section className="sidebar-group-section" aria-label="Groupes de fichiers">
-          <div className="sidebar-group-heading"><span>MES GROUPES</span><button type="button" title="Créer un groupe" aria-label="Créer un groupe" disabled={groups.length >= 30} onClick={() => openGroupDialog()}><Plus size={15} /></button></div>
+          <div className="sidebar-group-heading"><span>{tLang(preferences.language, 'nav.groups').toUpperCase()}</span><button type="button" title={tLang(preferences.language, 'nav.createGroup')} aria-label={tLang(preferences.language, 'nav.createGroup')} disabled={groups.length >= 30} onClick={() => openGroupDialog()}><Plus size={15} /></button></div>
           <div className="sidebar-group-list">
             {groups.map((group) => <button className={`group-nav-item ${page === 'group' && activeGroupId === group.id ? 'active' : ''}`} type="button" key={group.id} data-context-group-id={group.id} title={`${group.name} · ${group.files.length} fichier${group.files.length === 1 ? '' : 's'}`} onClick={() => { setActiveGroupId(group.id); setActiveId(null); setPage('group'); }}>
               <span className={`group-color-dot color-${group.color}`} /><span className="group-nav-label">{group.name}</span><span className="group-nav-count">{group.files.length}</span>
             </button>)}
-            {groups.length === 0 && <div className="sidebar-group-empty">Vos groupes apparaîtront ici.</div>}
+            {groups.length === 0 && <div className="sidebar-group-empty">{tLang(preferences.language, 'nav.emptyGroups')}</div>}
           </div>
         </section>
 
         <section className="sidebar-group-section smart-group-section" aria-label="Collections intelligentes">
-          <div className="sidebar-group-heading"><span>COLLECTIONS RAPIDES</span></div>
+          <div className="sidebar-group-heading"><span>{tLang(preferences.language, 'nav.quickCollections').toUpperCase()}</span></div>
           <div className="sidebar-group-list">
             <button className={`group-nav-item ${page === 'smart-group' && activeSmartGroup === 'pdf' ? 'active' : ''}`} type="button" onClick={() => openSmartGroup('pdf')} title={`PDF ouverts récemment · ${recents.filter((recent) => recent.kind === 'pdf').length}`}>
-              <span className="group-color-dot color-violet" /><span className="group-nav-label">PDF récents</span><span className="group-nav-count">{recents.filter((recent) => recent.kind === 'pdf').length}</span>
+              <span className="group-color-dot color-violet" /><span className="group-nav-label">{tLang(preferences.language, 'nav.pdfRecents')}</span><span className="group-nav-count">{recents.filter((recent) => recent.kind === 'pdf').length}</span>
             </button>
             <button className={`group-nav-item ${page === 'smart-group' && activeSmartGroup === 'image' ? 'active' : ''}`} type="button" onClick={() => openSmartGroup('image')} title={`Images récentes · ${recents.filter((recent) => recent.kind === 'image').length}`}>
-              <span className="group-color-dot color-blue" /><span className="group-nav-label">Images récentes</span><span className="group-nav-count">{recents.filter((recent) => recent.kind === 'image').length}</span>
+              <span className="group-color-dot color-blue" /><span className="group-nav-label">{tLang(preferences.language, 'nav.imageRecents')}</span><span className="group-nav-count">{recents.filter((recent) => recent.kind === 'image').length}</span>
             </button>
           </div>
         </section>
 
         <div className="sidebar-recents-header">
-          <span>RÉCEMMENT OUVERTS</span>
-          <button type="button" title="Effacer la liste des récents" aria-label="Effacer les fichiers récents" onClick={() => { setRecents([]); notify('La liste des fichiers récents a été effacée.'); }}><MoreHorizontal size={17} /></button>
+          <span>{tLang(preferences.language, 'nav.recentlyOpened').toUpperCase()}</span>
+          <button type="button" title={preferences.language === 'fr' ? 'Effacer la liste des récents' : 'Clear recent files'} aria-label={preferences.language === 'fr' ? 'Effacer les fichiers récents' : 'Clear recent files'} onClick={() => { setRecents([]); notify('La liste des fichiers récents a été effacée.'); }}><MoreHorizontal size={17} /></button>
         </div>
         <div className="sidebar-recent-list">
           {recents.slice(0, 6).map((recent) => (
@@ -1710,16 +1732,16 @@ export default function App() {
               <span className="recent-file-copy"><span className="recent-file-name">{recent.name}</span><span className="recent-file-date">{formatRelativeDate(recent.lastOpened)}</span></span>
             </button>
           ))}
-          {recents.length === 0 && <div className="sidebar-empty">Les fichiers ouverts apparaîtront ici.</div>}
+          {recents.length === 0 && <div className="sidebar-empty">{tLang(preferences.language, 'nav.emptyRecents')}</div>}
         </div>
 
         <div className="sidebar-bottom">
-          <div className="privacy-note"><ShieldCheck size={15} /><span>Vos fichiers restent<br />sur cet appareil</span></div>
+          <div className="privacy-note"><ShieldCheck size={15} /><span>{preferences.language === 'fr' ? <>Vos fichiers restent<br />sur cet appareil</> : <>Your files stay<br />on this device</>}</span></div>
           <div className="sidebar-footer-actions">
-            <button className="footer-icon-button" type="button" title={preferences.theme === 'light' ? 'Activer le thème sombre' : 'Activer le thème clair'} aria-label="Changer de thème" onClick={() => updatePreference('theme', preferences.theme === 'light' ? 'dark' : 'light')}>
+            <button className="footer-icon-button" type="button" title={preferences.language === 'fr' ? (preferences.theme === 'light' ? 'Activer le thème sombre' : 'Activer le thème clair') : (preferences.theme === 'light' ? 'Enable dark theme' : 'Enable light theme')} aria-label={preferences.language === 'fr' ? 'Changer de thème' : 'Change theme'} onClick={() => updatePreference('theme', preferences.theme === 'light' ? 'dark' : 'light')}>
               {preferences.theme === 'light' ? <Moon size={17} /> : <Sun size={17} />}
             </button>
-            <button className="footer-settings" type="button" onClick={() => setSettingsOpen(true)}><Settings2 size={16} /><span>Paramètres</span></button>
+            <button className="footer-settings" type="button" onClick={() => setSettingsOpen(true)}><Settings2 size={16} /><span>{tLang(preferences.language, 'settings.title')}</span></button>
           </div>
           <div className="sidebar-version"><span>Noto</span><span>{APP_VERSION}</span></div>
         </div>
@@ -1731,14 +1753,14 @@ export default function App() {
             <span className="topbar-icon">{activeDoc && page === 'file' ? kindIcon(activeDoc.kind, 16) : <span className="mini-logo">N</span>}</span>
             <div className="topbar-heading">
               <div className="topbar-name-row">
-                <h1>{page === 'studio' ? 'Atelier' : page === 'recents' ? 'Récents' : page === 'smart-group' ? smartGroupTitle : page === 'group' && currentGroup ? currentGroup.name : page === 'file' && activeDoc ? activeDoc.name : 'Accueil'}</h1>
+                <h1>{page === 'studio' ? tLang(preferences.language, 'nav.atelier') : page === 'recents' ? tLang(preferences.language, 'nav.recents') : page === 'smart-group' ? smartGroupTitle : page === 'group' && currentGroup ? currentGroup.name : page === 'file' && activeDoc ? activeDoc.name : tLang(preferences.language, 'nav.home')}</h1>
                 {page === 'file' && activeDoc && activeDoc.content !== activeDoc.savedContent && <span className="unsaved-indicator" title="Modifications non enregistrées" />}
               </div>
               <span className="topbar-subtitle">{page === 'studio' ? 'Traitement local · aucun envoi en ligne' : page === 'file' && activeDoc ? `${getFormatLabel(activeDoc.kind)}${activeDoc.path && activeDoc.source === 'desktop' && !preferences.hidePaths ? ` · ${activeDoc.path}` : ''}` : page === 'group' && currentGroup ? `${currentGroup.files.length} fichier${currentGroup.files.length === 1 ? '' : 's'} · Espace local` : page === 'smart-group' ? `${smartGroupFiles.length} fichier${smartGroupFiles.length === 1 ? '' : 's'} · Collection dynamique locale` : 'Espace local'}</span>
             </div>
           </div>
 
-          <AppMenuBar menus={menuDefinitions} onOpenPalette={() => setCommandPaletteOpen(true)} collapsed={topbarStage === 'menu-button'} />
+          <AppMenuBar menus={localizedMenus} onOpenPalette={() => setCommandPaletteOpen(true)} collapsed={topbarStage === 'menu-button'} />
 
           <div className="topbar-actions">
             {page === 'file' && activeDoc && <>
@@ -1832,12 +1854,12 @@ export default function App() {
               <StudioScreen request={studioRequest} onClose={() => { setStudioRequest(null); setPage('home'); }} />
             </Suspense>
           )}
-          {page === 'home' && <HomeScreen recents={recents} hidePaths={preferences.hidePaths} onOpen={() => void handleOpen()} onRecent={(recent) => void handleRecent(recent)} onViewAll={() => setPage('recents')} />}
-          {page === 'recents' && <RecentScreen recents={recents} hidePaths={preferences.hidePaths} onOpen={() => void handleOpen()} onRecent={(recent) => void handleRecent(recent)} onRemove={(id) => setRecents((current) => current.filter((item) => item.id !== id))} onTogglePin={(recent) => setRecents((current) => current.map((item) => item.id === recent.id ? { ...item, pinned: !item.pinned } : item))} />}
+          {page === 'home' && <HomeScreen recents={recents} hidePaths={preferences.hidePaths} language={preferences.language} onOpen={() => void handleOpen()} onRecent={(recent) => void handleRecent(recent)} onViewAll={() => setPage('recents')} />}
+          {page === 'recents' && <RecentScreen recents={recents} hidePaths={preferences.hidePaths} language={preferences.language} onOpen={() => void handleOpen()} onRecent={(recent) => void handleRecent(recent)} onRemove={(id) => setRecents((current) => current.filter((item) => item.id !== id))} onTogglePin={(recent) => setRecents((current) => current.map((item) => item.id === recent.id ? { ...item, pinned: !item.pinned } : item))} />}
           {page === 'smart-group' && activeSmartGroup && <SmartGroupScreen title={smartGroupTitle} kind={activeSmartGroup} files={smartGroupFiles} hidePaths={preferences.hidePaths} onRecent={(recent) => void handleRecent(recent)} />}
-          {page === 'smart-group' && !activeSmartGroup && <HomeScreen recents={recents} hidePaths={preferences.hidePaths} onOpen={() => void handleOpen()} onRecent={(recent) => void handleRecent(recent)} onViewAll={() => setPage('recents')} />}
+          {page === 'smart-group' && !activeSmartGroup && <HomeScreen recents={recents} hidePaths={preferences.hidePaths} language={preferences.language} onOpen={() => void handleOpen()} onRecent={(recent) => void handleRecent(recent)} onViewAll={() => setPage('recents')} />}
           {page === 'group' && currentGroup && <GroupScreen group={currentGroup} hidePaths={preferences.hidePaths} onOpen={() => void handleOpen()} onOpenAll={() => void openAllGroupFiles(currentGroup)} onRecent={(recent) => void handleRecent(recent)} onRemoveFile={(id) => setGroups((current) => removeGroupFile(current, currentGroup.id, id))} onRemoveFiles={(ids) => setGroups((current) => removeGroupFiles(current, currentGroup.id, ids))} onRename={() => setGroupDialog({ groupId: currentGroup.id })} onDelete={deleteCurrentGroup} />}
-          {page === 'group' && !currentGroup && <HomeScreen recents={recents} hidePaths={preferences.hidePaths} onOpen={() => void handleOpen()} onRecent={(recent) => void handleRecent(recent)} onViewAll={() => setPage('recents')} />}
+          {page === 'group' && !currentGroup && <HomeScreen recents={recents} hidePaths={preferences.hidePaths} language={preferences.language} onOpen={() => void handleOpen()} onRecent={(recent) => void handleRecent(recent)} onViewAll={() => setPage('recents')} />}
           {page === 'file' && activeDoc && <div className={`document-workspace ${activeDoc.kind === 'markdown' ? 'is-markdown' : ''}`}>
             {activeDoc.truncated && <div className="partial-warning"><CircleHelp size={15} /><span>Aperçu partiel — le contenu complet reste accessible lorsque le lecteur le permet. L’édition et l’enregistrement sont désactivés.</span></div>}
             {activeDoc.kind === 'unknown' && !canReadText ? <UnsupportedFile document={activeDoc} onOpenText={() => setTextFallbackIds((current) => new Set(current).add(activeDoc.id))} /> : (
@@ -1860,7 +1882,7 @@ export default function App() {
               />
             )}
           </div>}
-          {page === 'file' && !activeDoc && <HomeScreen recents={recents} hidePaths={preferences.hidePaths} onOpen={() => void handleOpen()} onRecent={(recent) => void handleRecent(recent)} onViewAll={() => setPage('recents')} />}
+          {page === 'file' && !activeDoc && <HomeScreen recents={recents} hidePaths={preferences.hidePaths} language={preferences.language} onOpen={() => void handleOpen()} onRecent={(recent) => void handleRecent(recent)} onViewAll={() => setPage('recents')} />}
         </section>
 
         {page === 'file' && activeDoc && <footer className="document-statusbar">
@@ -1883,7 +1905,7 @@ export default function App() {
       {dragging && <div className="drop-overlay" onDragLeave={() => setDragging(false)}><div className="drop-overlay-card"><span className="drop-icon"><FileUp size={25} /></span><strong>Déposez pour ouvrir</strong><span>Texte, code, PDF, présentations, documents et images…</span></div></div>}
       {loading && <div className="loading-overlay" aria-busy="true"><div className="loading-card" role="status" aria-live="polite"><LoaderCircle size={20} className="spin" /><div className="loading-copy"><span>{loadingMessage}</span>{loadingSlow && <small>Encore un instant : Noto termine cette opération localement. Aucun contenu n’est transmis.</small>}</div></div></div>}
       {toast && <div className={`toast toast-${toastKind}`} role="status"><span className="toast-mark">{toastKind === 'success' ? <Check size={14} /> : <CircleHelp size={14} />}</span>{toast}</div>}
-      {settingsOpen && <SettingsModal preferences={preferences} onChange={updatePreference} onClose={() => setSettingsOpen(false)} onClearRecents={() => { setRecents([]); notify('La liste des fichiers récents a été effacée.'); }} onResetDefaults={resetPreferences} onClearDrafts={clearDraftRecoveryData} onMoveToolbar={moveToolbarAction} onToggleToolbar={toggleToolbarAction} onOpenShortcuts={() => { setSettingsOpen(false); setShortcutsOpen(true); }} onOpenWindowsDefaults={() => void openWindowsDefaults()} onExportBackup={exportLocalSettings} onImportBackup={(file) => void importLocalSettings(file)} />}
+      {settingsOpen && <SettingsModal preferences={preferences} onChange={updatePreference} onClose={() => setSettingsOpen(false)} onClearRecents={() => { setRecents([]); notify('La liste des fichiers récents a été effacée.'); }} onResetDefaults={resetPreferences} onClearDrafts={clearDraftRecoveryData} onMoveToolbar={moveToolbarAction} onToggleToolbar={toggleToolbarAction} onOpenShortcuts={() => { setSettingsOpen(false); setShortcutsOpen(true); }} onOpenWindowsDefaults={() => void openWindowsDefaults()} onOpenReleasePage={() => void openReleasePage()} onOpenIndexedResult={(path) => { setSettingsOpen(false); void openTauriPath(path); }} onExportBackup={exportLocalSettings} onImportBackup={(file) => void importLocalSettings(file)} />}
       {folderSearchOpen && <FolderSearchDialog hidePaths={preferences.hidePaths} onOpenFile={(path, line, query) => { setFolderSearchOpen(false); void openTauriPath(path, { line, query }); }} onClose={() => setFolderSearchOpen(false)} />}
       {textDiffOpen && <TextDiffDialog documents={documents} initialLeftId={activeDoc?.id ?? null} onOpenFile={() => void handleOpen()} onClose={() => setTextDiffOpen(false)} />}
       {fileInfoOpen && activeDoc && <FileInfoDialog document={activeDoc} readout={viewerReadout} onClose={() => setFileInfoOpen(false)} notify={notify} />}
@@ -1895,13 +1917,13 @@ export default function App() {
       {renameTarget && <RenameFileDialog file={renameTarget} onClose={() => setRenameTarget(null)} onRename={(name) => void submitFileRename(name)} />}
       {groupAssignmentTarget && <GroupAssignmentDialog file={groupAssignmentTarget} groups={groups} onToggle={toggleAssignedFile} onCreate={() => { setGroupAssignmentTarget(null); openGroupDialog(); }} onClose={() => setGroupAssignmentTarget(null)} />}
       {contextMenu && <ContextMenu position={contextMenu.position} items={contextMenu.items} onClose={() => setContextMenu(null)} />}
-      {commandPaletteOpen && <CommandPalette commands={commands} onClose={() => setCommandPaletteOpen(false)} />}
+      {commandPaletteOpen && <CommandPalette commands={localizedCommands} language={preferences.language} onClose={() => setCommandPaletteOpen(false)} />}
       {shortcutsOpen && <ShortcutsDialog onClose={() => setShortcutsOpen(false)} />}
     </div>
   );
 }
 
-function HomeScreen({ recents, onOpen, onRecent, onViewAll, hidePaths = false }: { recents: RecentFile[]; onOpen: () => void; onRecent: (recent: RecentFile) => void; onViewAll: () => void; hidePaths?: boolean }) {
+function HomeScreen({ recents, onOpen, onRecent, onViewAll, hidePaths = false, language = 'fr' }: { recents: RecentFile[]; onOpen: () => void; onRecent: (recent: RecentFile) => void; onViewAll: () => void; hidePaths?: boolean; language?: Preferences['language'] }) {
   return (
     <div className="home-screen">
       <div className="welcome-block">
@@ -1912,25 +1934,25 @@ function HomeScreen({ recents, onOpen, onRecent, onViewAll, hidePaths = false }:
           <div className="illustration-sparkle"><Sparkles size={15} /></div>
         </div>
         <div className="welcome-copy">
-          <div className="eyebrow"><span className="eyebrow-dot" />UN ESPACE POUR VOS FICHIERS</div>
-          <h2>Vos fichiers,<br /><em>en toute clarté.</em></h2>
-          <p>Ouvrez un document, un extrait de code ou une image. Noto vous offre un endroit calme pour les consulter — et les modifier quand il le faut.</p>
-          <div className="welcome-actions"><OpenDialogButton onClick={onOpen} /><span className="local-hint"><ShieldCheck size={14} />Tout reste sur votre appareil</span></div>
+          <div className="eyebrow"><span className="eyebrow-dot" />{tLang(language, 'home.eyebrow')}</div>
+          <h2>{language === 'fr' ? <>Vos fichiers,<br /><em>en toute clarté.</em></> : <>Your files,<br /><em>in clear view.</em></>}</h2>
+          <p>{tLang(language, 'home.subtitle')}</p>
+          <div className="welcome-actions"><OpenDialogButton onClick={onOpen} language={language} /><span className="local-hint"><ShieldCheck size={14} />{tLang(language, 'home.localHint')}</span></div>
         </div>
       </div>
 
-      <div className="format-row" aria-label="Formats compatibles">
-        <span>PRÊT POUR VOS FORMATS COURANTS</span>
-        <div className="format-pills"><span><BookOpenText size={14} />Markdown</span><span><Code2 size={14} />Code</span><span><FileType2 size={14} />PDF</span><span><Presentation size={14} />Diaporamas</span><span><BookOpen size={14} />EPUB</span><span><ImageIcon size={14} />Images</span><span><Table2 size={14} />CSV / TSV</span></div>
+      <div className="format-row" aria-label={language === 'fr' ? 'Formats compatibles' : 'Supported file formats'}>
+        <span>{tLang(language, 'home.compatible').toUpperCase()}</span>
+        <div className="format-pills"><span><BookOpenText size={14} />Markdown</span><span><Code2 size={14} />Code</span><span><FileType2 size={14} />PDF</span><span><Presentation size={14} />{language === 'fr' ? 'Diaporamas' : 'Presentations'}</span><span><BookOpen size={14} />EPUB</span><span><ImageIcon size={14} />Images</span><span><Table2 size={14} />CSV / TSV</span></div>
       </div>
 
       <div className="home-recents-section">
-        <div className="section-heading"><div><h3>Fichiers récents</h3><p>Reprenez là où vous en étiez.</p></div>{recents.length > 3 && <button className="text-link" type="button" onClick={onViewAll}>Tout voir <span>→</span></button>}</div>
+        <div className="section-heading"><div><h3>{tLang(language, 'home.recent')}</h3><p>{tLang(language, 'home.recentSubtitle')}</p></div>{recents.length > 3 && <button className="text-link" type="button" onClick={onViewAll}>{tLang(language, 'home.viewAll')} <span>→</span></button>}</div>
         {recents.length > 0 ? <div className="home-recent-grid">
           {recents.slice(0, 3).map((recent) => <RecentCard key={recent.id} recent={recent} onClick={() => onRecent(recent)} hidePath={hidePaths} />)}
-        </div> : <div className="recent-empty-card"><span className="empty-clock"><Clock3 size={18} /></span><span><strong>Rien d’ouvert pour le moment</strong><small>Vos derniers fichiers apparaîtront ici.</small></span><button type="button" onClick={onOpen}>Parcourir <span>→</span></button></div>}
+        </div> : <div className="recent-empty-card"><span className="empty-clock"><Clock3 size={18} /></span><span><strong>{tLang(language, 'home.nothingOpen')}</strong><small>{tLang(language, 'home.noRecent')}</small></span><button type="button" onClick={onOpen}>{tLang(language, 'home.browse')} <span>→</span></button></div>}
       </div>
-      <div className="home-footnote"><span>Simple par nature</span><i />Pas de compte<i />Pas de cloud<i />Pas de suivi</div>
+      <div className="home-footnote"><span>{tLang(language, 'home.principle')}</span><i />{language === 'fr' ? 'Pas de compte' : 'No account'}<i />{language === 'fr' ? 'Pas de cloud' : 'No cloud'}<i />{language === 'fr' ? 'Pas de suivi' : 'No tracking'}</div>
     </div>
   );
 }
@@ -1943,7 +1965,7 @@ function RecentCard({ recent, onClick, hidePath = false }: { recent: RecentFile;
   </button>;
 }
 
-function RecentScreen({ recents, onOpen, onRecent, onRemove, onTogglePin, hidePaths }: { recents: RecentFile[]; onOpen: () => void; onRecent: (recent: RecentFile) => void; onRemove: (id: string) => void; onTogglePin: (recent: RecentFile) => void; hidePaths: boolean }) {
+function RecentScreen({ recents, onOpen, onRecent, onRemove, onTogglePin, hidePaths, language = 'fr' }: { recents: RecentFile[]; onOpen: () => void; onRecent: (recent: RecentFile) => void; onRemove: (id: string) => void; onTogglePin: (recent: RecentFile) => void; hidePaths: boolean; language?: Preferences['language'] }) {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<'all' | 'text' | 'code' | 'pdf' | 'image' | 'presentation' | 'data'>('all');
   const [sort, setSort] = useState<'recent' | 'name' | 'kind'>('recent');
@@ -1966,25 +1988,25 @@ function RecentScreen({ recents, onOpen, onRecent, onRemove, onTogglePin, hidePa
   }, [filter, query, recents, sort]);
 
   return <div className="recent-screen">
-    <div className="recent-screen-heading"><div><div className="eyebrow">VOTRE HISTORIQUE LOCAL</div><h2>Récents</h2><p>Les fichiers que vous avez consultés récemment sur cet appareil.</p></div><button className="secondary-button" type="button" onClick={onOpen}><Plus size={15} /> Ouvrir un fichier</button></div>
+    <div className="recent-screen-heading"><div><div className="eyebrow">{tLang(language, 'recents.eyebrow').toUpperCase()}</div><h2>{tLang(language, 'nav.recents')}</h2><p>{tLang(language, 'recents.description')}</p></div><button className="secondary-button" type="button" onClick={onOpen}><Plus size={15} /> {tLang(language, 'home.openFile')}</button></div>
     {recents.length > 0 && <div className="recent-controls">
-      <label className="recent-filter-search"><Search size={14} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Filtrer les noms et chemins" aria-label="Filtrer les fichiers récents" /></label>
-      <label><span>Type</span><select value={filter} onChange={(event) => setFilter(event.target.value as typeof filter)}><option value="all">Tous les types</option><option value="text">Texte / documents</option><option value="code">Code / HTML</option><option value="pdf">PDF</option><option value="image">Images</option><option value="presentation">Présentations</option><option value="data">CSV / TSV</option></select></label>
-      <label><span>Trier</span><select value={sort} onChange={(event) => setSort(event.target.value as typeof sort)}><option value="recent">Plus récents</option><option value="name">Nom</option><option value="kind">Type</option></select></label>
+      <label className="recent-filter-search"><Search size={14} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={language === 'fr' ? 'Filtrer les noms et chemins' : 'Filter names and paths'} aria-label={language === 'fr' ? 'Filtrer les fichiers récents' : 'Filter recent files'} /></label>
+      <label><span>{language === 'fr' ? 'Type' : 'Type'}</span><select value={filter} onChange={(event) => setFilter(event.target.value as typeof filter)}><option value="all">{language === 'fr' ? 'Tous les types' : 'All types'}</option><option value="text">{language === 'fr' ? 'Texte / documents' : 'Text / documents'}</option><option value="code">{language === 'fr' ? 'Code / HTML' : 'Code / HTML'}</option><option value="pdf">PDF</option><option value="image">{language === 'fr' ? 'Images' : 'Images'}</option><option value="presentation">{language === 'fr' ? 'Présentations' : 'Presentations'}</option><option value="data">CSV / TSV</option></select></label>
+      <label><span>{language === 'fr' ? 'Trier' : 'Sort'}</span><select value={sort} onChange={(event) => setSort(event.target.value as typeof sort)}><option value="recent">{language === 'fr' ? 'Plus récents' : 'Most recent'}</option><option value="name">{language === 'fr' ? 'Nom' : 'Name'}</option><option value="kind">{language === 'fr' ? 'Type' : 'Type'}</option></select></label>
     </div>}
     {recents.length ? visibleRecents.length ? <div className="recent-list-table">
-      <div className="recent-table-head"><span>FICHIER</span><span>TYPE</span><span>OUVERT</span><span /></div>
+      <div className="recent-table-head"><span>{language === 'fr' ? 'FICHIER' : 'FILE'}</span><span>{language === 'fr' ? 'TYPE' : 'TYPE'}</span><span>{language === 'fr' ? 'OUVERT' : 'OPENED'}</span><span /></div>
       {visibleRecents.map((recent) => <div className="recent-table-row" key={recent.id} data-context-file-id={recent.id}>
-        <button className="recent-table-file" type="button" onClick={() => onRecent(recent)} title={hidePaths ? recent.name : recent.path}><span className={`home-file-icon type-${recent.kind}`}>{kindIcon(recent.kind, 17)}</span><span><strong>{recent.name}</strong><small>{hidePaths ? 'Chemin masqué' : recent.path}</small></span></button>
+        <button className="recent-table-file" type="button" onClick={() => onRecent(recent)} title={hidePaths ? recent.name : recent.path}><span className={`home-file-icon type-${recent.kind}`}>{kindIcon(recent.kind, 17)}</span><span><strong>{recent.name}</strong><small>{hidePaths ? (language === 'fr' ? 'Chemin masqué' : 'Path hidden') : recent.path}</small></span></button>
         <span className="recent-table-kind">{getFormatLabel(recent.kind as OpenDocument['kind'])}</span>
         <span className="recent-table-date">{formatRelativeDate(recent.lastOpened)}</span>
         <div className="recent-row-actions">
-          <button className={`recent-pin ${recent.pinned ? 'is-pinned' : ''}`} type="button" title={recent.pinned ? 'Désépingler' : 'Épingler'} aria-label={`${recent.pinned ? 'Désépingler' : 'Épingler'} ${recent.name}`} aria-pressed={Boolean(recent.pinned)} onClick={() => onTogglePin(recent)}><Pin size={14} /></button>
-          <button className="recent-remove" type="button" title="Retirer des récents" aria-label={`Retirer ${recent.name} des récents`} onClick={() => onRemove(recent.id)}><X size={15} /></button>
+          <button className={`recent-pin ${recent.pinned ? 'is-pinned' : ''}`} type="button" title={language === 'fr' ? (recent.pinned ? 'Désépingler' : 'Épingler') : (recent.pinned ? 'Unpin' : 'Pin')} aria-label={`${language === 'fr' ? (recent.pinned ? 'Désépingler' : 'Épingler') : (recent.pinned ? 'Unpin' : 'Pin')} ${recent.name}`} aria-pressed={Boolean(recent.pinned)} onClick={() => onTogglePin(recent)}><Pin size={14} /></button>
+          <button className="recent-remove" type="button" title={language === 'fr' ? 'Retirer des récents' : 'Remove from recents'} aria-label={`${language === 'fr' ? 'Retirer' : 'Remove'} ${recent.name} ${language === 'fr' ? 'des récents' : 'from recents'}`} onClick={() => onRemove(recent.id)}><X size={15} /></button>
         </div>
       </div>)}
-    </div> : <div className="recent-filter-empty"><Search size={17} /><span>Aucun fichier récent ne correspond à ce filtre.</span></div> : <div className="recent-empty-large"><span><Clock3 size={24} /></span><h3>Aucun fichier récent</h3><p>Ouvrez votre premier fichier pour le retrouver ici.</p><button className="primary-button" type="button" onClick={onOpen}><Plus size={16} />Ouvrir un fichier</button></div>}
-    <div className="recent-privacy"><ShieldCheck size={15} />Votre historique reste uniquement enregistré sur cet appareil.</div>
+    </div> : <div className="recent-filter-empty"><Search size={17} /><span>{language === 'fr' ? 'Aucun fichier récent ne correspond à ce filtre.' : 'No recent files match this filter.'}</span></div> : <div className="recent-empty-large"><span><Clock3 size={24} /></span><h3>{language === 'fr' ? 'Aucun fichier récent' : 'No recent files'}</h3><p>{language === 'fr' ? 'Ouvrez votre premier fichier pour le retrouver ici.' : 'Open a file to see it here.'}</p><button className="primary-button" type="button" onClick={onOpen}><Plus size={16} />{tLang(language, 'home.openFile')}</button></div>}
+    <div className="recent-privacy"><ShieldCheck size={15} />{language === 'fr' ? 'Votre historique reste uniquement enregistré sur cet appareil.' : 'Your history stays only on this device.'}</div>
   </div>;
 }
 
@@ -2058,7 +2080,7 @@ function ViewerContent({
   return <UnsupportedFile document={document} onOpenText={() => onChange(document.content)} />;
 }
 
-export function SettingsModal({ preferences, onChange, onClose, onClearRecents, onResetDefaults, onClearDrafts, onMoveToolbar, onToggleToolbar, onOpenShortcuts, onOpenWindowsDefaults, onExportBackup, onImportBackup }: {
+export function SettingsModal({ preferences, onChange, onClose, onClearRecents, onResetDefaults, onClearDrafts, onMoveToolbar, onToggleToolbar, onOpenShortcuts, onOpenWindowsDefaults, onOpenReleasePage, onOpenIndexedResult, onExportBackup, onImportBackup }: {
   preferences: Preferences;
   onChange: <K extends keyof Preferences>(key: K, value: Preferences[K]) => void;
   onClose: () => void;
@@ -2069,73 +2091,103 @@ export function SettingsModal({ preferences, onChange, onClose, onClearRecents, 
   onToggleToolbar: (action: ToolbarAction) => void;
   onOpenShortcuts: () => void;
   onOpenWindowsDefaults: () => void;
+  onOpenReleasePage: () => void;
+  onOpenIndexedResult: (path: string) => void;
   onExportBackup: () => void;
   onImportBackup: (file: File) => void;
 }) {
   const backupInputRef = useRef<HTMLInputElement>(null);
-  const toolbarLabels: Record<ToolbarAction, string> = { search: 'Rechercher', edit: 'Éditer', save: 'Enregistrer', print: 'Imprimer', info: 'Informations du fichier', group: 'Classer dans un groupe', close: 'Fermer le fichier' };
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
+  const [updateError, setUpdateError] = useState('');
+  const [checkingUpdates, setCheckingUpdates] = useState(false);
+  const tx = (key: string, fallback?: string) => {
+    const value = tLang(preferences.language, key);
+    return value === key ? fallback ?? key : value;
+  };
+  const checkUpdates = async () => {
+    setCheckingUpdates(true);
+    setUpdateError('');
+    try {
+      setUpdateInfo(await checkForUpdate(APP_VERSION));
+    } catch (error) {
+      setUpdateError(error instanceof Error ? error.message : tx('settings.updateError', 'Update check failed.'));
+      setUpdateInfo(null);
+    } finally {
+      setCheckingUpdates(false);
+    }
+  };
+  const toolbarLabels: Record<ToolbarAction, string> = {
+    search: tx('settings.toolbarSearch', 'Search'), edit: tx('settings.toolbarEdit', 'Edit'), save: tx('settings.toolbarSave', 'Save'),
+    print: tx('settings.toolbarPrint', 'Print'), info: tx('settings.toolbarInfo', 'File information'), group: tx('settings.toolbarGroup', 'Add to group'), close: tx('settings.toolbarClose', 'Close file'),
+  };
   const toolbarIcons: Record<ToolbarAction, ReactNode> = { search: <Search size={14} />, edit: <Pencil size={14} />, save: <Save size={14} />, print: <Printer size={14} />, info: <FileSearch size={14} />, group: <FolderPlus size={14} />, close: <X size={14} /> };
   const orderedActions = [...preferences.toolbarOrder, ...TOOLBAR_ACTIONS.filter((action) => !preferences.toolbarOrder.includes(action))];
   const accents: { value: Preferences['accent']; label: string }[] = [
-    { value: 'violet', label: 'Violet' }, { value: 'blue', label: 'Bleu' }, { value: 'mint', label: 'Menthe' }, { value: 'rose', label: 'Rose' },
+    { value: 'violet', label: 'Violet' }, { value: 'blue', label: preferences.language === 'fr' ? 'Bleu' : 'Blue' },
+    { value: 'mint', label: preferences.language === 'fr' ? 'Menthe' : 'Mint' }, { value: 'rose', label: preferences.language === 'fr' ? 'Rose' : 'Rose' },
   ];
 
   return <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <section className="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
-      <header className="settings-header"><div><span className="settings-icon"><Settings2 size={17} /></span><div><h2 id="settings-title">Paramètres</h2><p>Personnalisez votre espace Noto.</p></div></div><button className="icon-action" type="button" title="Fermer" aria-label="Fermer les paramètres" onClick={onClose}><X size={18} /></button></header>
+      <header className="settings-header"><div><span className="settings-icon"><Settings2 size={17} /></span><div><h2 id="settings-title">{tx('settings.title', 'Settings')}</h2><p>{tx('settings.subtitle', 'Make Noto yours.')}</p></div></div><button className="icon-action" type="button" title={tx('settings.done', 'Close')} aria-label={tx('settings.title', 'Settings')} onClick={onClose}><X size={18} /></button></header>
       <div className="settings-body">
-        <section className="settings-section"><div className="settings-section-title"><span>APPARENCE</span><small>Votre espace, à votre façon.</small></div>
-          <div className="setting-row"><div className="setting-label"><strong>Thème</strong><small>Choisissez l’apparence de Noto.</small></div><div className="theme-picker">
-            <button className={preferences.theme === 'light' ? 'selected' : ''} type="button" onClick={() => onChange('theme', 'light')}><Sun size={15} />Clair</button>
-            <button className={preferences.theme === 'dark' ? 'selected' : ''} type="button" onClick={() => onChange('theme', 'dark')}><Moon size={15} />Sombre</button>
+        <section className="settings-section"><div className="settings-section-title"><span>{tx('settings.appearance', 'Appearance').toUpperCase()}</span><small>{tx('settings.appearanceDesc', 'Your space, your way.')}</small></div>
+          <div className="setting-row"><div className="setting-label"><strong>{tx('settings.theme', 'Theme')}</strong><small>{tx('settings.themeDesc', 'Choose how Noto looks.')}</small></div><div className="theme-picker">
+            <button className={preferences.theme === 'light' ? 'selected' : ''} type="button" onClick={() => onChange('theme', 'light')}><Sun size={15} />{tx('settings.themeLight', 'Light')}</button>
+            <button className={preferences.theme === 'dark' ? 'selected' : ''} type="button" onClick={() => onChange('theme', 'dark')}><Moon size={15} />{tx('settings.themeDark', 'Dark')}</button>
           </div></div>
-          <div className="setting-row"><div className="setting-label"><strong>Couleur d’accent</strong><small>Les repères colorés de l’interface.</small></div><div className="accent-picker" role="radiogroup" aria-label="Couleur d’accent">
+          <div className="setting-row"><div className="setting-label"><strong>{tx('settings.accent', 'Accent color')}</strong><small>{tx('settings.accentDesc', 'Color highlights across the interface.')}</small></div><div className="accent-picker" role="radiogroup" aria-label={tx('settings.accent', 'Accent color')}>
             {accents.map((accent) => <button className={`accent-swatch accent-${accent.value} ${preferences.accent === accent.value ? 'selected' : ''}`} key={accent.value} type="button" role="radio" aria-checked={preferences.accent === accent.value} title={accent.label} aria-label={accent.label} onClick={() => onChange('accent', accent.value)} />)}
           </div></div>
-          <div className="setting-row"><div className="setting-label"><strong>Taille du texte</strong><small>Confort de lecture.</small></div><div className="select-wrap"><select value={preferences.textSize} onChange={(event) => onChange('textSize', Number(event.target.value))}><option value={14}>Compacte</option><option value={16}>Standard</option><option value={18}>Confortable</option><option value={20}>Grande</option></select><ChevronDown size={14} /></div></div>
+          <div className="setting-row"><div className="setting-label"><strong>{tx('settings.textSize', 'Text size')}</strong><small>{tx('settings.textSizeDesc', 'Reading comfort.')}</small></div><div className="select-wrap"><select value={preferences.textSize} aria-label={tx('settings.textSize', 'Text size')} onChange={(event) => onChange('textSize', Number(event.target.value))}><option value={14}>{preferences.language === 'fr' ? 'Compacte' : 'Compact'}</option><option value={16}>Standard</option><option value={18}>{preferences.language === 'fr' ? 'Confortable' : 'Comfortable'}</option><option value={20}>{preferences.language === 'fr' ? 'Grande' : 'Large'}</option></select><ChevronDown size={14} /></div></div>
+          <div className="setting-row"><div className="setting-label"><strong>{tx('settings.language', 'Language')}</strong><small>{tx('settings.languageDesc', 'Choose the interface language.')}</small></div><div className="select-wrap"><select value={preferences.language} aria-label={tx('settings.language', 'Language')} onChange={(event) => onChange('language', event.target.value as Preferences['language'])}><option value="fr">{tx('settings.languageFr', 'Français')}</option><option value="en">{tx('settings.languageEn', 'English')}</option></select><ChevronDown size={14} /></div></div>
         </section>
-        <section className="settings-section"><div className="settings-section-title"><span>ESPACE DE TRAVAIL</span><small>Réglez les panneaux et la barre d’outils.</small></div>
-          <div className="setting-row"><div className="setting-label"><strong>Barre d’outils compacte</strong><small>Masquer les libellés pour gagner de la place.</small></div><button className={`toggle ${preferences.compactToolbar ? 'on' : ''}`} type="button" role="switch" aria-checked={preferences.compactToolbar} onClick={() => onChange('compactToolbar', !preferences.compactToolbar)}><i /></button></div>
-          <div className="setting-row"><div className="setting-label"><strong>Barre latérale compacte</strong><small>Réduire le panneau de navigation.</small></div><button className={`toggle ${preferences.sidebarCollapsed ? 'on' : ''}`} type="button" role="switch" aria-checked={preferences.sidebarCollapsed} onClick={() => onChange('sidebarCollapsed', !preferences.sidebarCollapsed)}><i /></button></div>
-          <div className="toolbar-customization"><div className="toolbar-customization-heading"><div><strong>Commandes de la barre</strong><small>Masquez-les ou réorganisez-les.</small></div><span>ORDRE</span></div>
+        <section className="settings-section"><div className="settings-section-title"><span>{tx('settings.workspace', 'Workspace').toUpperCase()}</span><small>{tx('settings.workspaceDesc', 'Configure panels and toolbar.')}</small></div>
+          <div className="setting-row"><div className="setting-label"><strong>{tx('settings.compactToolbar', 'Compact toolbar')}</strong><small>{tx('settings.compactToolbarDesc', 'Hide labels to save space.')}</small></div><button className={`toggle ${preferences.compactToolbar ? 'on' : ''}`} type="button" role="switch" aria-checked={preferences.compactToolbar} onClick={() => onChange('compactToolbar', !preferences.compactToolbar)}><i /></button></div>
+          <div className="setting-row"><div className="setting-label"><strong>{tx('settings.sidebarCollapsed', 'Compact sidebar')}</strong><small>{tx('settings.sidebarCollapsedDesc', 'Collapse navigation panel.')}</small></div><button className={`toggle ${preferences.sidebarCollapsed ? 'on' : ''}`} type="button" role="switch" aria-checked={preferences.sidebarCollapsed} onClick={() => onChange('sidebarCollapsed', !preferences.sidebarCollapsed)}><i /></button></div>
+          <div className="toolbar-customization"><div className="toolbar-customization-heading"><div><strong>{tx('settings.toolbarCommands', 'Toolbar commands')}</strong><small>{tx('settings.toolbarCommandsDesc', 'Hide or reorder them.')}</small></div><span>{preferences.language === 'fr' ? 'ORDRE' : 'ORDER'}</span></div>
             {orderedActions.map((action, index) => {
               const visible = !preferences.hiddenToolbarActions.includes(action);
               return <div className={`toolbar-preference-row ${visible ? '' : 'muted'}`} key={action}>
-                <div className="toolbar-order-controls"><button type="button" title="Monter" aria-label={`Monter ${toolbarLabels[action]}`} disabled={index === 0} onClick={() => onMoveToolbar(action, -1)}><ArrowUp size={13} /></button><button type="button" title="Descendre" aria-label={`Descendre ${toolbarLabels[action]}`} disabled={index === orderedActions.length - 1} onClick={() => onMoveToolbar(action, 1)}><ArrowDown size={13} /></button></div>
+                <div className="toolbar-order-controls"><button type="button" title={preferences.language === 'fr' ? 'Monter' : 'Move up'} aria-label={`${preferences.language === 'fr' ? 'Monter' : 'Move up'} ${toolbarLabels[action]}`} disabled={index === 0} onClick={() => onMoveToolbar(action, -1)}><ArrowUp size={13} /></button><button type="button" title={preferences.language === 'fr' ? 'Descendre' : 'Move down'} aria-label={`${preferences.language === 'fr' ? 'Descendre' : 'Move down'} ${toolbarLabels[action]}`} disabled={index === orderedActions.length - 1} onClick={() => onMoveToolbar(action, 1)}><ArrowDown size={13} /></button></div>
                 <span className="toolbar-preference-icon">{toolbarIcons[action]}</span><span className="toolbar-preference-name">{toolbarLabels[action]}</span>
-                <button className={`toggle ${visible ? 'on' : ''}`} type="button" role="switch" aria-checked={visible} aria-label={`${visible ? 'Masquer' : 'Afficher'} ${toolbarLabels[action]}`} onClick={() => onToggleToolbar(action)}><i /></button>
+                <button className={`toggle ${visible ? 'on' : ''}`} type="button" role="switch" aria-checked={visible} aria-label={`${preferences.language === 'fr' ? (visible ? 'Masquer' : 'Afficher') : (visible ? 'Hide' : 'Show')} ${toolbarLabels[action]}`} onClick={() => onToggleToolbar(action)}><i /></button>
               </div>;
             })}
           </div>
         </section>
-        <section className="settings-section"><div className="settings-section-title"><span>ÉDITEUR</span><small>Options pour les modifications rapides.</small></div>
-          <div className="setting-row"><div className="setting-label"><strong>Police de l’éditeur</strong><small>Taille de la police monospace.</small></div><div className="select-wrap"><select value={preferences.editorSize} onChange={(event) => onChange('editorSize', Number(event.target.value))}><option value={12}>12 px</option><option value={14}>14 px</option><option value={16}>16 px</option><option value={18}>18 px</option><option value={20}>20 px</option></select><ChevronDown size={14} /></div></div>
-          <div className="setting-row"><div className="setting-label"><strong>Numéros de lignes</strong><small>Repérez-vous dans le fichier.</small></div><button className={`toggle ${preferences.lineNumbers ? 'on' : ''}`} type="button" role="switch" aria-checked={preferences.lineNumbers} onClick={() => onChange('lineNumbers', !preferences.lineNumbers)}><i /></button></div>
-          <div className="setting-row"><div className="setting-label"><strong>Retour à la ligne</strong><small>Renvoyer les longues lignes à la ligne.</small></div><button className={`toggle ${preferences.wordWrap ? 'on' : ''}`} type="button" role="switch" aria-checked={preferences.wordWrap} onClick={() => onChange('wordWrap', !preferences.wordWrap)}><i /></button></div>
+        <section className="settings-section"><div className="settings-section-title"><span>{tx('settings.editor', 'Editor').toUpperCase()}</span><small>{tx('settings.editorDesc', 'Options for quick edits.')}</small></div>
+          <div className="setting-row"><div className="setting-label"><strong>{tx('settings.editorFont', 'Editor font')}</strong><small>{tx('settings.editorFontDesc', 'Monospace font size.')}</small></div><div className="select-wrap"><select value={preferences.editorSize} onChange={(event) => onChange('editorSize', Number(event.target.value))}><option value={12}>12 px</option><option value={14}>14 px</option><option value={16}>16 px</option><option value={18}>18 px</option><option value={20}>20 px</option></select><ChevronDown size={14} /></div></div>
+          <div className="setting-row"><div className="setting-label"><strong>{tx('settings.lineNumbers', 'Line numbers')}</strong><small>{tx('settings.lineNumbersDesc', 'Find your way in the file.')}</small></div><button className={`toggle ${preferences.lineNumbers ? 'on' : ''}`} type="button" role="switch" aria-checked={preferences.lineNumbers} onClick={() => onChange('lineNumbers', !preferences.lineNumbers)}><i /></button></div>
+          <div className="setting-row"><div className="setting-label"><strong>{tx('settings.wordWrap', 'Word wrap')}</strong><small>{tx('settings.wordWrapDesc', 'Wrap long lines.')}</small></div><button className={`toggle ${preferences.wordWrap ? 'on' : ''}`} type="button" role="switch" aria-checked={preferences.wordWrap} onClick={() => onChange('wordWrap', !preferences.wordWrap)}><i /></button></div>
         </section>
-        <section className="settings-section"><div className="settings-section-title"><span>WINDOWS & ASSOCIATIONS</span><small>Gardez le contrôle des applications par défaut.</small></div>
-          <div className="setting-row windows-defaults-row"><div className="setting-label"><strong>Applications par défaut</strong><small>Noto peut être proposé pour les formats pris en charge. Windows vous laisse choisir, sans remplacer silencieusement vos associations actuelles.</small></div><button className="subtle-button" type="button" disabled={!isTauri()} onClick={onOpenWindowsDefaults}><Globe2 size={14} />Ouvrir les paramètres Windows</button></div>
-          <div className="setting-row"><div className="setting-label"><strong>Ouvrir en mode immersion depuis Windows</strong><small>Double-clic sur un fichier associé à Noto, ou « Ouvrir avec » : le document s’affiche seul, sans barre latérale, menus ni onglets. Échap ou Ctrl+Maj+F rétablit l’interface.</small></div><button className={`toggle ${preferences.immersiveOnFileOpen ? 'on' : ''}`} type="button" role="switch" aria-checked={preferences.immersiveOnFileOpen} onClick={() => onChange('immersiveOnFileOpen', !preferences.immersiveOnFileOpen)}><i /></button></div>
-          <div className="integration-format-list" aria-label="Formats déclarés par Noto"><span><strong>Texte & code</strong><small>TXT · MD · JSON · JS · CSS · YAML…</small></span><span><strong>Lecture</strong><small>PDF · images · EPUB</small></span><span><strong>Données & documents</strong><small>CSV · TSV · DOCX · ODT · PPTX · ODP</small></span></div>
-          <div className="settings-inline-note"><ShieldCheck size={14} />Noto ne modifie pas les applications par défaut sans votre accord. Les préférences se gèrent dans Windows.</div>
+        <section className="settings-section"><div className="settings-section-title"><span>{tx('settings.windows', 'Windows & Associations').toUpperCase()}</span><small>{tx('settings.windowsDesc', 'Stay in control of default apps.')}</small></div>
+          <div className="setting-row windows-defaults-row"><div className="setting-label"><strong>{tx('settings.defaultApps', 'Default apps')}</strong><small>{tx('settings.defaultAppsDesc', 'Windows lets you choose without silent replacement.')}</small></div><button className="subtle-button" type="button" disabled={!isTauri()} onClick={onOpenWindowsDefaults}><Globe2 size={14} />{tx('settings.openWindowsSettings', 'Open Windows Settings')}</button></div>
+          <div className="setting-row"><div className="setting-label"><strong>{tx('settings.immersive', 'Open in immersive from Windows')}</strong><small>{tx('settings.immersiveDesc', 'Open an associated file without navigation.')}</small></div><button className={`toggle ${preferences.immersiveOnFileOpen ? 'on' : ''}`} type="button" role="switch" aria-checked={preferences.immersiveOnFileOpen} onClick={() => onChange('immersiveOnFileOpen', !preferences.immersiveOnFileOpen)}><i /></button></div>
+          <div className="integration-format-list" aria-label={preferences.language === 'fr' ? 'Formats déclarés par Noto' : 'Formats supported by Noto'}><span><strong>{preferences.language === 'fr' ? 'Texte & code' : 'Text & code'}</strong><small>TXT · MD · JSON · JS · CSS · YAML…</small></span><span><strong>{preferences.language === 'fr' ? 'Lecture' : 'Reading'}</strong><small>PDF · images · EPUB</small></span><span><strong>{preferences.language === 'fr' ? 'Données & documents' : 'Data & documents'}</strong><small>CSV · TSV · DOCX · ODT · PPTX · ODP</small></span></div>
+          <div className="settings-inline-note"><ShieldCheck size={14} />{preferences.language === 'fr' ? 'Noto ne modifie pas les applications par défaut sans votre accord. Les préférences se gèrent dans Windows.' : 'Noto never changes default apps without your permission. Manage preferences in Windows.'}</div>
         </section>
-        <section className="settings-section settings-general"><div className="settings-section-title"><span>GÉNÉRAL</span></div>
-          <div className="setting-row backup-setting-row"><div className="setting-label"><strong>Sauvegarde locale</strong><small>Exporter ou importer groupes et paramètres ; les chemins sont inclus, jamais le contenu des fichiers.</small></div><div className="backup-buttons"><button className="subtle-button" type="button" onClick={onExportBackup}><Download size={13} />Exporter</button><button className="subtle-button" type="button" onClick={() => backupInputRef.current?.click()}><Upload size={13} />Importer</button><input ref={backupInputRef} className="visually-hidden" type="file" accept="application/json,.json" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; if (file) onImportBackup(file); }} aria-label="Choisir une sauvegarde Noto à importer" /></div></div>
-          <div className="setting-row"><div className="setting-label"><strong>Restaurer la session bureau</strong><small>Garde les chemins des onglets ouverts sur cet appareil, sans mémoriser leur contenu.</small></div><button className={`toggle ${preferences.restoreSession ? 'on' : ''}`} type="button" role="switch" aria-checked={preferences.restoreSession} onClick={() => onChange('restoreSession', !preferences.restoreSession)}><i /></button></div>
-          <div className="setting-row"><div className="setting-label"><strong>Récupération locale des brouillons</strong><small>Enregistre localement les modifications non sauvegardées des fichiers texte. Désactivée par défaut ; limite de 750 000 caractères par fichier. La désactivation efface les brouillons (après confirmation).</small></div><button className={`toggle ${preferences.draftRecoveryEnabled ? 'on' : ''}`} type="button" role="switch" aria-checked={preferences.draftRecoveryEnabled} onClick={() => onChange('draftRecoveryEnabled', !preferences.draftRecoveryEnabled)}><i /></button></div>
-          <div className="setting-row"><div className="setting-label"><strong>Conservation des brouillons</strong><small>Les brouillons plus anciens sont supprimés au prochain accès.</small></div><div className="draft-retention-actions"><div className="select-wrap"><select disabled={!preferences.draftRecoveryEnabled} value={preferences.draftRetentionDays} onChange={(event) => onChange('draftRetentionDays', Number(event.target.value) as Preferences['draftRetentionDays'])}><option value={1}>1 jour</option><option value={7}>7 jours</option><option value={30}>30 jours</option></select><ChevronDown size={14} /></div><button className="subtle-button" type="button" onClick={onClearDrafts}><Trash2 size={13} />Effacer</button></div></div>
-          <div className="setting-row"><div className="setting-label"><strong>Nombre de fichiers récents</strong><small>Limite locale de la liste des récents.</small></div><div className="select-wrap"><select value={preferences.recentLimit} onChange={(event) => onChange('recentLimit', Number(event.target.value) as Preferences['recentLimit'])}><option value={4}>4 fichiers</option><option value={8}>8 fichiers</option><option value={12}>12 fichiers</option><option value={20}>20 fichiers</option></select><ChevronDown size={14} /></div></div>
-          <div className="setting-row"><div className="setting-label"><strong>Masquer les chemins</strong><small>Remplacer les chemins visibles par un libellé discret dans l’interface.</small></div><button className={`toggle ${preferences.hidePaths ? 'on' : ''}`} type="button" role="switch" aria-checked={preferences.hidePaths} onClick={() => onChange('hidePaths', !preferences.hidePaths)}><i /></button></div>
-          <div className="setting-row"><div className="setting-label"><strong>Historique local</strong><small>Effacer la liste des fichiers récents.</small></div><button className="subtle-button" type="button" onClick={onClearRecents}><RotateCcw size={14} />Effacer</button></div>
-          <div className="setting-row"><div className="setting-label"><strong>Raccourcis clavier</strong><small>Afficher la liste des commandes rapides.</small></div><button className="subtle-button" type="button" onClick={onOpenShortcuts}><Keyboard size={14} />Consulter</button></div>
-          <div className="setting-row"><div className="setting-label"><strong>Réglages</strong><small>Restaurer les paramètres visuels et éditeur par défaut.</small></div><button className="subtle-button" type="button" onClick={onResetDefaults}><RotateCcw size={14} />Tout rétablir</button></div>
+        <section className="settings-section settings-general"><div className="settings-section-title"><span>{tx('settings.general', 'General').toUpperCase()}</span></div>
+          <div className="setting-row"><div className="setting-label"><strong>{tx('settings.updates', 'Updates')}</strong><small>{preferences.language === 'fr' ? 'Vérifiez manuellement la dernière version stable. Seules les métadonnées publiques de version sont demandées ; aucun document n’est transmis.' : 'Manually check the latest stable version. Only public release metadata is requested; no document is sent.'}</small></div><button className="subtle-button" type="button" disabled={checkingUpdates} onClick={() => void checkUpdates()}><RotateCcw size={13} className={checkingUpdates ? 'spin' : ''} />{checkingUpdates ? (preferences.language === 'fr' ? 'Vérification…' : 'Checking…') : tx('settings.checkUpdates', 'Check for updates')}</button></div>
+          {updateInfo && <div className={`update-check-result ${updateInfo.isNewer ? 'available' : ''}`} role="status"><span>{updateInfo.isNewer ? `${tx('settings.updateAvailable', 'An update is available')} · v${updateInfo.latestVersion}` : `${tx('settings.upToDate', 'Noto is up to date')} · v${updateInfo.currentVersion}`}</span>{updateInfo.isNewer && <button className="text-link" type="button" onClick={onOpenReleasePage}>{preferences.language === 'fr' ? 'Télécharger' : 'Download'} <span>→</span></button>}</div>}
+          {updateError && <div className="update-check-error" role="status">{updateError}</div>}
+          <div className="setting-row backup-setting-row"><div className="setting-label"><strong>{tx('settings.backup', 'Local backup')}</strong><small>{tx('settings.backupDesc', 'Export or import groups and settings; paths included, never file contents.')}</small></div><div className="backup-buttons"><button className="subtle-button" type="button" onClick={onExportBackup}><Download size={13} />{tx('settings.export', 'Export')}</button><button className="subtle-button" type="button" onClick={() => backupInputRef.current?.click()}><Upload size={13} />{tx('settings.import', 'Import')}</button><input ref={backupInputRef} className="visually-hidden" type="file" accept="application/json,.json" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; if (file) onImportBackup(file); }} aria-label={preferences.language === 'fr' ? 'Choisir une sauvegarde Noto à importer' : 'Choose a Noto backup to import'} /></div></div>
+          <div className="setting-row"><div className="setting-label"><strong>{tx('settings.restoreSession', 'Restore desktop session')}</strong><small>{tx('settings.restoreSessionDesc', 'Keep open tab paths on this device without storing content.')}</small></div><button className={`toggle ${preferences.restoreSession ? 'on' : ''}`} type="button" role="switch" aria-checked={preferences.restoreSession} onClick={() => onChange('restoreSession', !preferences.restoreSession)}><i /></button></div>
+          <div className="setting-row"><div className="setting-label"><strong>{tx('settings.draftRecovery', 'Local draft recovery')}</strong><small>{tx('settings.draftRecoveryDesc', 'Save unsaved text edits locally. Off by default; turning it off clears drafts after confirmation.')}</small></div><button className={`toggle ${preferences.draftRecoveryEnabled ? 'on' : ''}`} type="button" role="switch" aria-checked={preferences.draftRecoveryEnabled} onClick={() => onChange('draftRecoveryEnabled', !preferences.draftRecoveryEnabled)}><i /></button></div>
+          <div className="setting-row"><div className="setting-label"><strong>{tx('settings.draftRetention', 'Draft retention')}</strong><small>{tx('settings.draftRetentionDesc', 'Older drafts are removed on next access.')}</small></div><div className="draft-retention-actions"><div className="select-wrap"><select disabled={!preferences.draftRecoveryEnabled} value={preferences.draftRetentionDays} onChange={(event) => onChange('draftRetentionDays', Number(event.target.value) as Preferences['draftRetentionDays'])}><option value={1}>{preferences.language === 'fr' ? '1 jour' : '1 day'}</option><option value={7}>{preferences.language === 'fr' ? '7 jours' : '7 days'}</option><option value={30}>{preferences.language === 'fr' ? '30 jours' : '30 days'}</option></select><ChevronDown size={14} /></div><button className="subtle-button" type="button" onClick={onClearDrafts}><Trash2 size={13} />{tx('settings.clear', 'Clear')}</button></div></div>
+          <div className="setting-row"><div className="setting-label"><strong>{tx('settings.recentLimit', 'Recent files limit')}</strong><small>{tx('settings.recentLimitDesc', 'Local limit for the recents list.')}</small></div><div className="select-wrap"><select value={preferences.recentLimit} onChange={(event) => onChange('recentLimit', Number(event.target.value) as Preferences['recentLimit'])}><option value={4}>4</option><option value={8}>8</option><option value={12}>12</option><option value={20}>20</option></select><ChevronDown size={14} /></div></div>
+          <div className="setting-row"><div className="setting-label"><strong>{tx('settings.hidePaths', 'Hide paths')}</strong><small>{tx('settings.hidePathsDesc', 'Replace visible paths with a discreet label.')}</small></div><button className={`toggle ${preferences.hidePaths ? 'on' : ''}`} type="button" role="switch" aria-checked={preferences.hidePaths} onClick={() => onChange('hidePaths', !preferences.hidePaths)}><i /></button></div>
+          <div className="setting-row"><div className="setting-label"><strong>{tx('settings.localHistory', 'Local history')}</strong><small>{tx('settings.localHistoryDesc', 'Clear the recent files list.')}</small></div><button className="subtle-button" type="button" onClick={onClearRecents}><RotateCcw size={14} />{tx('settings.clear', 'Clear')}</button></div>
+          <div className="setting-row"><div className="setting-label"><strong>{tx('settings.shortcuts', 'Keyboard shortcuts')}</strong><small>{tx('settings.shortcutsDesc', 'Show the quick commands list.')}</small></div><button className="subtle-button" type="button" onClick={onOpenShortcuts}><Keyboard size={14} />{tx('settings.view', 'View')}</button></div>
+          <div className="setting-row"><div className="setting-label"><strong>{tx('settings.reset', 'Settings')}</strong><small>{tx('settings.resetDesc', 'Restore the default visual and editor settings.')}</small></div><button className="subtle-button" type="button" onClick={onResetDefaults}><RotateCcw size={14} />{tx('settings.resetAll', 'Restore all')}</button></div>
         </section>
-        <section className="settings-section settings-thanks"><div className="settings-section-title"><span>REMERCIEMENTS</span></div>
-          <div className="thanks-card"><span className="thanks-icon" aria-hidden="true"><Heart size={16} /></span><div className="thanks-copy"><strong>Noto par Louxos</strong><p>Noto est imaginé et développé par <strong>Louis — Louxos</strong>, fondateur de Louxos Corporation, avec le collectif Louxos Corporation. Merci à toutes celles et ceux qui testent, signalent et soutiennent le projet.</p><div className="thanks-links"><a href="https://louxos-corporation.netlify.app" target="_blank" rel="noreferrer">louxos-corporation.netlify.app</a><span aria-hidden="true">·</span><a href="https://louxos-corporation.netlify.app/#equipe" target="_blank" rel="noreferrer">Découvrir l’équipe</a></div></div></div>
+        <LocalSearchPanel language={preferences.language} hidePaths={preferences.hidePaths} onOpenFile={onOpenIndexedResult} />
+        <section className="settings-section settings-thanks"><div className="settings-section-title"><span>{tx('settings.thanks', 'Thanks').toUpperCase()}</span></div>
+          <div className="thanks-card"><span className="thanks-icon" aria-hidden="true"><Heart size={16} /></span><div className="thanks-copy"><strong>{tx('settings.thanksTitle', 'Noto by Louxos')}</strong><p>{tx('settings.thanksText', 'Noto is imagined and developed by Louis — Louxos, founder of Louxos Corporation, with the Louxos Corporation collective.')}</p><div className="thanks-links"><a href="https://louxos-corporation.netlify.app" target="_blank" rel="noreferrer">{tx('settings.thanksLink', 'louxos-corporation.netlify.app')}</a><span aria-hidden="true">·</span><a href="https://louxos-corporation.netlify.app/#equipe" target="_blank" rel="noreferrer">{tx('settings.thanksTeam', 'Meet the team')}</a></div></div></div>
         </section>
-        <div className="settings-privacy"><ShieldCheck size={15} /><span>Vos documents et groupes restent sur cet appareil. Les brouillons contenant du texte sont conservés localement uniquement si la récupération est activée ; sa désactivation les efface.</span></div>
+        <div className="settings-privacy"><ShieldCheck size={15} /><span>{tx('settings.privacy', 'Your documents stay on this device.')}</span></div>
       </div>
-      <footer className="settings-footer"><span>Noto <i>·</i> Version {APP_VERSION}</span><button className="secondary-button" type="button" onClick={onClose}>Terminé</button></footer>
+      <footer className="settings-footer"><span>Noto <i>·</i> {tx('settings.version', 'Version')} {APP_VERSION}</span><button className="secondary-button" type="button" onClick={onClose}>{tx('settings.done', 'Done')}</button></footer>
     </section>
   </div>;
 }

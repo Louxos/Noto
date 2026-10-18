@@ -404,12 +404,13 @@ export function GroupAssignmentDialog({ file, groups, onToggle, onCreate, onClos
   </div>;
 }
 
-export function CommandPalette({ commands, onClose }: { commands: CommandOption[]; onClose: () => void }) {
+export function CommandPalette({ commands, onClose, language = 'fr' }: { commands: CommandOption[]; onClose: () => void; language?: 'fr' | 'en' }) {
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-  const normalizedQuery = query.trim().toLocaleLowerCase('fr-FR');
-  const filtered = commands.filter((command) => !command.disabled && `${command.label} ${command.detail ?? ''} ${command.keywords ?? ''}`.toLocaleLowerCase('fr-FR').includes(normalizedQuery));
+  const searchLocale = language === 'fr' ? 'fr-FR' : 'en-US';
+  const normalizedQuery = query.trim().toLocaleLowerCase(searchLocale);
+  const filtered = commands.filter((command) => !command.disabled && `${command.label} ${command.detail ?? ''} ${command.keywords ?? ''}`.toLocaleLowerCase(searchLocale).includes(normalizedQuery));
 
   useEffect(() => { inputRef.current?.focus(); }, []);
   useEffect(() => { setActiveIndex(0); }, [normalizedQuery]);
@@ -427,14 +428,14 @@ export function CommandPalette({ commands, onClose }: { commands: CommandOption[
 
   return <div className="modal-backdrop palette-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <section className="command-palette" role="dialog" aria-modal="true" aria-labelledby="palette-title">
-      <h2 id="palette-title" className="visually-hidden">Ouverture rapide et commandes</h2>
-      <div className="palette-search"><Search size={17} /><input ref={inputRef} value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={handleKeyDown} placeholder="Rechercher une commande, un onglet ou un fichier récent…" aria-label="Rechercher une commande, un onglet ou un fichier récent" /><kbd>Échap</kbd></div>
-      <div className="palette-results" role="listbox" aria-label="Commandes disponibles">
+      <h2 id="palette-title" className="visually-hidden">{language === 'fr' ? 'Ouverture rapide et commandes' : 'Quick open and commands'}</h2>
+      <div className="palette-search"><Search size={17} /><input ref={inputRef} value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={handleKeyDown} placeholder={language === 'fr' ? 'Rechercher une commande, un onglet ou un fichier récent…' : 'Search commands, tabs or recent files…'} aria-label={language === 'fr' ? 'Rechercher une commande, un onglet ou un fichier récent' : 'Search commands, tabs or recent files'} /><kbd>{language === 'fr' ? 'Échap' : 'Esc'}</kbd></div>
+      <div className="palette-results" role="listbox" aria-label={language === 'fr' ? 'Commandes disponibles' : 'Available commands'}>
         {filtered.length ? filtered.map((command, index) => <button className={`palette-command ${index === activeIndex ? 'active' : ''}`} type="button" role="option" aria-selected={index === activeIndex} disabled={command.disabled} key={command.id} onMouseEnter={() => setActiveIndex(index)} onClick={() => { onClose(); command.onSelect(); }}>
           <span className="palette-command-icon">{command.icon}</span><span className="palette-command-copy"><strong>{command.label}</strong>{command.detail && <small>{command.detail}</small>}</span>{command.shortcut && <kbd>{command.shortcut}</kbd>}
-        </button>) : <div className="palette-no-results">Aucune commande ne correspond à « {query} ».</div>}
+        </button>) : <div className="palette-no-results">{language === 'fr' ? `Aucune commande ne correspond à « ${query} ».` : `No commands match “${query}”.`}</div>}
       </div>
-      <footer className="palette-footer"><span><Keyboard size={13} />Flèches pour naviguer</span><span><kbd>Entrée</kbd> pour lancer</span><span><kbd>Esc</kbd> pour fermer</span></footer>
+      <footer className="palette-footer"><span><Keyboard size={13} />{language === 'fr' ? 'Flèches pour naviguer' : 'Use arrows to navigate'}</span><span><kbd>{language === 'fr' ? 'Entrée' : 'Enter'}</kbd> {language === 'fr' ? 'pour lancer' : 'to run'}</span><span><kbd>Esc</kbd> {language === 'fr' ? 'pour fermer' : 'to close'}</span></footer>
     </section>
   </div>;
 }

@@ -6,8 +6,12 @@ Toute la documentation de référence vit dans `docs/`. Ce fichier en est l’in
 
 - [Guide utilisateur](user-guide.md) — ouvrir, lire, éditer, enregistrer, imprimer, mesurer, liens et sections, raccourcis, limites de chaque format.
 - [L’atelier](atelier.md) — l’espace de traitement local : accès, trois colonnes, familles d’outils, niveaux de prise en charge, rapports, réseau et confidentialité.
+- [Recherche indexée locale](local-search.md) — index à la demande, limites de parcours, persistance locale et effacement.
+- [Langues de l’interface](language.md) — état réel des catalogues français/anglais et règles d’ajout de chaînes.
+- [Mises à jour](update-check.md) — vérification manuelle actuelle et prérequis d’un futur updater Tauri signé.
 - [Icônes par type de fichier sous Windows](icons-fichiers.md) — fonctionnement, table des 21 classes, limites, régénération des `.ico`.
 - [Installation et téléchargement Windows](installation.md) — release publiée, vérification SHA-256, build de test, construction depuis le dépôt, dépannage.
+- [Signer l’installeur Windows](release-signing.md) — secrets d’Actions attendus, vérification Authenticode et configuration sécurisée.
 
 ## Développer
 

@@ -512,6 +512,38 @@ button.zoom-label { border: 0; background: transparent; cursor: pointer; }
 .toggle i { display: block; width: 14px; height: 14px; border-radius: 50%; background: white; box-shadow: 0 1px 3px rgba(0,0,0,.15); transition: transform .16s; }
 .toggle.on { background: var(--accent); }
 .toggle.on i { transform: translateX(12px); }
+.settings-indexed-search { padding-bottom: 14px; }
+.update-check-result { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 10px; margin: 5px 0 9px; color: var(--success); border: 1px solid color-mix(in srgb, var(--success) 20%, var(--line)); border-radius: 6px; background: var(--success-soft); font-size: 9px; }
+.update-check-result.available { color: var(--accent-strong); border-color: var(--accent-line); background: var(--accent-soft); }
+.update-check-error { padding: 7px 9px; margin: 5px 0 9px; color: var(--danger); border-radius: 6px; background: var(--warning-soft); font-size: 9px; }
+.indexed-search-controls { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.indexed-search-folder { display: flex; align-items: center; gap: 7px; flex: 1 1 100%; min-width: 0; padding: 8px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--muted); font-size: 9px; }
+.indexed-search-folder svg { flex: 0 0 auto; color: var(--accent-strong); }
+.indexed-search-folder span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.indexed-search-build { color: var(--accent-strong); }
+.indexed-search-clear { margin-left: auto; }
+.indexed-search-disabled, .indexed-search-empty { padding: 10px 11px; border-radius: 6px; color: var(--muted); background: var(--surface-hover); font-size: 9px; line-height: 1.5; }
+.indexed-search-progress, .indexed-search-meta { display: flex; align-items: center; gap: 7px; margin-top: 8px; color: var(--muted); font-size: 9px; }
+.indexed-search-message { margin-top: 8px; color: var(--accent-strong); font-size: 9px; line-height: 1.5; }
+.indexed-search-query { display: flex; gap: 8px; align-items: center; margin-top: 10px; padding: 0 9px; height: 34px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); color: var(--muted); }
+.indexed-search-query:focus-within { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.indexed-search-query svg { flex: 0 0 auto; }
+.indexed-search-query input { flex: 1; min-width: 0; color: var(--text); border: 0; outline: 0; background: transparent; font: inherit; font-size: 10px; }
+.indexed-search-query > span { min-width: 18px; text-align: right; color: var(--subtle); font-size: 9px; }
+.indexed-search-results { max-height: 190px; overflow: auto; margin-top: 6px; border: 1px solid var(--line); border-radius: 7px; }
+.indexed-search-result { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 40px; padding: 5px 7px 5px 9px; border-bottom: 1px solid var(--line); }
+.indexed-search-result:last-child { border-bottom: 0; }
+.indexed-search-result-copy { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--accent-strong); }
+.indexed-search-result-copy > svg { flex: 0 0 auto; }
+.indexed-search-result-copy span { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
+.indexed-search-result-copy strong, .indexed-search-result-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.indexed-search-result-copy strong { color: var(--text-strong); font-size: 10px; }
+.indexed-search-result-copy small { color: var(--muted); font-size: 8px; }
+.indexed-search-result .icon-action { width: 28px; height: 28px; flex: 0 0 28px; }
+.indexed-search-meta { justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.indexed-search-meta span { display: inline-flex; align-items: center; gap: 5px; }
+.indexed-search-meta svg { color: var(--success); }
+.indexed-search-privacy { align-items: flex-start; margin-top: 9px; }
 .settings-thanks { border-bottom: 0; padding-bottom: 12px; }
 .thanks-card { display: flex; gap: 12px; align-items: flex-start; padding: 12px 13px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-hover); }
 .thanks-icon { display: grid; place-items: center; width: 32px; height: 32px; flex: 0 0 32px; color: var(--accent-strong); background: var(--accent-soft); border: 1px solid var(--accent-line); border-radius: 8px; }

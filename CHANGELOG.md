@@ -4,9 +4,16 @@ Les changements notables sont consignés ici, selon une version simplifiée de K
 
 ## [Non publié]
 
-_Aucun changement depuis la 1.0.1._
+### Ajouté
+- **Recherche indexée locale à la demande** : choix explicite d’un dossier, index conservé localement dans IndexedDB, recherche par nom et contenu, limites de parcours et effacement manuel. L’index ne stocke pas le corps complet ; pour le moment, les 16 000 premiers caractères de chaque fichier sont recherchés.
+- **Langue anglaise (couverture initiale)** : sélection français/anglais persistante ; accueil, navigation, récents et paramètres sont traduits. Les menus, lecteurs et l’atelier restent à traduire.
+- **Vérification manuelle des versions** : Paramètres compare la version à la dernière release stable ; l’installation reste explicite via GitHub, aucun téléchargement en arrière-plan.
+- **Site produit GitHub Pages** : présentation responsive, liens de téléchargement mis à jour depuis les métadonnées publiques de Releases, documentation, FAQ et visuels clairement identifiés.
 
-## [1.0.1] — 2026-10-16
+### Sécurité et publication
+- Guide de configuration Authenticode et guide des prérequis d’un futur updater Tauri signé. La signature Windows reste conditionnée à un certificat et les mises à jour automatiques ne sont pas encore activées.
+
+## [1.0.1] — 2026-10-18
 
 Mise à jour de correction : retrait du badge **BÊTA** de la barre latérale (1.0 stable) et ajout d’une section **Remerciements** dans les paramètres — présentation de **Louis — Louxos** / Louxos Corporation avec liens vers [louxos-corporation.netlify.app](https://louxos-corporation.netlify.app) et [l’équipe](https://louxos-corporation.netlify.app/#equipe). Aucun changement de fonctionnalité, de dépendance ou de format.
 

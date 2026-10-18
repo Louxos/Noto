@@ -1,8 +1,8 @@
 [package]
 name = "noto"
 version = "1.0.1"
-description = "Lecteur de fichiers local Noto"
-authors = ["Noto contributors"]
+description = "Suite documentaire locale Noto : lire, éditer et traiter vos fichiers"
+authors = ["Louxos Corporation", "Noto contributors"]
 edition = "2021"
 
 [build-dependencies]

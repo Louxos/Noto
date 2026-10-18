@@ -22,7 +22,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; img-src 'self' asset: http://asset.localhost blob: data:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src ipc: http://ipc.localhost http://localhost:1420 ws://localhost:1420; worker-src 'self' blob:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self';"
+      "csp": "default-src 'self'; img-src 'self' asset: http://asset.localhost blob: data:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src ipc: http://ipc.localhost http://localhost:1420 ws://localhost:1420 https://api.github.com; worker-src 'self' blob:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self';"
     }
   },
   "bundle": {
@@ -31,13 +31,13 @@
       "nsis"
     ],
     "category": "Utility",
-    "publisher": "Noto",
+    "publisher": "Louxos Corporation",
     "homepage": "https://github.com/Louxos/Noto",
-    "copyright": "Copyright © 2026 Noto contributors",
+    "copyright": "Copyright © 2026 Louxos Corporation contributors",
     "license": "MIT",
     "licenseFile": "../LICENSE",
-    "shortDescription": "Lecteur et éditeur de fichiers local",
-    "longDescription": "Noto ouvre et organise localement vos fichiers texte, Markdown, PDF, images et documents courants, dans un espace de lecture clair et simple. Aucun compte ni synchronisation : vos fichiers restent sur votre appareil.",
+    "shortDescription": "Suite documentaire locale : lire, éditer, traiter",
+    "longDescription": "Noto rassemble lecture, édition, impression et traitement local de fichiers texte, code, PDF, images, tableaux et documents. Aucun compte, aucun cloud et aucune télémétrie : vos documents restent sur votre appareil.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

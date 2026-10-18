@@ -1,4 +1,5 @@
 export type Theme = 'light' | 'dark';
+export type Language = 'fr' | 'en';
 export type AccentColor = 'violet' | 'blue' | 'mint' | 'rose';
 export type ToolbarAction = 'search' | 'edit' | 'save' | 'print' | 'info' | 'group' | 'close';
 export type RecentLimit = 4 | 8 | 12 | 20;
@@ -6,6 +7,7 @@ export type DraftRetentionDays = 1 | 7 | 30;
 
 export interface Preferences {
   theme: Theme;
+  language: Language;
   accent: AccentColor;
   textSize: number;
   editorSize: number;
@@ -40,6 +42,7 @@ const RECENTS_KEY = 'noto.recents.v1';
 
 export const defaultPreferences: Preferences = {
   theme: 'light',
+  language: 'fr',
   accent: 'violet',
   textSize: 16,
   editorSize: 14,
@@ -71,6 +74,7 @@ export function normalizePreferences(value: unknown): Preferences {
   const hidden = normalizeToolbarList(parsed.hiddenToolbarActions);
   return {
     theme: parsed.theme === 'dark' ? 'dark' : 'light',
+    language: parsed.language === 'en' ? 'en' : 'fr',
     accent: parsed.accent === 'blue' || parsed.accent === 'mint' || parsed.accent === 'rose' ? parsed.accent : 'violet',
     textSize: clampNumber(parsed.textSize, 14, 20, defaultPreferences.textSize),
     editorSize: clampNumber(parsed.editorSize, 12, 20, defaultPreferences.editorSize),
