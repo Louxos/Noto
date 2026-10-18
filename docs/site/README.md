@@ -4,10 +4,14 @@ Site statique, sans dépendances ni compilation : `index.html`, `styles.css`, `s
 
 ## Publication GitHub Pages
 
+État vérifié le 18 octobre 2026 via l’API GitHub Pages : `build_type=legacy`, source `arena/30f013fe-noto:/`, aucun domaine personnalisé (`cname=null`), HTTPS forcé. L’adresse actuelle `https://louxos.github.io/Noto/` publie la racine du dépôt, pas le site produit de `docs/site/`.
+
+Pour publier ce site :
+
 1. Fusionner les fichiers du site sur `main`.
-2. Dans le dépôt GitHub, ouvrir **Settings → Pages** et choisir **GitHub Actions** comme source. La configuration actuelle est en mode historique : elle publie la racine du dépôt sur la branche Arena, pas `docs/site/`.
+2. Dans le dépôt GitHub, ouvrir **Settings → Pages** et choisir **GitHub Actions** comme source.
 3. Lancer une fois **Actions → GitHub Pages → Run workflow** (ou attendre la prochaine poussée des fichiers du site sur `main`).
-4. GitHub affichera l’adresse publiée dans l’environnement `github-pages`. Le dépôt possède déjà un `CNAME` (`noto.pages`) ; le workflow en inclut une copie à la racine du site. Vérifier l’état DNS/TLS dans **Settings → Pages** avant d’annoncer ce domaine. L’adresse standard du projet reste `https://louxos.github.io/Noto/`.
+4. Vérifier l’adresse publiée et l’état HTTPS dans l’environnement `github-pages` et **Settings → Pages**. Aucun domaine personnalisé n’est actuellement configuré.
 
 Le workflow `.github/workflows/pages.yml` publie uniquement le dossier `docs/site/`. Il est relancé automatiquement lorsqu’un fichier du site change sur `main`.
 
