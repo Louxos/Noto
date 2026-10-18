@@ -5,9 +5,9 @@ Site statique, sans dépendances ni compilation : `index.html`, `styles.css`, `s
 ## Publication GitHub Pages
 
 1. Fusionner les fichiers du site sur `main`.
-2. Dans le dépôt GitHub, ouvrir **Settings → Pages** et choisir **GitHub Actions** comme source de publication.
+2. Dans le dépôt GitHub, ouvrir **Settings → Pages** et choisir **GitHub Actions** comme source. La configuration actuelle est en mode historique : elle publie la racine du dépôt sur la branche Arena, pas `docs/site/`.
 3. Lancer une fois **Actions → GitHub Pages → Run workflow** (ou attendre la prochaine poussée des fichiers du site sur `main`).
-4. GitHub affichera l’adresse publiée dans l’environnement `github-pages`. Pour ce dépôt, l’adresse standard est `https://louxos.github.io/Noto/`.
+4. GitHub affichera l’adresse publiée dans l’environnement `github-pages`. Le dépôt possède déjà un `CNAME` (`noto.pages`) ; le workflow en inclut une copie à la racine du site. Vérifier l’état DNS/TLS dans **Settings → Pages** avant d’annoncer ce domaine. L’adresse standard du projet reste `https://louxos.github.io/Noto/`.
 
 Le workflow `.github/workflows/pages.yml` publie uniquement le dossier `docs/site/`. Il est relancé automatiquement lorsqu’un fichier du site change sur `main`.
 
