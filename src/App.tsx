@@ -8,6 +8,7 @@ import {
   Expand, Image as ImageIcon, Keyboard, LayoutGrid, LoaderCircle, Maximize2, Minimize2, Moon, MoreHorizontal,
   PanelLeft, Pencil, Plus, RotateCcw, Scissors, Search, Settings2, ShieldCheck, Sun, Table2,
   TextCursorInput, X, Save, Replace, Sparkles, Trash2, Pin, Wrench, Printer, FileSearch, Link2, CircleAlert,
+  Heart,
 } from 'lucide-react';
 import { CodeViewer } from './components/CodeViewer';
 import { CsvViewer } from './components/CsvViewer';
@@ -1660,7 +1661,6 @@ export default function App() {
         <div className="brand-lockup" onClick={() => { setPage('home'); setActiveId(null); }} role="button" tabIndex={0}>
           <span className="brand-mark" aria-hidden="true"><span /><span /><i /></span>
           <span className="brand-name">noto</span>
-          <span className="brand-build">BÊTA</span>
         </div>
 
         <div className="sidebar-main-action"><OpenDialogButton onClick={() => void handleOpen()} compact /></div>
@@ -2129,6 +2129,9 @@ export function SettingsModal({ preferences, onChange, onClose, onClearRecents, 
           <div className="setting-row"><div className="setting-label"><strong>Historique local</strong><small>Effacer la liste des fichiers récents.</small></div><button className="subtle-button" type="button" onClick={onClearRecents}><RotateCcw size={14} />Effacer</button></div>
           <div className="setting-row"><div className="setting-label"><strong>Raccourcis clavier</strong><small>Afficher la liste des commandes rapides.</small></div><button className="subtle-button" type="button" onClick={onOpenShortcuts}><Keyboard size={14} />Consulter</button></div>
           <div className="setting-row"><div className="setting-label"><strong>Réglages</strong><small>Restaurer les paramètres visuels et éditeur par défaut.</small></div><button className="subtle-button" type="button" onClick={onResetDefaults}><RotateCcw size={14} />Tout rétablir</button></div>
+        </section>
+        <section className="settings-section settings-thanks"><div className="settings-section-title"><span>REMERCIEMENTS</span></div>
+          <div className="thanks-card"><span className="thanks-icon" aria-hidden="true"><Heart size={16} /></span><div className="thanks-copy"><strong>Noto par Louxos</strong><p>Noto est imaginé et développé par <strong>Louis — Louxos</strong>, fondateur de Louxos Corporation, avec le collectif Louxos Corporation. Merci à toutes celles et ceux qui testent, signalent et soutiennent le projet.</p><div className="thanks-links"><a href="https://louxos-corporation.netlify.app" target="_blank" rel="noreferrer">louxos-corporation.netlify.app</a><span aria-hidden="true">·</span><a href="https://louxos-corporation.netlify.app/#equipe" target="_blank" rel="noreferrer">Découvrir l’équipe</a></div></div></div>
         </section>
         <div className="settings-privacy"><ShieldCheck size={15} /><span>Vos documents et groupes restent sur cet appareil. Les brouillons contenant du texte sont conservés localement uniquement si la récupération est activée ; sa désactivation les efface.</span></div>
       </div>

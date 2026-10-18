@@ -512,6 +512,17 @@ button.zoom-label { border: 0; background: transparent; cursor: pointer; }
 .toggle i { display: block; width: 14px; height: 14px; border-radius: 50%; background: white; box-shadow: 0 1px 3px rgba(0,0,0,.15); transition: transform .16s; }
 .toggle.on { background: var(--accent); }
 .toggle.on i { transform: translateX(12px); }
+.settings-thanks { border-bottom: 0; padding-bottom: 12px; }
+.thanks-card { display: flex; gap: 12px; align-items: flex-start; padding: 12px 13px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-hover); }
+.thanks-icon { display: grid; place-items: center; width: 32px; height: 32px; flex: 0 0 32px; color: var(--accent-strong); background: var(--accent-soft); border: 1px solid var(--accent-line); border-radius: 8px; }
+.thanks-copy { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.thanks-copy strong { color: var(--text-strong); font-size: 11px; }
+.thanks-copy p { margin: 0; color: var(--muted); font-size: 9px; line-height: 1.55; }
+.thanks-copy p strong { color: var(--text); font-size: inherit; }
+.thanks-links { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
+.thanks-links a { color: var(--accent-strong); font-size: 9px; font-weight: 600; text-decoration: none; word-break: break-all; }
+.thanks-links a:hover { text-decoration: underline; }
+.thanks-links span { color: var(--subtle); }
 .settings-general { border-bottom: 0; }
 .subtle-button { display: flex; align-items: center; gap: 6px; height: 27px; padding: 0 8px; color: #8d8e9a; border: 1px solid var(--line); border-radius: 5px; background: var(--surface); font-size: 9px; cursor: pointer; }
 .subtle-button:hover { color: var(--danger); background: var(--surface-hover); }
