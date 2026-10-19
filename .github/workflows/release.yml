@@ -76,6 +76,28 @@ jobs:
             throw 'Configure TAURI_SIGNING_PRIVATE_KEY and TAURI_SIGNING_PRIVATE_KEY_PASSWORD in GitHub Actions repository secrets before creating a release tag.'
           }
           Write-Host 'Both Tauri updater signing secrets are present.'
+      - name: Validate Tauri updater signing key
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $probePath = Join-Path $env:RUNNER_TEMP 'noto-updater-signing-probe.txt'
+          $signaturePath = "$probePath.sig"
+          [IO.File]::WriteAllText($probePath, 'Noto updater signing key validation', [Text.UTF8Encoding]::new($false))
+          try {
+            $signOutput = & npx tauri signer sign --app-version $version $probePath 2>&1
+            $signExitCode = $LASTEXITCODE
+            if ($signExitCode -ne 0) {
+              throw "Tauri updater key validation failed with exit code $signExitCode. Check the configured private key and password."
+            }
+            if (-not (Test-Path -LiteralPath $signaturePath)) { throw 'Tauri updater key validation did not create a signature.' }
+            Write-Host "Tauri updater key and password validated for Noto $version."
+          } finally {
+            Remove-Item -LiteralPath @($probePath, $signaturePath) -Force -ErrorAction SilentlyContinue
+          }
       - name: Build Windows installers
         if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
         shell: pwsh
@@ -93,15 +115,12 @@ jobs:
             Write-Output "::error title=Tauri build output::$escapedLog"
             exit $buildExitCode
           }
-      - name: Build signed Windows release
+      - name: Build Windows release installer
         if: startsWith(github.ref, 'refs/tags/v')
         shell: pwsh
-        env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           $logPath = Join-Path $env:RUNNER_TEMP 'noto-tauri-build.log'
-          npm run tauri:build -- --config src-tauri/tauri.updater-release.conf.json 2>&1 | Tee-Object -FilePath $logPath
+          npm run tauri:build 2>&1 | Tee-Object -FilePath $logPath
           $buildExitCode = $LASTEXITCODE
           if ($null -eq $buildExitCode) { $buildExitCode = 1 }
           if ($buildExitCode -ne 0) {

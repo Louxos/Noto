@@ -29,9 +29,17 @@ describe('configuration de l’updater Tauri', () => {
     expect(updater?.windows?.installMode).toBe('passive');
   });
 
-  it('ne demande la clé privée que pour construire les artefacts de release', () => {
+  it('signe l’installateur final uniquement dans le flux de release', () => {
     expect(readConfig('src-tauri/tauri.conf.json').bundle?.createUpdaterArtifacts).toBeUndefined();
-    expect(readConfig('src-tauri/tauri.updater-release.conf.json').bundle?.createUpdaterArtifacts).toBe(true);
+
+    const workflow = readFileSync(resolve(root, '.github/workflows/release.yml'), 'utf8');
+    const authenticodeStep = workflow.indexOf('      - name: Sign Windows installers when a certificate is configured');
+    const updaterSigningStart = workflow.indexOf('      - name: Re-sign final installer for the Tauri updater');
+    const updaterSigningStep = workflow.slice(updaterSigningStart).split('\n      - name: ')[0];
+    expect(authenticodeStep).toBeGreaterThan(-1);
+    expect(updaterSigningStart).toBeGreaterThan(authenticodeStep);
+    expect(updaterSigningStep).toContain("if: startsWith(github.ref, 'refs/tags/v')");
+    expect(updaterSigningStep).toContain('npx tauri signer sign --app-version $version $installer.FullName');
   });
 
   it('autorise la commande de redémarrage utilisée par relaunch() du plugin process', () => {
