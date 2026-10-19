@@ -1,7 +1,13 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import type { DownloadEvent, Update } from '@tauri-apps/plugin-updater';
 import App from './App';
+
+const { tauriUpdaterCheck, tauriRelaunch } = vi.hoisted(() => ({ tauriUpdaterCheck: vi.fn(), tauriRelaunch: vi.fn() }));
+vi.mock('@tauri-apps/plugin-updater', () => ({ check: tauriUpdaterCheck }));
+vi.mock('@tauri-apps/plugin-process', () => ({ relaunch: tauriRelaunch }));
 
 /**
  * Ouverture depuis l’Explorateur Windows.
@@ -41,6 +47,8 @@ const SAMPLE = 'C:\\Users\\Ada\\Documents\\journal.md';
 
 beforeEach(() => {
   localStorage.setItem('noto.first-run.v1', 'done');
+  tauriUpdaterCheck.mockReset().mockResolvedValue(null);
+  tauriRelaunch.mockReset().mockResolvedValue(undefined);
   listeners.clear();
   startupPaths = [];
   pendingPaths = [];
@@ -79,5 +87,48 @@ describe('ouverture par Windows', () => {
     // La preuve que la séquence de démarrage a bien eu lieu : le document est ouvert.
     await screen.findByRole('tab', { name: /journal\.md/ }, ATTENTE);
     expect(shellClasses()).not.toContain('immersive');
+  });
+
+  it('vérifie discrètement les mises à jour signées au démarrage et affiche une confirmation discrète si Noto est à jour', { timeout: 20_000 }, async () => {
+    render(<App />);
+    await waitFor(() => expect(tauriUpdaterCheck).toHaveBeenCalledWith({ timeout: 15_000 }), ATTENTE);
+    await waitFor(() => expect(screen.getByRole('status').textContent).toContain('Noto est à jour'), ATTENTE);
+    expect(screen.queryByRole('dialog', { name: /version plus récente/i })).toBeNull();
+  });
+
+  it('annonce une version disponible et suit les véritables événements de téléchargement', { timeout: 20_000 }, async () => {
+    const user = userEvent.setup();
+    let finishDownload: () => void = () => { throw new Error('The download has not started.'); };
+    let sendEvent: ((event: DownloadEvent) => void) | null = null;
+    const update = {
+      currentVersion: '1.1.0',
+      version: '1.2.0',
+      body: 'Mise à jour Tauri signée.',
+      close: vi.fn(async () => undefined),
+      downloadAndInstall: vi.fn((onEvent: (event: DownloadEvent) => void) => {
+        sendEvent = onEvent;
+        onEvent({ event: 'Started', data: { contentLength: 1_000 } });
+        onEvent({ event: 'Progress', data: { chunkLength: 250 } });
+        return new Promise<void>((resolve) => {
+          finishDownload = () => {
+            sendEvent?.({ event: 'Finished' });
+            resolve();
+          };
+        });
+      }),
+    } as unknown as Update;
+    tauriUpdaterCheck.mockReset().mockResolvedValue(update);
+
+    render(<App />);
+    const dialog = await screen.findByRole('dialog', { name: 'Une version plus récente est prête' }, ATTENTE);
+    expect(dialog.textContent).toContain('Mise à jour Tauri signée.');
+    await user.click(screen.getByRole('button', { name: 'Télécharger et installer' }));
+    await waitFor(() => expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('250'), ATTENTE);
+    expect(screen.getByRole('progressbar').getAttribute('aria-valuemax')).toBe('1000');
+
+    finishDownload();
+    await waitFor(() => expect(screen.getByText('Vérification cryptographique en cours')).toBeTruthy(), ATTENTE);
+    await waitFor(() => expect(tauriRelaunch).toHaveBeenCalledOnce(), ATTENTE);
+    expect(update.close).toHaveBeenCalledOnce();
   });
 });

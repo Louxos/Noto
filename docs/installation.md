@@ -49,7 +49,7 @@ L’artefact d’Actions est un build de test temporaire (30 jours), pas une rel
 
 Noto est déclaré comme application compatible avec les formats pris en charge. Depuis l’Explorateur, choisissez **Ouvrir avec → Noto**. Windows garde le contrôle de l’application par défaut : l’installation de Noto ne doit pas remplacer votre choix actuel. Vous pouvez choisir « Toujours utiliser cette application » dans Windows si vous le souhaitez.
 
-Les fichiers récents et les préférences sont stockés localement sur l’appareil. Noto ne synchronise pas vos documents et ne propose pas de mise à jour automatique ; pour mettre à jour l’application, installez un nouveau build ou une release.
+Les fichiers récents et les préférences sont stockés localement sur l’appareil. Noto ne synchronise pas vos documents. À partir de la 1.2.0, l’application de bureau vérifie discrètement les releases stables au démarrage et vous demande votre accord avant tout téléchargement ; la signature cryptographique est contrôlée avant l’installation. Aucun document ni chemin n’est transmis. La 1.1.0 publiée avant l’updater doit être remplacée manuellement une fois par la 1.2.0 ; les versions suivantes peuvent ensuite être mises à jour depuis Noto. La version navigateur ne réalise pas d’installation intégrée.
 
 ## 2. Construire Noto depuis le dépôt
 

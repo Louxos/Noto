@@ -7,7 +7,13 @@ Le workflow `.github/workflows/release.yml` attend ces deux secrets d’Actions 
 - `NOTO_WINDOWS_SIGNING_CERTIFICATE_BASE64` — certificat de signature Windows au format PFX encodé en Base64 ;
 - `NOTO_WINDOWS_SIGNING_CERTIFICATE_PASSWORD` — mot de passe du PFX.
 
-Si les deux secrets sont absents, le build continue sans signature et le journal l’annonce. Si un seul secret est présent, le build échoue volontairement : une configuration incomplète ne doit pas produire une publication ambiguë.
+Si les deux secrets Authenticode sont absents, les installeurs restent sans signature d’éditeur et le journal l’annonce. Si un seul secret est présent, le build échoue volontairement : une configuration incomplète ne doit pas produire une publication ambiguë.
+
+## Signature de l’updater Tauri
+
+La signature Authenticode ci-dessus est distincte de la signature cryptographique utilisée par l’updater. Tout **tag de release** exige les secrets `TAURI_SIGNING_PRIVATE_KEY` et `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` dans **Settings → Secrets and variables → Actions**. Sans eux, le workflow refuse de construire et publier la release signée. Les builds de branche ne reçoivent pas la clé privée et ne produisent pas d’artefacts de mise à jour.
+
+La clé privée Tauri doit rester réservée aux secrets Actions et hors du dépôt. Elle ne doit jamais apparaître dans une issue ou une conversation. L’artefact final est re-signé après l’étape Authenticode, afin que la signature de mise à jour couvre les octets exacts publiés ; le workflow publie également le manifeste Tauri et la somme SHA-256.
 
 ## Configuration par le propriétaire du dépôt
 

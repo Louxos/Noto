@@ -2,6 +2,17 @@
 
 Les changements notables sont consignés ici, selon une version simplifiée de Keep a Changelog.
 
+## [1.2.0] — en préparation
+
+### Ajouté
+- **Mises à jour intégrées Tauri** : contrôle discret des releases stables au démarrage, annonce soignée avec notes de version et installation uniquement après confirmation.
+- **Progression honnête** : pourcentage fondé sur les octets réellement reçus lorsque la taille totale est connue, compteur d’octets lorsqu’elle ne l’est pas ; l’installeur NSIS affiche ensuite sa propre progression réelle.
+- **Vérification cryptographique** : la signature Tauri est contrôlée avant l’installation ; un artefact absent ou invalide est refusé, sans renvoi vers une installation manuelle qui contournerait ce contrôle.
+- **Publication signée** : le workflow vérifie l’alignement du tag et des versions, garde la clé privée dans les secrets d’Actions, re-signe l’installeur final après l’éventuelle signature Authenticode et publie `latest.json`, la signature et les sommes SHA-256.
+
+### Migration
+- La 1.1.0, publiée avant l’updater, nécessite une installation manuelle de la 1.2.0. Les versions intégrant l’updater pourront ensuite être mises à jour depuis Noto.
+
 ## [1.1.0] — 2026-10-18
 
 ### Ajouté

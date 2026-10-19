@@ -38,7 +38,42 @@ jobs:
       - run: npm run build
       - name: Test native Windows commands
         run: cargo test --manifest-path src-tauri/Cargo.toml
+      - name: Validate release version
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          $packageVersion = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $tauriVersion = (Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json).version
+          $cargoText = Get-Content src-tauri/Cargo.toml -Raw
+          $cargoMatch = [regex]::Match($cargoText, '(?m)^version\s*=\s*"([^"]+)"')
+          if (-not $cargoMatch.Success) { throw 'Could not read the Rust package version.' }
+          $cargoVersion = $cargoMatch.Groups[1].Value
+          $sourceText = Get-Content src/lib/version.ts -Raw
+          $sourceMatch = [regex]::Match($sourceText, "APP_VERSION\s*=\s*'([^']+)'")
+          if (-not $sourceMatch.Success) { throw 'Could not read the frontend application version.' }
+          $sourceVersion = $sourceMatch.Groups[1].Value
+          $versions = @($packageVersion, $tauriVersion, $cargoVersion, $sourceVersion)
+          $uniqueVersions = @($versions | Select-Object -Unique)
+          if ($uniqueVersions.Count -ne 1) {
+            throw "Version mismatch: package=$packageVersion, tauri=$tauriVersion, cargo=$cargoVersion, app=$sourceVersion."
+          }
+          if ($env:GITHUB_REF_NAME -ne "v$packageVersion") {
+            throw "Tag $env:GITHUB_REF_NAME does not match the application version v$packageVersion."
+          }
+          Write-Host "Release tag and all application versions match: v$packageVersion"
+      - name: Verify Tauri updater signing secrets
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:TAURI_SIGNING_PRIVATE_KEY) -or [string]::IsNullOrWhiteSpace($env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD)) {
+            throw 'Configure TAURI_SIGNING_PRIVATE_KEY and TAURI_SIGNING_PRIVATE_KEY_PASSWORD in GitHub Actions repository secrets before creating a release tag.'
+          }
+          Write-Host 'Both Tauri updater signing secrets are present.'
       - name: Build Windows installers
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
         shell: pwsh
         run: |
           $logPath = Join-Path $env:RUNNER_TEMP 'noto-tauri-build.log'
@@ -48,6 +83,23 @@ jobs:
             Get-Content $logPath -Tail 25 | ForEach-Object {
               $line = $_ -replace '%', '%25' -replace "`r", '%0D' -replace "`n", '%0A'
               Write-Output "::error title=Tauri build output::$line"
+            }
+            exit $buildExitCode
+          }
+      - name: Build signed Windows release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          $logPath = Join-Path $env:RUNNER_TEMP 'noto-tauri-build.log'
+          npm run tauri:build -- --config src-tauri/tauri.updater-release.conf.json 2>&1 | Tee-Object -FilePath $logPath
+          $buildExitCode = $LASTEXITCODE
+          if ($buildExitCode -ne 0) {
+            Get-Content $logPath -Tail 25 | ForEach-Object {
+              $line = $_ -replace '%', '%25' -replace "`r", '%0D' -replace "`n", '%0A'
+              Write-Output "::error title=Tauri signed build output::$line"
             }
             exit $buildExitCode
           }
@@ -233,18 +285,70 @@ jobs:
           } finally {
             Remove-Item $certificatePath -Force -ErrorAction SilentlyContinue
           }
+      - name: Re-sign final installer for the Tauri updater
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $installers = @(Get-ChildItem 'src-tauri/target/release/bundle/nsis' -Filter '*.exe' -File | Sort-Object Name)
+          if ($installers.Count -ne 1) { throw "Expected one NSIS installer to sign, found $($installers.Count)." }
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          foreach ($installer in $installers) {
+            npx tauri signer sign --app-version $version $installer.FullName
+            if ($LASTEXITCODE -ne 0) { throw "Tauri updater signing failed for $($installer.Name)." }
+            if (-not (Test-Path -LiteralPath "$($installer.FullName).sig")) { throw "Tauri signature missing for $($installer.Name)." }
+          }
+      - name: Generate Tauri updater manifest
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tag = $env:GITHUB_REF_NAME
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $bundleRoot = 'src-tauri/target/release/bundle'
+          $installers = @(Get-ChildItem (Join-Path $bundleRoot 'nsis') -Filter '*.exe' -File | Sort-Object Name)
+          if ($installers.Count -ne 1) { throw "Expected one NSIS installer for the updater manifest, found $($installers.Count)." }
+          $installer = $installers[0]
+          $signaturePath = "$($installer.FullName).sig"
+          if (-not (Test-Path -LiteralPath $signaturePath)) { throw "Tauri updater signature is missing: $signaturePath" }
+          $signature = (Get-Content -LiteralPath $signaturePath -Raw).Trim()
+          if ([string]::IsNullOrWhiteSpace($signature)) { throw 'Tauri updater signature is empty.' }
+          $notesPath = ".github/release-notes/$tag.md"
+          $notes = if (Test-Path -LiteralPath $notesPath) { Get-Content -LiteralPath $notesPath -Raw } else { 'Une nouvelle version stable de Noto est disponible.' }
+          $assetName = [Uri]::EscapeDataString($installer.Name)
+          $manifest = [ordered]@{
+            version = $version
+            notes = $notes
+            pub_date = [DateTimeOffset]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ')
+            platforms = [ordered]@{
+              'windows-x86_64' = [ordered]@{
+                signature = $signature
+                url = "https://github.com/Louxos/Noto/releases/download/$tag/$assetName"
+              }
+            }
+          }
+          $manifestPath = Join-Path $bundleRoot 'latest.json'
+          $json = $manifest | ConvertTo-Json -Depth 8
+          [IO.File]::WriteAllText($manifestPath, $json + [Environment]::NewLine, [Text.UTF8Encoding]::new($false))
+          Get-Content -LiteralPath $manifestPath | Select-Object -First 12
       - name: Generate SHA-256 checksums
         shell: pwsh
         run: |
           $bundleRoot = 'src-tauri/target/release/bundle'
-          $installers = @(
-            Get-ChildItem (Join-Path $bundleRoot 'nsis') -Filter '*.exe' -File
-          ) | Sort-Object Name
-          if (-not $installers.Count) { throw 'No Windows installer files were found to hash.' }
+          $nsisRoot = Join-Path $bundleRoot 'nsis'
+          $assets = @(Get-ChildItem $nsisRoot -Filter '*.exe' -File)
+          $assets += @(Get-ChildItem $nsisRoot -Filter '*.exe.sig' -File -ErrorAction SilentlyContinue)
+          $manifestPath = Join-Path $bundleRoot 'latest.json'
+          if (Test-Path -LiteralPath $manifestPath) { $assets += Get-Item -LiteralPath $manifestPath }
+          $assets = @($assets | Sort-Object Name)
+          if (-not $assets.Count) { throw 'No Windows release files were found to hash.' }
           $checksumFile = Join-Path $bundleRoot 'SHA256SUMS.txt'
-          $lines = foreach ($installer in $installers) {
-            $hash = (Get-FileHash $installer.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-            '{0}  {1}' -f $hash, $installer.Name
+          $lines = foreach ($asset in $assets) {
+            $hash = (Get-FileHash $asset.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            '{0}  {1}' -f $hash, $asset.Name
           }
           $lines | Set-Content -Path $checksumFile -Encoding ascii
           Get-Content $checksumFile
@@ -254,6 +358,8 @@ jobs:
           name: noto-windows-installers
           path: |
             src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/bundle/nsis/*.exe.sig
+            src-tauri/target/release/bundle/latest.json
             src-tauri/target/release/bundle/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 30
@@ -286,4 +392,6 @@ jobs:
           fail_on_unmatched_files: true
           files: |
             src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/bundle/nsis/*.exe.sig
+            src-tauri/target/release/bundle/latest.json
             src-tauri/target/release/bundle/SHA256SUMS.txt

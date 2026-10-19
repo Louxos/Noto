@@ -19,6 +19,8 @@
     "fs:allow-rename",
     "fs:allow-exists",
     "core:window:allow-set-fullscreen",
-    "core:window:allow-is-fullscreen"
+    "core:window:allow-is-fullscreen",
+    "process:allow-relaunch",
+    "updater:default"
   ]
 }

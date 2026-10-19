@@ -98,6 +98,7 @@ describe('workspace keyboard and menu integration', () => {
       onOpenShortcuts={vi.fn()}
       onOpenWindowsDefaults={vi.fn()}
       onOpenReleasePage={vi.fn()}
+      onCheckForUpdates={vi.fn(async () => false)}
       onOpenIndexedResult={vi.fn()}
       onExportBackup={vi.fn()}
       onImportBackup={vi.fn()}

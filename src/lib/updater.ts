@@ -20,9 +20,10 @@ export function compareVersions(left: string, right: string): number {
 }
 
 /**
- * Vérification déclenchée explicitement par la personne dans Paramètres.
- * Seules les métadonnées publiques de release sont demandées à GitHub ; aucun
- * nom de fichier, chemin, document ou identifiant d’usage n’est transmis.
+ * Contrôle manuel de métadonnées réservé à la version navigateur : celle-ci ne
+ * peut pas installer l’application Windows. L’application Tauri utilise le
+ * plugin updater signé, et non ce chemin de téléchargement manuel. Aucun nom de
+ * fichier, chemin, document ou identifiant d’usage n’est transmis.
  */
 export async function checkForUpdate(currentVersion: string, fetcher: typeof fetch = fetch): Promise<UpdateInfo> {
   const response = await fetcher('https://api.github.com/repos/Louxos/Noto/releases/latest', {

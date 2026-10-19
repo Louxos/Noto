@@ -1,13 +1,21 @@
-# Vérifier une mise à jour
+# Mises à jour de Noto
 
-Dans **Paramètres → Général**, Noto propose une vérification manuelle des versions stables. Elle compare la version locale à la dernière publication publique du dépôt, puis propose d’ouvrir la page officielle des téléchargements dans le navigateur par défaut.
+## Application de bureau Windows
 
-La vérification n’est lancée que lorsque l’utilisateur clique sur le bouton. Elle demande les métadonnées publiques de `https://api.github.com/repos/Louxos/Noto/releases/latest` ; elle ne transmet ni document, ni chemin, ni nom de fichier. L’application n’installe rien en arrière-plan et ne télécharge pas silencieusement un binaire. L’installeur et `SHA256SUMS.txt` se récupèrent depuis GitHub Releases ; l’empreinte doit être vérifiée avant d’exécuter l’installeur.
+À partir de **Noto 1.2.0**, l’application vérifie au démarrage s’il existe une version stable plus récente. Cette vérification est silencieuse en cas de coupure réseau et n’interrompt pas l’ouverture de Noto. Si aucune mise à jour n’est disponible, une confirmation discrète apparaît ; si une release stable existe, Noto présente sa version et ses notes avant toute action.
 
-## Mise à jour automatique Tauri
+Le bouton **Télécharger et installer** est explicite : rien n’est téléchargé avant votre accord. Le téléchargement passe par le plugin officiel Tauri Updater, depuis les releases GitHub de `Louxos/Noto`. Les événements de téléchargement sont les octets reçus par l’application ; si le serveur ne fournit pas la taille totale, Noto affiche les octets réels et ne fabrique pas de pourcentage. Avant de lancer l’installeur, Tauri vérifie la signature cryptographique de l’artefact avec la clé publique intégrée à Noto. Sous Windows, l’installeur NSIS affiche sa propre progression réelle et redémarre l’application à la fin.
 
-Le téléchargement et l’installation automatiques par le plugin Tauri Updater ne sont **pas activés**. Ils nécessitent une clé de signature dédiée aux métadonnées et aux archives de mise à jour, distincte du certificat Authenticode de l’installeur. Activer un endpoint ou une clé publique sans détenir et protéger la clé privée correspondante rendrait le mécanisme inutilisable ou dangereux.
+La vérification ne transmet que la demande de métadonnées de version à GitHub. Aucun document, nom de fichier, chemin ni identifiant d’usage n’est envoyé. En mode hors ligne, les fichiers et fonctions locales restent disponibles ; seule la recherche de mise à jour échoue silencieusement. Une signature absente ou invalide bloque l’installation : Noto ne remplace pas ce contrôle par l’ouverture d’une page de téléchargement.
 
-Pour une future activation, le mainteneur devra générer la clé localement avec la CLI Tauri, conserver la clé privée hors du dépôt, la configurer uniquement comme secret GitHub Actions, publier la clé publique dans la configuration Tauri, puis ajouter au workflow les archives, signatures et métadonnées `latest.json`. Une validation doit confirmer qu’une mise à jour est téléchargée, vérifiée, installée et relancée sur une machine Windows avant d’annoncer l’installation automatique.
+La version stable **1.1.0** publiée avant l’activation de l’updater ne peut pas acquérir ce mécanisme rétroactivement. Il faut installer manuellement la première version qui l’intègre (**1.2.0**) depuis les releases officielles ; les versions suivantes pourront ensuite être proposées dans Noto.
 
-La clé privée ne doit jamais être ajoutée au dépôt, à un ticket public ou à une conversation.
+## Version navigateur
+
+La version navigateur ne peut pas installer ou relancer l’application Windows. Depuis **Paramètres → Général**, elle peut vérifier manuellement les métadonnées publiques de la dernière release et ouvrir la page officielle des téléchargements. Cette action reste un accès à la page GitHub, pas une installation intégrée.
+
+## Publication signée
+
+Les artefacts de mise à jour sont produits uniquement pour un tag de release. Le workflow vérifie que les versions npm, frontend, Cargo et Tauri correspondent au tag, construit les artefacts Tauri signés, re-signe l’installeur final après une éventuelle signature Authenticode, puis publie `latest.json`, la signature et `SHA256SUMS.txt`. Les builds de branche ne reçoivent pas la clé privée et ne produisent pas de métadonnées de release.
+
+La clé privée de mise à jour et sa phrase secrète restent des secrets GitHub Actions (`TAURI_SIGNING_PRIVATE_KEY` et `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`) et ne doivent jamais être ajoutées au dépôt, à un ticket ou à une conversation. Elles sont distinctes du certificat Authenticode Windows, facultatif.

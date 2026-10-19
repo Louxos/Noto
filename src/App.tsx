@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, lazy, Suspense, type
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { getCurrentWebview } from '@tauri-apps/api/webview';
+import { check as checkForTauriUpdate, type Update } from '@tauri-apps/plugin-updater';
+import { relaunch } from '@tauri-apps/plugin-process';
 import {
   ArrowDown, ArrowUp, BookOpen, BookOpenText, Check, ChevronDown, CircleHelp, Clock3, Code2, Command,
   Copy, ClipboardPaste, Download, File, FileCode2, FileDiff, FileImage, FileText, FileType2, FileUp, FolderInput, FolderPlus, FolderSearch, Globe2, Presentation, Upload,
@@ -22,6 +24,7 @@ import { FolderSearchDialog } from './components/FolderSearchDialog';
 import { LocalSearchPanel } from './components/LocalSearchPanel';
 import { TextDiffDialog } from './components/TextDiffDialog';
 import { WelcomeDialog } from './components/WelcomeDialog';
+import { UpdateDialog, type UpdatePhase } from './components/UpdateDialog';
 import { FileInfoDialog, PrintDialog } from './components/FileTools';
 import { formatBytes, loadBrowserFile, openDesktopFiles, pickBrowserFiles, readDesktopPath, saveDocument, type SaveAsOptions } from './lib/files';
 import { moveDesktopFile, pathFileName, renameDesktopFile } from './lib/fileOperations';
@@ -162,6 +165,12 @@ export default function App() {
   const [pendingSearchResult, setPendingSearchResult] = useState<(TextSearchMatch & { documentId: string; documentName: string }) | null>(null);
   const [pdfFindRequest, setPdfFindRequest] = useState<{ id: number; backwards: boolean } | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [availableUpdate, setAvailableUpdate] = useState<Update | null>(null);
+  const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
+  const [updatePhase, setUpdatePhase] = useState<UpdatePhase>('available');
+  const [downloadedUpdateBytes, setDownloadedUpdateBytes] = useState(0);
+  const [updateContentLength, setUpdateContentLength] = useState<number | null>(null);
+  const [updateErrorMessage, setUpdateErrorMessage] = useState('');
   const [folderSearchOpen, setFolderSearchOpen] = useState(false);
   const [textDiffOpen, setTextDiffOpen] = useState(false);
   const [welcomeOpen, setWelcomeOpen] = useState(() => shouldShowFirstRun());
@@ -180,6 +189,10 @@ export default function App() {
   const searchRef = useRef<HTMLInputElement>(null);
   const modalReturnFocusRef = useRef<HTMLElement | null>(null);
   const draftStorageErrorShown = useRef(false);
+  const updateResourceRef = useRef<Update | null>(null);
+  const updateCheckPromiseRef = useRef<Promise<Update | null> | null>(null);
+  const updateInstallInProgressRef = useRef(false);
+  const automaticUpdateCheckStartedRef = useRef(false);
   const editorRef = useRef<HTMLTextAreaElement | null>(null);
   const topbarRef = useRef<HTMLElement | null>(null);
   const browserHandles = useRef<Map<string, BrowserFileHandle>>(new Map());
@@ -190,7 +203,7 @@ export default function App() {
   }, []);
   const activeDoc = documents.find((document) => document.id === activeId) ?? null;
   const comparableDocuments = documents.filter(isComparableDocument);
-  const activeModalId = commandPaletteOpen ? 'palette' : shortcutsOpen ? 'shortcuts' : textDiffOpen ? 'text-diff' : folderSearchOpen ? 'folder-search' : welcomeOpen ? 'welcome' : saveAsDialogOpen ? 'save-as' : goToLineOpen ? 'go-to-line' : renameTarget ? 'rename-file' : groupAssignmentTarget ? 'group-assignment' : groupDialog ? 'group' : settingsOpen ? 'settings' : fileInfoOpen ? 'file-info' : printOpen ? 'print' : null;
+  const activeModalId = updateDialogOpen ? 'updater' : commandPaletteOpen ? 'palette' : shortcutsOpen ? 'shortcuts' : textDiffOpen ? 'text-diff' : folderSearchOpen ? 'folder-search' : welcomeOpen ? 'welcome' : saveAsDialogOpen ? 'save-as' : goToLineOpen ? 'go-to-line' : renameTarget ? 'rename-file' : groupAssignmentTarget ? 'group-assignment' : groupDialog ? 'group' : settingsOpen ? 'settings' : fileInfoOpen ? 'file-info' : printOpen ? 'print' : null;
   const searchResults = useMemo(() => {
     const searchDocuments = searchAllTabs
       ? [...(activeDoc ? [activeDoc] : []), ...documents.filter((document) => document.id !== activeDoc?.id)]
@@ -329,6 +342,110 @@ export default function App() {
   const notify = useCallback((message: string, kind: 'success' | 'error' = 'success') => {
     setToast(message);
     setToastKind(kind);
+  }, []);
+
+  const checkForSignedUpdate = useCallback(async (silent = false) => {
+    if (!isTauri()) throw new Error(preferences.language === 'fr'
+      ? 'La vérification intégrée est disponible dans l’application de bureau Noto.'
+      : 'Integrated updates are available in the Noto desktop app.');
+
+    let pendingCheck = updateCheckPromiseRef.current;
+    if (!pendingCheck) {
+      pendingCheck = checkForTauriUpdate({ timeout: 15_000 });
+      updateCheckPromiseRef.current = pendingCheck;
+    }
+
+    let nextUpdate: Update | null;
+    try {
+      nextUpdate = await pendingCheck;
+    } finally {
+      if (updateCheckPromiseRef.current === pendingCheck) updateCheckPromiseRef.current = null;
+    }
+
+    if (!nextUpdate) {
+      if (silent) notify(preferences.language === 'fr' ? 'Noto est à jour.' : 'Noto is up to date.');
+      return false;
+    }
+
+    if (updateResourceRef.current && updateResourceRef.current !== nextUpdate) {
+      try { await updateResourceRef.current.close(); } catch { /* Releasing a stale updater handle is best-effort. */ }
+    }
+    updateResourceRef.current = nextUpdate;
+    setAvailableUpdate(nextUpdate);
+    setUpdateErrorMessage('');
+    setUpdatePhase('available');
+    setDownloadedUpdateBytes(0);
+    setUpdateContentLength(null);
+    setUpdateDialogOpen(true);
+    return true;
+  }, [notify, preferences.language]);
+
+  const dismissAvailableUpdate = useCallback(() => {
+    if (updateInstallInProgressRef.current) return;
+    const currentUpdate = updateResourceRef.current;
+    updateResourceRef.current = null;
+    setAvailableUpdate(null);
+    setUpdateDialogOpen(false);
+    setUpdatePhase('available');
+    setUpdateErrorMessage('');
+    if (currentUpdate) void currentUpdate.close().catch(() => undefined);
+  }, []);
+
+  const installAvailableUpdate = useCallback(async () => {
+    const update = availableUpdate;
+    if (!update || updateInstallInProgressRef.current) return;
+    updateInstallInProgressRef.current = true;
+    setUpdatePhase('downloading');
+    setUpdateErrorMessage('');
+    setDownloadedUpdateBytes(0);
+    setUpdateContentLength(null);
+
+    let receivedBytes = 0;
+    try {
+      await update.downloadAndInstall((event) => {
+        if (event.event === 'Started') {
+          receivedBytes = 0;
+          const length = event.data.contentLength;
+          setUpdateContentLength(typeof length === 'number' && length > 0 ? length : null);
+          setDownloadedUpdateBytes(0);
+          setUpdatePhase('downloading');
+        } else if (event.event === 'Progress') {
+          receivedBytes += event.data.chunkLength;
+          setDownloadedUpdateBytes(receivedBytes);
+        } else if (event.event === 'Finished') {
+          setUpdatePhase('installing');
+        }
+      });
+      setUpdatePhase('installing');
+      updateResourceRef.current = null;
+      try { await update.close(); } catch { /* The signed package has already been handed to the installer. */ }
+      // NSIS restarts the Windows app after installing in passive mode. Other
+      // desktop targets need an explicit relaunch after the updater resolves.
+      if (!/Windows/i.test(navigator.userAgent)) {
+        try { await relaunch(); } catch { /* The platform installer remains available if relaunch is denied. */ }
+      }
+    } catch (error) {
+      setUpdatePhase('error');
+      setUpdateErrorMessage(error instanceof Error ? error.message : String(error));
+    } finally {
+      updateInstallInProgressRef.current = false;
+    }
+  }, [availableUpdate]);
+
+  useEffect(() => {
+    if (!isTauri() || automaticUpdateCheckStartedRef.current) return;
+    const timer = window.setTimeout(() => {
+      if (automaticUpdateCheckStartedRef.current) return;
+      automaticUpdateCheckStartedRef.current = true;
+      void checkForSignedUpdate(true).catch(() => undefined);
+    }, 1_200);
+    return () => window.clearTimeout(timer);
+  }, [checkForSignedUpdate]);
+
+  useEffect(() => () => {
+    const currentUpdate = updateResourceRef.current;
+    updateResourceRef.current = null;
+    if (currentUpdate && !updateInstallInProgressRef.current) void currentUpdate.close().catch(() => undefined);
   }, []);
 
   const fullscreen = useMemo(() => fullscreenSupport(), []);
@@ -1232,6 +1349,10 @@ export default function App() {
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
+        if (updateDialogOpen) {
+          if (!updateInstallInProgressRef.current) dismissAvailableUpdate();
+          return;
+        }
         if (commandPaletteOpen) setCommandPaletteOpen(false);
         else if (textDiffOpen) setTextDiffOpen(false);
         else if (folderSearchOpen) setFolderSearchOpen(false);
@@ -1337,7 +1458,7 @@ export default function App() {
     }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [activeDoc, activeId, canEdit, closeDocument, closeWelcome, commandPaletteOpen, currentGroup, documents, fileInfoOpen, findInDocument, folderSearchOpen, fullscreen.supported, goToLineOpen, printOpen, groupDialog, groupPickerOpen, handleOpen, handleSave, immersive, openFileInfoDialog, openGoToLine, openPrintDialog, page, query, saveAsDialogOpen, searchOpen, settingsOpen, shortcutsOpen, textDiffOpen, toggleEditMode, toggleImmersive, toggleWindowFullscreen, welcomeOpen]);
+  }, [activeDoc, activeId, canEdit, closeDocument, closeWelcome, commandPaletteOpen, currentGroup, documents, fileInfoOpen, findInDocument, folderSearchOpen, fullscreen.supported, goToLineOpen, printOpen, groupDialog, groupPickerOpen, handleOpen, handleSave, immersive, openFileInfoDialog, openGoToLine, openPrintDialog, page, query, saveAsDialogOpen, searchOpen, settingsOpen, shortcutsOpen, textDiffOpen, toggleEditMode, toggleImmersive, toggleWindowFullscreen, updateDialogOpen, dismissAvailableUpdate, welcomeOpen]);
 
   useEffect(() => {
     if (!activeModalId) {
@@ -1349,19 +1470,19 @@ export default function App() {
     if (!modalReturnFocusRef.current && document.activeElement instanceof HTMLElement) modalReturnFocusRef.current = document.activeElement;
     let frame = 0;
     const findFocusable = () => {
-      const backdrop = document.querySelector<HTMLElement>('.modal-backdrop');
+      const backdrop = document.querySelector<HTMLElement>(activeModalId === 'updater' ? '.update-backdrop' : '.modal-backdrop');
       if (!backdrop) return [] as HTMLElement[];
       return [...backdrop.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled):not([type="hidden"]), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex]:not([tabindex="-1"])')]
         .filter((element) => element.getAttribute('aria-hidden') !== 'true' && element.getClientRects().length > 0);
     };
     frame = window.requestAnimationFrame(() => {
-      const backdrop = document.querySelector<HTMLElement>('.modal-backdrop');
+      const backdrop = document.querySelector<HTMLElement>(activeModalId === 'updater' ? '.update-backdrop' : '.modal-backdrop');
       const preferred = backdrop?.querySelector<HTMLElement>('input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]), textarea, select');
       (preferred ?? findFocusable()[0])?.focus();
     });
     const trapFocus = (event: KeyboardEvent) => {
       if (event.key !== 'Tab') return;
-      const backdrop = document.querySelector<HTMLElement>('.modal-backdrop');
+      const backdrop = document.querySelector<HTMLElement>(activeModalId === 'updater' ? '.update-backdrop' : '.modal-backdrop');
       const focusable = findFocusable();
       if (!backdrop || focusable.length === 0) { event.preventDefault(); return; }
       const first = focusable[0];
@@ -1905,7 +2026,7 @@ export default function App() {
       {dragging && <div className="drop-overlay" onDragLeave={() => setDragging(false)}><div className="drop-overlay-card"><span className="drop-icon"><FileUp size={25} /></span><strong>Déposez pour ouvrir</strong><span>Texte, code, PDF, présentations, documents et images…</span></div></div>}
       {loading && <div className="loading-overlay" aria-busy="true"><div className="loading-card" role="status" aria-live="polite"><LoaderCircle size={20} className="spin" /><div className="loading-copy"><span>{loadingMessage}</span>{loadingSlow && <small>Encore un instant : Noto termine cette opération localement. Aucun contenu n’est transmis.</small>}</div></div></div>}
       {toast && <div className={`toast toast-${toastKind}`} role="status"><span className="toast-mark">{toastKind === 'success' ? <Check size={14} /> : <CircleHelp size={14} />}</span>{toast}</div>}
-      {settingsOpen && <SettingsModal preferences={preferences} onChange={updatePreference} onClose={() => setSettingsOpen(false)} onClearRecents={() => { setRecents([]); notify('La liste des fichiers récents a été effacée.'); }} onResetDefaults={resetPreferences} onClearDrafts={clearDraftRecoveryData} onMoveToolbar={moveToolbarAction} onToggleToolbar={toggleToolbarAction} onOpenShortcuts={() => { setSettingsOpen(false); setShortcutsOpen(true); }} onOpenWindowsDefaults={() => void openWindowsDefaults()} onOpenReleasePage={() => void openReleasePage()} onOpenIndexedResult={(path) => { setSettingsOpen(false); void openTauriPath(path); }} onExportBackup={exportLocalSettings} onImportBackup={(file) => void importLocalSettings(file)} />}
+      {settingsOpen && <SettingsModal preferences={preferences} onChange={updatePreference} onClose={() => setSettingsOpen(false)} onClearRecents={() => { setRecents([]); notify('La liste des fichiers récents a été effacée.'); }} onResetDefaults={resetPreferences} onClearDrafts={clearDraftRecoveryData} onMoveToolbar={moveToolbarAction} onToggleToolbar={toggleToolbarAction} onOpenShortcuts={() => { setSettingsOpen(false); setShortcutsOpen(true); }} onOpenWindowsDefaults={() => void openWindowsDefaults()} onOpenReleasePage={() => void openReleasePage()} onCheckForUpdates={() => checkForSignedUpdate(false)} onOpenIndexedResult={(path) => { setSettingsOpen(false); void openTauriPath(path); }} onExportBackup={exportLocalSettings} onImportBackup={(file) => void importLocalSettings(file)} />}
       {folderSearchOpen && <FolderSearchDialog hidePaths={preferences.hidePaths} onOpenFile={(path, line, query) => { setFolderSearchOpen(false); void openTauriPath(path, { line, query }); }} onClose={() => setFolderSearchOpen(false)} />}
       {textDiffOpen && <TextDiffDialog documents={documents} initialLeftId={activeDoc?.id ?? null} onOpenFile={() => void handleOpen()} onClose={() => setTextDiffOpen(false)} />}
       {fileInfoOpen && activeDoc && <FileInfoDialog document={activeDoc} readout={viewerReadout} onClose={() => setFileInfoOpen(false)} notify={notify} />}
@@ -1919,6 +2040,16 @@ export default function App() {
       {contextMenu && <ContextMenu position={contextMenu.position} items={contextMenu.items} onClose={() => setContextMenu(null)} />}
       {commandPaletteOpen && <CommandPalette commands={localizedCommands} language={preferences.language} onClose={() => setCommandPaletteOpen(false)} />}
       {shortcutsOpen && <ShortcutsDialog onClose={() => setShortcutsOpen(false)} />}
+      {updateDialogOpen && availableUpdate && <UpdateDialog
+        update={availableUpdate}
+        language={preferences.language}
+        phase={updatePhase}
+        downloadedBytes={downloadedUpdateBytes}
+        contentLength={updateContentLength}
+        error={updateErrorMessage}
+        onInstall={() => void installAvailableUpdate()}
+        onDismiss={dismissAvailableUpdate}
+      />}
     </div>
   );
 }
@@ -2080,7 +2211,7 @@ function ViewerContent({
   return <UnsupportedFile document={document} onOpenText={() => onChange(document.content)} />;
 }
 
-export function SettingsModal({ preferences, onChange, onClose, onClearRecents, onResetDefaults, onClearDrafts, onMoveToolbar, onToggleToolbar, onOpenShortcuts, onOpenWindowsDefaults, onOpenReleasePage, onOpenIndexedResult, onExportBackup, onImportBackup }: {
+export function SettingsModal({ preferences, onChange, onClose, onClearRecents, onResetDefaults, onClearDrafts, onMoveToolbar, onToggleToolbar, onOpenShortcuts, onOpenWindowsDefaults, onOpenReleasePage, onCheckForUpdates, onOpenIndexedResult, onExportBackup, onImportBackup }: {
   preferences: Preferences;
   onChange: <K extends keyof Preferences>(key: K, value: Preferences[K]) => void;
   onClose: () => void;
@@ -2092,12 +2223,14 @@ export function SettingsModal({ preferences, onChange, onClose, onClearRecents, 
   onOpenShortcuts: () => void;
   onOpenWindowsDefaults: () => void;
   onOpenReleasePage: () => void;
+  onCheckForUpdates: () => Promise<boolean>;
   onOpenIndexedResult: (path: string) => void;
   onExportBackup: () => void;
   onImportBackup: (file: File) => void;
 }) {
   const backupInputRef = useRef<HTMLInputElement>(null);
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
+  const [updateCheckStatus, setUpdateCheckStatus] = useState<'current' | null>(null);
   const [updateError, setUpdateError] = useState('');
   const [checkingUpdates, setCheckingUpdates] = useState(false);
   const tx = (key: string, fallback?: string) => {
@@ -2107,14 +2240,23 @@ export function SettingsModal({ preferences, onChange, onClose, onClearRecents, 
   const checkUpdates = async () => {
     setCheckingUpdates(true);
     setUpdateError('');
+    setUpdateInfo(null);
+    setUpdateCheckStatus(null);
+    let foundIntegratedUpdate = false;
     try {
-      setUpdateInfo(await checkForUpdate(APP_VERSION));
+      if (isTauri()) {
+        foundIntegratedUpdate = await onCheckForUpdates();
+        if (!foundIntegratedUpdate) setUpdateCheckStatus('current');
+      } else {
+        setUpdateInfo(await checkForUpdate(APP_VERSION));
+      }
     } catch (error) {
       setUpdateError(error instanceof Error ? error.message : tx('settings.updateError', 'Update check failed.'));
       setUpdateInfo(null);
     } finally {
       setCheckingUpdates(false);
     }
+    if (foundIntegratedUpdate) onClose();
   };
   const toolbarLabels: Record<ToolbarAction, string> = {
     search: tx('settings.toolbarSearch', 'Search'), edit: tx('settings.toolbarEdit', 'Edit'), save: tx('settings.toolbarSave', 'Save'),
@@ -2168,8 +2310,11 @@ export function SettingsModal({ preferences, onChange, onClose, onClearRecents, 
           <div className="settings-inline-note"><ShieldCheck size={14} />{preferences.language === 'fr' ? 'Noto ne modifie pas les applications par défaut sans votre accord. Les préférences se gèrent dans Windows.' : 'Noto never changes default apps without your permission. Manage preferences in Windows.'}</div>
         </section>
         <section className="settings-section settings-general"><div className="settings-section-title"><span>{tx('settings.general', 'General').toUpperCase()}</span></div>
-          <div className="setting-row"><div className="setting-label"><strong>{tx('settings.updates', 'Updates')}</strong><small>{preferences.language === 'fr' ? 'Vérifiez manuellement la dernière version stable. Seules les métadonnées publiques de version sont demandées ; aucun document n’est transmis.' : 'Manually check the latest stable version. Only public release metadata is requested; no document is sent.'}</small></div><button className="subtle-button" type="button" disabled={checkingUpdates} onClick={() => void checkUpdates()}><RotateCcw size={13} className={checkingUpdates ? 'spin' : ''} />{checkingUpdates ? (preferences.language === 'fr' ? 'Vérification…' : 'Checking…') : tx('settings.checkUpdates', 'Check for updates')}</button></div>
-          {updateInfo && <div className={`update-check-result ${updateInfo.isNewer ? 'available' : ''}`} role="status"><span>{updateInfo.isNewer ? `${tx('settings.updateAvailable', 'An update is available')} · v${updateInfo.latestVersion}` : `${tx('settings.upToDate', 'Noto is up to date')} · v${updateInfo.currentVersion}`}</span>{updateInfo.isNewer && <button className="text-link" type="button" onClick={onOpenReleasePage}>{preferences.language === 'fr' ? 'Télécharger' : 'Download'} <span>→</span></button>}</div>}
+          <div className="setting-row"><div className="setting-label"><strong>{tx('settings.updates', 'Updates')}</strong><small>{isTauri()
+            ? (preferences.language === 'fr' ? 'Noto vérifie discrètement les versions stables au démarrage. Le téléchargement ne commence qu’avec votre accord et la signature est contrôlée avant installation ; aucun document ni chemin n’est transmis.' : 'Noto quietly checks for stable releases at startup. Downloads begin only with your approval, and the signature is checked before installation; no document or file path is sent.')
+            : (preferences.language === 'fr' ? 'Cette version web ne peut pas installer l’application Windows. Elle peut vérifier la version stable et ouvrir les téléchargements officiels, sans rien installer.' : 'This web version cannot install the Windows app. It can check the stable version and open official downloads, but cannot install anything.')}</small></div><button className="subtle-button" type="button" disabled={checkingUpdates} onClick={() => void checkUpdates()}><RotateCcw size={13} className={checkingUpdates ? 'spin' : ''} />{checkingUpdates ? (preferences.language === 'fr' ? 'Vérification…' : 'Checking…') : tx('settings.checkUpdates', 'Check for updates')}</button></div>
+          {isTauri() && updateCheckStatus === 'current' && <div className="update-check-result" role="status"><span>{preferences.language === 'fr' ? `Noto est à jour · v${APP_VERSION}` : `Noto is up to date · v${APP_VERSION}`}</span></div>}
+          {!isTauri() && updateInfo && <div className={`update-check-result ${updateInfo.isNewer ? 'available' : ''}`} role="status"><span>{updateInfo.isNewer ? `${tx('settings.updateAvailable', 'An update is available')} · v${updateInfo.latestVersion}` : `${tx('settings.upToDate', 'Noto is up to date')} · v${updateInfo.currentVersion}`}</span>{updateInfo.isNewer && <button className="text-link" type="button" onClick={onOpenReleasePage}>{preferences.language === 'fr' ? 'Page des téléchargements' : 'Open downloads'} <span>→</span></button>}</div>}
           {updateError && <div className="update-check-error" role="status">{updateError}</div>}
           <div className="setting-row backup-setting-row"><div className="setting-label"><strong>{tx('settings.backup', 'Local backup')}</strong><small>{tx('settings.backupDesc', 'Export or import groups and settings; paths included, never file contents.')}</small></div><div className="backup-buttons"><button className="subtle-button" type="button" onClick={onExportBackup}><Download size={13} />{tx('settings.export', 'Export')}</button><button className="subtle-button" type="button" onClick={() => backupInputRef.current?.click()}><Upload size={13} />{tx('settings.import', 'Import')}</button><input ref={backupInputRef} className="visually-hidden" type="file" accept="application/json,.json" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; if (file) onImportBackup(file); }} aria-label={preferences.language === 'fr' ? 'Choisir une sauvegarde Noto à importer' : 'Choose a Noto backup to import'} /></div></div>
           <div className="setting-row"><div className="setting-label"><strong>{tx('settings.restoreSession', 'Restore desktop session')}</strong><small>{tx('settings.restoreSessionDesc', 'Keep open tab paths on this device without storing content.')}</small></div><button className={`toggle ${preferences.restoreSession ? 'on' : ''}`} type="button" role="switch" aria-checked={preferences.restoreSession} onClick={() => onChange('restoreSession', !preferences.restoreSession)}><i /></button></div>
