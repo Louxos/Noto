@@ -37,7 +37,18 @@ jobs:
         run: npm run check -- --reporter=default --reporter=github-actions
       - run: npm run build
       - name: Test native Windows commands
-        run: cargo test --manifest-path src-tauri/Cargo.toml
+        shell: pwsh
+        run: |
+          $logPath = Join-Path $env:RUNNER_TEMP 'noto-cargo-test.log'
+          cargo test --manifest-path src-tauri/Cargo.toml 2>&1 | Tee-Object -FilePath $logPath
+          $testExitCode = $LASTEXITCODE
+          if ($testExitCode -ne 0) {
+            Get-Content $logPath -Tail 40 | ForEach-Object {
+              $line = $_ -replace '%', '%25' -replace "`r", '%0D' -replace "`n", '%0A'
+              Write-Output "::error title=Rust native test output::$line"
+            }
+            exit $testExitCode
+          }
       - name: Validate release version
         if: startsWith(github.ref, 'refs/tags/v')
         shell: pwsh
