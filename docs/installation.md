@@ -140,9 +140,16 @@ Après le succès du workflow, l’installeur `.exe` et `SHA256SUMS.txt` sont at
 
 ### Le désinstalleur indique que Noto est encore en cours d’exécution
 
-1. Enregistrez vos documents et fermez toutes les fenêtres de Noto. Si Noto affiche une demande d’enregistrement, répondez-y avant de continuer.
-2. Si le message persiste, récupérez le [script Windows de fermeture](../scripts/fermer-noto.bat) depuis le dépôt GitHub et double-cliquez sur le fichier téléchargé. Il vise `noto.exe` et ses processus enfants, tente d’abord une fermeture normale et attend cinq secondes.
-3. Si Noto tourne encore, le script propose une fermeture forcée. Choisir **O** peut faire perdre les modifications non enregistrées ; choisir **N** annule et laisse Noto ouvert. Après le message confirmant la fermeture, relancez le désinstalleur.
+1. Enregistrez vos documents et fermez toutes les fenêtres de Noto. Si une demande d’enregistrement apparaît, répondez-y avant de continuer.
+2. Téléchargez le [script PowerShell de fermeture](../scripts/fermer-noto.ps1). Sur GitHub, le code peut s’afficher en texte : c’est seulement l’aperçu. Utilisez **Raw / Download raw file** (ou clic droit → **Enregistrer la cible sous**) et vérifiez que le nom est bien `fermer-noto.ps1`, pas `fermer-noto.ps1.txt`.
+3. Ouvrez PowerShell. Si le script est dans le dossier Téléchargements, lancez :
+
+   ```powershell
+   powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$HOME\Downloads\fermer-noto.ps1"
+   ```
+
+   Si vous l’avez enregistré ailleurs, adaptez le chemin. `-ExecutionPolicy Bypass` ne modifie pas durablement les paramètres Windows.
+4. Le script demande d’abord à Noto de se fermer normalement et attend cinq secondes. S’il est encore actif, tapez **O** pour forcer la fermeture ou **N** pour annuler. **O peut faire perdre les modifications non enregistrées.** Le script cible `noto.exe` et ses processus enfants. Après confirmation de la fermeture, relancez le désinstalleur.
 
 | Problème | À vérifier |
 | --- | --- |

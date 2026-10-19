@@ -11,7 +11,7 @@ Toute la documentation de référence vit dans `docs/`. Ce fichier en est l’in
 - [Mises à jour](update-check.md) — vérification manuelle actuelle et prérequis d’un futur updater Tauri signé.
 - [Icônes par type de fichier sous Windows](icons-fichiers.md) — fonctionnement, table des 21 classes, limites, régénération des `.ico`.
 - [Installation et téléchargement Windows](installation.md) — release publiée, vérification SHA-256, build de test, construction depuis le dépôt, dépannage.
-- [Fermer Noto avant sa désinstallation](../scripts/fermer-noto.bat) — script Windows et avertissement sur la fermeture forcée ; consultez le [mode d’emploi](installation.md#dépannage).
+- [Script PowerShell pour fermer Noto avant sa désinstallation](../scripts/fermer-noto.ps1) — le fichier peut s’afficher en texte dans GitHub ; consultez la [commande de lancement et les précautions](installation.md#dépannage).
 - [Signer l’installeur Windows](release-signing.md) — secrets d’Actions attendus, vérification Authenticode et configuration sécurisée.
 
 ## Développer
