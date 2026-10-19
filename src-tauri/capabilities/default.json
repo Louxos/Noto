@@ -20,7 +20,7 @@
     "fs:allow-exists",
     "core:window:allow-set-fullscreen",
     "core:window:allow-is-fullscreen",
-    "process:allow-relaunch",
+    "process:allow-restart",
     "updater:default"
   ]
 }

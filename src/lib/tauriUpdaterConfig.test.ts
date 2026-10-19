@@ -33,4 +33,12 @@ describe('configuration de l’updater Tauri', () => {
     expect(readConfig('src-tauri/tauri.conf.json').bundle?.createUpdaterArtifacts).toBeUndefined();
     expect(readConfig('src-tauri/tauri.updater-release.conf.json').bundle?.createUpdaterArtifacts).toBe(true);
   });
+
+  it('autorise la commande de redémarrage utilisée par relaunch() du plugin process', () => {
+    const capability = JSON.parse(readFileSync(resolve(root, 'src-tauri/capabilities/default.json'), 'utf8')) as {
+      permissions?: string[];
+    };
+    expect(capability.permissions).toContain('process:allow-restart');
+    expect(capability.permissions).not.toContain('process:allow-relaunch');
+  });
 });
