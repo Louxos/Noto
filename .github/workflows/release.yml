@@ -43,16 +43,21 @@ jobs:
       - name: Test native Windows commands
         shell: pwsh
         run: |
-          $logPath = Join-Path $env:RUNNER_TEMP 'noto-cargo-test.log'
-          cargo test --manifest-path src-tauri/Cargo.toml --jobs 2 2>&1 | Tee-Object -FilePath $logPath
-          $testExitCode = $LASTEXITCODE
+          $stdoutPath = Join-Path $env:RUNNER_TEMP 'noto-cargo-test.stdout.log'
+          $stderrPath = Join-Path $env:RUNNER_TEMP 'noto-cargo-test.stderr.log'
+          $process = Start-Process -FilePath 'cargo' -ArgumentList @('test', '--manifest-path', 'src-tauri/Cargo.toml', '--jobs', '2') -WorkingDirectory $env:GITHUB_WORKSPACE -NoNewWindow -Wait -PassThru -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath
+          $testExitCode = $process.ExitCode
           if ($testExitCode -ne 0) {
-            Get-Content $logPath -Tail 100 | ForEach-Object {
+            $diagnostics = @()
+            if (Test-Path $stdoutPath) { $diagnostics += Get-Content $stdoutPath }
+            if (Test-Path $stderrPath) { $diagnostics += Get-Content $stderrPath }
+            $diagnostics | Select-Object -Last 80 | ForEach-Object {
               $line = $_ -replace '%', '%25' -replace "`r", '%0D' -replace "`n", '%0A'
               Write-Output "::error title=Rust native test output::$line"
             }
             exit $testExitCode
           }
+          Get-Content $stdoutPath -Tail 20
       - name: Validate release version
         if: startsWith(github.ref, 'refs/tags/v')
         shell: pwsh
