@@ -138,6 +138,12 @@ Après le succès du workflow, l’installeur `.exe` et `SHA256SUMS.txt` sont at
 
 ## Dépannage
 
+### Le désinstalleur indique que Noto est encore en cours d’exécution
+
+1. Enregistrez vos documents et fermez toutes les fenêtres de Noto. Si Noto affiche une demande d’enregistrement, répondez-y avant de continuer.
+2. Si le message persiste, récupérez le [script Windows de fermeture](../scripts/fermer-noto.bat) depuis le dépôt GitHub et double-cliquez sur le fichier téléchargé. Il vise `noto.exe` et ses processus enfants, tente d’abord une fermeture normale et attend cinq secondes.
+3. Si Noto tourne encore, le script propose une fermeture forcée. Choisir **O** peut faire perdre les modifications non enregistrées ; choisir **N** annule et laisse Noto ouvert. Après le message confirmant la fermeture, relancez le désinstalleur.
+
 | Problème | À vérifier |
 | --- | --- |
 | `cargo` ou `rustc` introuvable | Installez Rust avec rustup, sélectionnez `stable-msvc`, puis fermez et rouvrez PowerShell. |
