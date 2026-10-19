@@ -34,9 +34,8 @@ jobs:
         with:
           workspaces: './src-tauri -> target'
       - run: npm ci
-      # Le journal Windows n'est pas lisible par l'API ici : le rapporteur
-      # github-actions remonte le test fautif en annotation, consultable
-      # avec `gh api repos/<owner>/<repo>/check-runs/<id>/annotations`.
+      # Les diagnostics du build Windows sont regroupés en une annotation pour
+      # éviter la limite GitHub de dix annotations et garder l'erreur finale.
       - name: Types TypeScript et tests
         run: npm run check -- --reporter=default --reporter=github-actions
       - run: npm run build
@@ -82,17 +81,18 @@ jobs:
         shell: pwsh
         run: |
           $logPath = Join-Path $env:RUNNER_TEMP 'noto-tauri-build.log'
-          $buildCommand = "npm run tauri:build > `"$logPath`" 2>&1"
-          & $env:ComSpec /d /c $buildCommand
+          npm run tauri:build 2>&1 | Tee-Object -FilePath $logPath
           $buildExitCode = $LASTEXITCODE
+          if ($null -eq $buildExitCode) { $buildExitCode = 1 }
           if ($buildExitCode -ne 0) {
-            Get-Content $logPath -Tail 100 | ForEach-Object {
-              $line = $_ -replace '%', '%25' -replace "`r", '%0D' -replace "`n", '%0A'
-              Write-Output "::error title=Tauri build output::$line"
+            $buildLog = [string]::Join("`n", @(Get-Content -LiteralPath $logPath -Tail 80))
+            if ($buildLog.Length -gt 30000) {
+              $buildLog = "[...journal tronqué... ]`n" + $buildLog.Substring($buildLog.Length - 30000)
             }
+            $escapedLog = $buildLog.Replace('%', '%25').Replace("`r", '%0D').Replace("`n", '%0A')
+            Write-Output "::error title=Tauri build output::$escapedLog"
             exit $buildExitCode
           }
-          Get-Content $logPath -Tail 20
       - name: Build signed Windows release
         if: startsWith(github.ref, 'refs/tags/v')
         shell: pwsh
@@ -101,17 +101,18 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           $logPath = Join-Path $env:RUNNER_TEMP 'noto-tauri-build.log'
-          $buildCommand = "npm run tauri:build -- --config src-tauri/tauri.updater-release.conf.json > `"$logPath`" 2>&1"
-          & $env:ComSpec /d /c $buildCommand
+          npm run tauri:build -- --config src-tauri/tauri.updater-release.conf.json 2>&1 | Tee-Object -FilePath $logPath
           $buildExitCode = $LASTEXITCODE
+          if ($null -eq $buildExitCode) { $buildExitCode = 1 }
           if ($buildExitCode -ne 0) {
-            Get-Content $logPath -Tail 100 | ForEach-Object {
-              $line = $_ -replace '%', '%25' -replace "`r", '%0D' -replace "`n", '%0A'
-              Write-Output "::error title=Tauri signed build output::$line"
+            $buildLog = [string]::Join("`n", @(Get-Content -LiteralPath $logPath -Tail 80))
+            if ($buildLog.Length -gt 30000) {
+              $buildLog = "[...journal tronqué... ]`n" + $buildLog.Substring($buildLog.Length - 30000)
             }
+            $escapedLog = $buildLog.Replace('%', '%25').Replace("`r", '%0D').Replace("`n", '%0A')
+            Write-Output "::error title=Tauri signed build output::$escapedLog"
             exit $buildExitCode
           }
-          Get-Content $logPath -Tail 20
       - name: Smoke-test Windows install, file opening, associations and uninstall
         shell: pwsh
         run: |
