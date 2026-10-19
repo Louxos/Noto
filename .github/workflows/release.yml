@@ -19,6 +19,10 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: write
+    env:
+      CARGO_BUILD_JOBS: 2
+      CARGO_TERM_PROGRESS_WHEN: never
+      CARGO_TERM_COLOR: never
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -40,10 +44,10 @@ jobs:
         shell: pwsh
         run: |
           $logPath = Join-Path $env:RUNNER_TEMP 'noto-cargo-test.log'
-          cargo test --manifest-path src-tauri/Cargo.toml 2>&1 | Tee-Object -FilePath $logPath
+          cargo test --manifest-path src-tauri/Cargo.toml --jobs 2 2>&1 | Tee-Object -FilePath $logPath
           $testExitCode = $LASTEXITCODE
           if ($testExitCode -ne 0) {
-            Get-Content $logPath -Tail 40 | ForEach-Object {
+            Get-Content $logPath -Tail 100 | ForEach-Object {
               $line = $_ -replace '%', '%25' -replace "`r", '%0D' -replace "`n", '%0A'
               Write-Output "::error title=Rust native test output::$line"
             }
