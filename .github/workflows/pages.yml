@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out site sources
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Vérifier la page d’accueil et la copie pour la source /docs
         run: node scripts/sync-pages-root.mjs --check
       - name: Configure GitHub Pages
