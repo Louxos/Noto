@@ -394,7 +394,7 @@ jobs:
           $lines | Set-Content -Path $checksumFile -Encoding ascii
           Get-Content $checksumFile
       - name: Upload Windows installers and checksums
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: noto-windows-installers
           path: |
