@@ -30,7 +30,7 @@ jobs:
       - name: Vérifier la page d’accueil et la copie pour la source /docs
         run: node scripts/sync-pages-root.mjs --check
       - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
       - name: Upload static website
         uses: actions/upload-pages-artifact@v3
         with:
