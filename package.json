@@ -32,13 +32,13 @@
     "lucide-react": "^0.468.0",
     "minisearch": "^7.1.0",
     "pdf-lib": "^1.17.1",
-    "pdfjs-dist": "4.10.38",
+    "pdfjs-dist": "6.4.299",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-markdown": "^9.0.3",
+    "react-markdown": "^10.1.0",
     "rehype-highlight": "^7.0.2",
     "remark-gfm": "^4.0.1",
-    "tesseract.js": "^5.1.1",
+    "tesseract.js": "^7.0.0",
     "utif": "^3.1.0"
   },
   "devDependencies": {
