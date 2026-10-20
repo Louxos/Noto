@@ -91,7 +91,7 @@ describe('ouverture par Windows', () => {
 
   it('vérifie discrètement les mises à jour signées au démarrage et affiche une confirmation discrète si Noto est à jour', { timeout: 20_000 }, async () => {
     render(<App />);
-    await waitFor(() => expect(tauriUpdaterCheck).toHaveBeenCalledWith({ timeout: 15_000 }), ATTENTE);
+    await waitFor(() => expect(tauriUpdaterCheck).toHaveBeenCalledWith({ timeout: 30_000 }), ATTENTE);
     await waitFor(() => expect(screen.getByRole('status').textContent).toContain('Noto est à jour'), ATTENTE);
     expect(screen.queryByRole('dialog', { name: /version plus récente/i })).toBeNull();
   });

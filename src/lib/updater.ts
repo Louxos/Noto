@@ -8,6 +8,21 @@ export interface UpdateInfo {
   isNewer: boolean;
 }
 
+/** Extract a useful, non-sensitive reason from errors returned by Tauri IPC. */
+export function getUpdateErrorDetail(error: unknown): string | null {
+  let detail: string | null = null;
+  if (error instanceof Error && error.message.trim()) detail = error.message.trim();
+  else if (typeof error === 'string' && error.trim()) detail = error.trim();
+  else if (error !== null && typeof error === 'object' && 'message' in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === 'string' && message.trim()) detail = message.trim();
+  }
+
+  // GitHub release URLs may contain short-lived signed query parameters; don't
+  // surface those tokens in an error shown to the user.
+  return detail?.replace(/(https?:\/\/[^\s?#)]+)\?[^\s)]*/gi, '$1') ?? null;
+}
+
 export function compareVersions(left: string, right: string): number {
   const parse = (version: string) => version.replace(/^v/i, '').split('.').map((part) => Number.parseInt(part, 10) || 0);
   const a = parse(left);

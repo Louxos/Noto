@@ -40,7 +40,7 @@ import { loadPinnedSearchFolders, savePinnedSearchFolders, togglePinnedSearchFol
 import { defaultPreferences, loadPreferences, loadRecentFiles, savePreferences, saveRecentFiles, upsertRecent, TOOLBAR_ACTIONS, type Preferences, type RecentFile, type ToolbarAction } from './lib/preferences';
 import type { BrowserFileHandle, OpenDocument } from './types';
 import { APP_VERSION } from './lib/version';
-import { checkForUpdate, type UpdateInfo } from './lib/updater';
+import { checkForUpdate, getUpdateErrorDetail, type UpdateInfo } from './lib/updater';
 import { setLanguage, tLang } from './lib/i18n';
 import { detectFullscreenKind, enterFullscreen, exitFullscreen, fullscreenSupport, onDocumentFullscreenChange, type FullscreenKind } from './lib/fullscreen';
 import { immersiveOpenNotice, opensInImmersive, type OpenGesture } from './lib/launchMode';
@@ -351,7 +351,7 @@ export default function App() {
 
     let pendingCheck = updateCheckPromiseRef.current;
     if (!pendingCheck) {
-      pendingCheck = checkForTauriUpdate({ timeout: 15_000 });
+      pendingCheck = checkForTauriUpdate({ timeout: 30_000 });
       updateCheckPromiseRef.current = pendingCheck;
     }
 
@@ -2251,7 +2251,11 @@ export function SettingsModal({ preferences, onChange, onClose, onClearRecents, 
         setUpdateInfo(await checkForUpdate(APP_VERSION));
       }
     } catch (error) {
-      setUpdateError(error instanceof Error ? error.message : tx('settings.updateError', 'Update check failed.'));
+      const fallback = tx('settings.updateError', 'Update check failed.');
+      const detail = getUpdateErrorDetail(error);
+      setUpdateError(detail
+        ? `${fallback} ${preferences.language === 'fr' ? 'Détail :' : 'Details:'} ${detail}`
+        : fallback);
       setUpdateInfo(null);
     } finally {
       setCheckingUpdates(false);

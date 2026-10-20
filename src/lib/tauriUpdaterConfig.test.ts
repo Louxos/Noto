@@ -42,6 +42,15 @@ describe('configuration de l’updater Tauri', () => {
     expect(updaterSigningStep).toContain('npx tauri signer sign --app-version $version $installer.FullName');
   });
 
+  it('utilise le magasin de certificats et le proxy système de Windows pour joindre GitHub', () => {
+    const cargo = readFileSync(resolve(root, 'src-tauri/Cargo.toml'), 'utf8');
+    const updaterDependency = cargo.match(/^tauri-plugin-updater\s*=\s*\{([^}]+)\}/m)?.[1] ?? '';
+    expect(updaterDependency).toContain('default-features = false');
+    expect(updaterDependency).toContain('"native-tls"');
+    expect(updaterDependency).toContain('"system-proxy"');
+    expect(updaterDependency).not.toContain('"rustls-tls"');
+  });
+
   it('autorise la commande de redémarrage utilisée par relaunch() du plugin process', () => {
     const capability = JSON.parse(readFileSync(resolve(root, 'src-tauri/capabilities/default.json'), 'utf8')) as {
       permissions?: string[];

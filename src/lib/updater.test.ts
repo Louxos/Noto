@@ -1,11 +1,26 @@
 import { describe, expect, it, vi } from 'vitest';
-import { checkForUpdate, compareVersions } from './updater';
+import { checkForUpdate, compareVersions, getUpdateErrorDetail } from './updater';
 
 describe('version comparison', () => {
   it('compares stable versions and optional v prefixes', () => {
     expect(compareVersions('v1.0.2', '1.0.1')).toBeGreaterThan(0);
     expect(compareVersions('1.1.0', '1.0.9')).toBeGreaterThan(0);
     expect(compareVersions('1.0.0', 'v1.0.0')).toBe(0);
+  });
+});
+
+describe('updater error details', () => {
+  it('keeps the string rejection reason returned by Tauri IPC', () => {
+    expect(getUpdateErrorDetail('failed to send request')).toBe('failed to send request');
+  });
+
+  it('redacts query parameters from signed release URLs', () => {
+    expect(getUpdateErrorDetail('failed: https://example.test/latest.json?token=secret'))
+      .toBe('failed: https://example.test/latest.json');
+  });
+
+  it('returns null when an error has no useful message', () => {
+    expect(getUpdateErrorDetail({})).toBeNull();
   });
 });
 
