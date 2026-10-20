@@ -1,7 +1,7 @@
 {
   "name": "noto",
   "private": true,
-  "version": "1.2.0",
+  "version": "1.2.1",
   "type": "module",
   "description": "Noto — suite documentaire locale pour Windows : lire, éditer, imprimer et traiter vos fichiers, sans compte ni cloud. Gratuit et open source (MIT).",
   "scripts": {

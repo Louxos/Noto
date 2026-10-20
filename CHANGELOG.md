@@ -2,7 +2,13 @@
 
 Les changements notables sont consignés ici, selon une version simplifiée de Keep a Changelog.
 
-## [1.2.0] — en préparation
+## [1.2.1] — en préparation
+
+### Corrigé
+- **Connexion de l’updater sous Windows** : recours au magasin de certificats et au proxy système de Windows, sans désactiver la validation TLS ni la vérification de signature Tauri.
+- **Diagnostic de recherche** : affichage du motif technique renvoyé par Tauri, avec suppression des paramètres temporaires des URL ; délai de contrôle porté de 15 à 30 secondes.
+
+## [1.2.0] — 2026-10-19
 
 ### Ajouté
 - **Mises à jour intégrées Tauri** : contrôle discret des releases stables au démarrage, annonce soignée avec notes de version et installation uniquement après confirmation.
