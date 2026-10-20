@@ -149,7 +149,7 @@ Après le succès du workflow, l’installeur `.exe` et `SHA256SUMS.txt` sont at
    ```
 
    Si vous l’avez enregistré ailleurs, adaptez le chemin. `-ExecutionPolicy Bypass` ne modifie pas durablement les paramètres Windows.
-4. Le script demande d’abord à Noto de se fermer normalement et attend cinq secondes. S’il est encore actif, tapez **O** pour forcer la fermeture ou **N** pour annuler. **O peut faire perdre les modifications non enregistrées.** Le script cible `noto.exe` et ses processus enfants. Après confirmation de la fermeture, relancez le désinstalleur.
+4. Le script recherche `Noto.exe` via CIM, demande d’abord une fermeture normale et attend cinq secondes. S’il trouve encore le processus, tapez **O** pour forcer sa fermeture (et celle de ses processus enfants) ou **N** pour annuler. **O peut faire perdre les modifications non enregistrées.** Si CIM ne trouve aucun processus, **O** lance tout de même une vérification ciblée de l’image `Noto.exe` avec `taskkill`, car l’ancienne vérification PowerShell pouvait manquer une instance. Si Windows ne trouve toujours aucun processus alors que l’installateur affiche encore le message, redémarrez Windows, ne relancez pas Noto et lancez aussitôt la désinstallation. N’effacez pas le dossier de l’application à la main. En cas de refus d’accès, ouvrez PowerShell en tant qu’administrateur et relancez le script.
 
 | Problème | À vérifier |
 | --- | --- |

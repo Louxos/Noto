@@ -34,6 +34,18 @@ jobs:
         with:
           workspaces: './src-tauri -> target'
       - run: npm ci
+      - name: Validate PowerShell uninstall helper syntax
+        shell: pwsh
+        run: |
+          $scriptPath = Join-Path $PWD 'scripts/fermer-noto.ps1'
+          $tokens = $null
+          $errors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile($scriptPath, [ref]$tokens, [ref]$errors)
+          if ($errors.Count -gt 0) {
+            $errors | ForEach-Object { Write-Error $_.Message }
+            throw 'The Noto uninstall helper contains a PowerShell syntax error.'
+          }
+          Write-Host 'The Noto uninstall helper parses successfully.'
       # Les diagnostics du build Windows sont regroupés en une annotation pour
       # éviter la limite GitHub de dix annotations et garder l'erreur finale.
       - name: Types TypeScript et tests

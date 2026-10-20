@@ -194,6 +194,7 @@ Aucun service payant, aucun compte, aucune API distante, aucune télémétrie. S
 - Liens et sections : `src/lib/markdownAnchors.ts`, `src/lib/linkPreview.ts`, `src/components/MarkdownViewer.tsx` (identifiants uniques, clic sur un renvoi), `src/App.tsx` (écouteur de survol, aperçu dans la barre d’état), `src/styles.css`.
 - Tests : `src/lib/{fileStats,fileName,printing,fileAnalysis,markdownAnchors,linkPreview,docsIntegrity}.test.ts`, `src/lib/printJobs.pdf.test.ts`, `src/components/MarkdownViewer.anchors.test.tsx`, `src/components/FileTools.test.tsx`, `src/App.print.test.tsx`.
 - Outillage : `eslint.config.js`, `vite.config.ts` (couverture), `package.json` (scripts `lint`, `coverage`, `verify`).
+- Désinstallation Noto bloquée par une détection de processus : `scripts/fermer-noto.ps1` a été renforcé pour repérer `Noto.exe` via CIM, essayer une fermeture normale puis, avec confirmation, lancer `taskkill` ciblé même si `Get-Process` ne voit rien. `docs/installation.md` décrit aussi le redémarrage sûr si Windows ne détecte aucun processus.
 - Fichiers racine : `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, `.editorconfig`, `.gitattributes`, `.nvmrc`, `docs/tests.md`.
 - Documentation : voir §1.
 
