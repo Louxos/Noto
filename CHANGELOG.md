@@ -2,7 +2,7 @@
 
 Les changements notables sont consignés ici, selon une version simplifiée de Keep a Changelog.
 
-## [1.2.1] — en préparation
+## [1.2.1] — 2026-10-20
 
 ### Corrigé
 - **Connexion de l’updater sous Windows** : recours au magasin de certificats et au proxy système de Windows, sans désactiver la validation TLS ni la vérification de signature Tauri.
