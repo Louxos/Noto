@@ -1,23 +1,15 @@
-import { useEffect, useState, isValidElement, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, isValidElement, type MouseEvent, type ReactNode } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeHighlight from 'rehype-highlight';
 import remarkGfm from 'remark-gfm';
 import type { OpenDocument } from '../types';
+import { createHeadingSlugger, resolveAnchorTarget } from '../lib/markdownAnchors';
 
 function flattenText(value: ReactNode): string {
   if (typeof value === 'string' || typeof value === 'number') return String(value);
   if (Array.isArray(value)) return value.map(flattenText).join('');
   if (isValidElement<{ children?: ReactNode }>(value)) return flattenText(value.props.children);
   return '';
-}
-
-function plainText(children: ReactNode): string {
-  return flattenText(children)
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
 }
 
 function findLocalImage(source: string, current: OpenDocument | undefined, documents: OpenDocument[]): OpenDocument | undefined {
@@ -59,22 +51,59 @@ function MarkdownImage({ source, alt, current, documents }: { source: string; al
 }
 
 export function MarkdownViewer({ source, document, documents = [] }: { source: string; document?: OpenDocument; documents?: OpenDocument[] }) {
+  const rootRef = useRef<HTMLElement>(null);
+  // Un compteur neuf à chaque rendu : l’unicité des identifiants dépend de
+  // l’ordre des titres, et le réutiliser suffixerait des titres inchangés.
+  const headingSlug = createHeadingSlugger();
+
+  /**
+   * Amène à la section visée par un lien interne.
+   *
+   * Le défilement se fait dans le lecteur, sans recharger ni quitter le
+   * document ; le titre reçoit le focus (utile au clavier et aux lecteurs
+   * d’écran) et un repère visuel temporaire. Si la section n’existe pas, le lien
+   * garde son comportement habituel : rien n’est inventé.
+   */
+  const handleAnchorClick = useCallback((event: MouseEvent<HTMLAnchorElement>, href: string) => {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const target = resolveAnchorTarget(rootRef.current, href);
+    if (!target) return;
+    event.preventDefault();
+    if (typeof target.scrollIntoView === 'function') {
+      const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+      target.scrollIntoView({ block: 'start', behavior: reduced ? 'auto' : 'smooth' });
+    }
+    target.setAttribute('tabindex', '-1');
+    target.focus({ preventScroll: true });
+    target.classList.add('is-anchor-target');
+    window.setTimeout(() => target.classList.remove('is-anchor-target'), 2_000);
+  }, []);
+
   return (
-    <article className="markdown-document">
+    <article className="markdown-document" ref={rootRef}>
       {source.trim() ? (
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
           rehypePlugins={[rehypeHighlight]}
           components={{
-            h1: ({ children, node: _node, ...props }) => <h1 id={plainText(children)} {...props}>{children}</h1>,
-            h2: ({ children, node: _node, ...props }) => <h2 id={plainText(children)} {...props}>{children}</h2>,
-            h3: ({ children, node: _node, ...props }) => <h3 id={plainText(children)} {...props}>{children}</h3>,
-            h4: ({ children, node: _node, ...props }) => <h4 id={plainText(children)} {...props}>{children}</h4>,
-            h5: ({ children, node: _node, ...props }) => <h5 id={plainText(children)} {...props}>{children}</h5>,
-            h6: ({ children, node: _node, ...props }) => <h6 id={plainText(children)} {...props}>{children}</h6>,
+            // Les identifiants suivent la règle de GitHub, pour que les liens
+            // écrits ailleurs dans ce document fonctionnent ici.
+            h1: ({ children, node: _node, ...props }) => <h1 id={headingSlug(flattenText(children))} {...props}>{children}</h1>,
+            h2: ({ children, node: _node, ...props }) => <h2 id={headingSlug(flattenText(children))} {...props}>{children}</h2>,
+            h3: ({ children, node: _node, ...props }) => <h3 id={headingSlug(flattenText(children))} {...props}>{children}</h3>,
+            h4: ({ children, node: _node, ...props }) => <h4 id={headingSlug(flattenText(children))} {...props}>{children}</h4>,
+            h5: ({ children, node: _node, ...props }) => <h5 id={headingSlug(flattenText(children))} {...props}>{children}</h5>,
+            h6: ({ children, node: _node, ...props }) => <h6 id={headingSlug(flattenText(children))} {...props}>{children}</h6>,
             a: ({ href, children, node: _node, ...props }) => {
               const external = href?.startsWith('https://') || href?.startsWith('http://');
-              return <a href={href} target={external ? '_blank' : undefined} rel={external ? 'noreferrer' : undefined} {...props}>{children}</a>;
+              const anchor = href?.startsWith('#') ?? false;
+              return <a
+                href={href}
+                target={external ? '_blank' : undefined}
+                rel={external ? 'noreferrer' : undefined}
+                {...(anchor ? { onClick: (event: MouseEvent<HTMLAnchorElement>) => handleAnchorClick(event, href ?? '') } : {})}
+                {...props}
+              >{children}</a>;
             },
             img: ({ alt, src, node: _node }) => <MarkdownImage source={src ?? ''} alt={alt ?? ''} current={document} documents={documents} />,
           }}

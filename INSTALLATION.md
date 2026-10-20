@@ -1,5 +1,5 @@
 # Installation
 
-The installation guide has moved to [`docs/installation.md`](docs/installation.md).
+Le guide d’installation se trouve dans [`docs/installation.md`](docs/installation.md).
 
-For end users, the recommended download channel is [GitHub Releases](https://github.com/Louxos/Noto/releases/latest): version tags publish the `.exe`, `.msi`, and `SHA256SUMS.txt` as separate assets with generated release notes. The single `Windows installers` workflow also uploads a temporary ZIP artifact for smoke-tested builds; see [`docs/installation.md`](docs/installation.md) for the latest test build and verification instructions.
+Pour installer Noto, le canal recommandé reste [GitHub Releases](https://github.com/Louxos/Noto/releases/latest) : chaque tag `vX.Y.Z` y publie l’installeur NSIS `.exe` et `SHA256SUMS.txt` comme fichiers séparés, accompagnés de notes rédigées en français. Le workflow **Windows installers** dépose en plus une archive ZIP temporaire destinée aux builds de test ; le guide explique comment la vérifier. Le paquet MSI n’est plus produit depuis la version 0.2.0.

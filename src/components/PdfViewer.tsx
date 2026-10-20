@@ -5,6 +5,7 @@ import { Bookmark, BookOpen, ChevronLeft, ChevronRight, Copy, FileText, List, Mi
 import type { OpenDocument } from '../types';
 import { ContextMenu, type MenuEntry } from './WorkspaceTools';
 import { readPdfLocalState, writePdfLocalState } from '../lib/pdfState';
+import type { StatRow } from '../lib/fileStats';
 
 GlobalWorkerOptions.workerSrc = workerUrl;
 
@@ -17,7 +18,7 @@ interface RawOutlineItem { title?: string; dest?: string | unknown[] | null; ite
 
 const EMPTY_SEARCH: PdfSearchState = { query: '', pages: [], occurrences: 0, searching: false, scannedPages: 0, totalPages: 0 };
 
-export function PdfViewer({ document, searchQuery, searchRequest, fileContextItems }: { document: OpenDocument; searchQuery: string; searchRequest: SearchRequest | null; fileContextItems: MenuEntry[] }) {
+export function PdfViewer({ document, searchQuery, searchRequest, fileContextItems, onReadout }: { document: OpenDocument; searchQuery: string; searchRequest: SearchRequest | null; fileContextItems: MenuEntry[]; onReadout?: (rows: StatRow[]) => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const handledRequestId = useRef(0);
@@ -40,6 +41,15 @@ export function PdfViewer({ document, searchQuery, searchRequest, fileContextIte
   const [pageText, setPageText] = useState('');
   const [pageTextLoading, setPageTextLoading] = useState(false);
   const [copyFeedback, setCopyFeedback] = useState('');
+
+  // Relevé lu par la barre d’état et la fenêtre d’informations : le lecteur est
+  // seul à connaître le nombre de pages et la page affichée.
+  useEffect(() => {
+    onReadout?.([
+      { label: 'Pages', value: pageCount ? pageCount.toLocaleString('fr-FR') : '—' },
+      { label: 'Page affichée', value: pageCount ? `${pageNumber} / ${pageCount}` : '—', raw: pageNumber },
+    ]);
+  }, [onReadout, pageCount, pageNumber]);
 
   useEffect(() => {
     setPdf(null);

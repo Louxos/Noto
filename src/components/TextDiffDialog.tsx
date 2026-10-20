@@ -41,7 +41,7 @@ export function TextDiffDialog({ documents, initialLeftId, onOpenFile, onClose }
     window.requestAnimationFrame(() => { syncingScroll.current = false; });
   }
 
-  const rows = comparison.result?.rows ?? [];
+  const rows = useMemo(() => comparison.result?.rows ?? [], [comparison.result]);
   const changeIndexes = useMemo(() => rows.flatMap((row, index) => row.kind === 'equal' ? [] : [index]), [rows]);
 
   useEffect(() => { setActiveChangeIndex(0); }, [leftId, rightId, ignoreLineEndings, ignoreWhitespace]);

@@ -1,4 +1,6 @@
-import { useCallback, useRef, type KeyboardEvent, type MutableRefObject } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, type KeyboardEvent, type MutableRefObject } from 'react';
+import { highlightCode } from '../lib/highlighting';
+import { languageForExtension } from '../lib/fileTypes';
 
 interface TextEditorProps {
   value: string;
@@ -11,11 +13,35 @@ interface TextEditorProps {
   textareaRef?: MutableRefObject<HTMLTextAreaElement | null>;
 }
 
+/**
+ * Limites de la coloration pendant la frappe. Une frappe reconstruit la couche
+ * colorée : au-delà de ces seuils, l’éditeur repasse en texte simple plutôt que
+ * de faire attendre la personne qui écrit.
+ */
+const MAX_HIGHLIGHT_CHARACTERS = 200_000;
+const MAX_HIGHLIGHT_LINES = 20_000;
+
 export function TextEditor({ value, extension, onChange, lineNumbers, wordWrap, fontSize, disabled, textareaRef }: TextEditorProps) {
   const gutterRef = useRef<HTMLDivElement | null>(null);
+  const highlightRef = useRef<HTMLPreElement | null>(null);
   const internalRef = useRef<HTMLTextAreaElement | null>(null);
   const lineCount = Math.max(1, value.split('\n').length);
   const showLineNumbers = lineNumbers && lineCount <= 20_000;
+
+  const language = languageForExtension(extension);
+  // La couche colorée peut prendre une ou deux images de retard sur la frappe :
+  // le curseur, lui, ne doit jamais attendre.
+  const deferredValue = useDeferredValue(value);
+  const highlightable = Boolean(language)
+    && value.length <= MAX_HIGHLIGHT_CHARACTERS
+    && lineCount <= MAX_HIGHLIGHT_LINES;
+  const highlighted = useMemo(() => {
+    if (!highlightable) return '';
+    const { html } = highlightCode(deferredValue, extension);
+    // Un saut de ligne final n’est pas rendu tel quel dans une couche <pre> :
+    // l’espace ajouté maintient la dernière ligne vide à sa place.
+    return deferredValue.endsWith('\n') ? `${html} ` : html;
+  }, [deferredValue, extension, highlightable]);
 
   const setEditorRef = useCallback((node: HTMLTextAreaElement | null) => {
     internalRef.current = node;
@@ -23,8 +49,18 @@ export function TextEditor({ value, extension, onChange, lineNumbers, wordWrap, 
   }, [textareaRef]);
 
   function syncScroll() {
-    if (gutterRef.current && internalRef.current) gutterRef.current.scrollTop = internalRef.current.scrollTop;
+    const editor = internalRef.current;
+    if (!editor) return;
+    if (gutterRef.current) gutterRef.current.scrollTop = editor.scrollTop;
+    if (highlightRef.current) {
+      highlightRef.current.scrollTop = editor.scrollTop;
+      highlightRef.current.scrollLeft = editor.scrollLeft;
+    }
   }
+
+  // La couche colorée reprend la position de défilement à chaque nouveau rendu
+  // (changement de contenu, de taille de police, de retour à la ligne).
+  useEffect(() => { syncScroll(); }, [highlighted, wordWrap, fontSize]);
 
   function replaceSelection(nextValue: string, selectionStart: number, selectionEnd = selectionStart) {
     onChange(nextValue);
@@ -79,7 +115,12 @@ export function TextEditor({ value, extension, onChange, lineNumbers, wordWrap, 
           {Array.from({ length: lineCount }, (_, index) => <span key={index}>{index + 1}</span>)}
         </div>
       )}
-      <div className="editor-code-layer">
+      <div className={`editor-code-layer ${highlightable ? 'is-highlighted' : ''}`}>
+        {highlightable && (
+          <pre className="editor-highlight" ref={highlightRef} aria-hidden="true" style={{ fontSize }}>
+            <code className={`hljs language-${language}`} dangerouslySetInnerHTML={{ __html: highlighted }} />
+          </pre>
+        )}
         <textarea
           ref={setEditorRef}
           className="source-editor"

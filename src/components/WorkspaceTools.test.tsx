@@ -6,7 +6,7 @@ import userEvent from '@testing-library/user-event';
 import { SettingsModal } from '../App';
 import { defaultPreferences, type RecentFile } from '../lib/preferences';
 import { createGroup, toggleGroupFile } from '../lib/groups';
-import { CommandPalette, ContextMenu, GroupAssignmentDialog, GroupDialog } from './WorkspaceTools';
+import { AppMenuBar, CommandPalette, ContextMenu, GroupAssignmentDialog, GroupDialog, type MenuDefinition } from './WorkspaceTools';
 
 afterEach(cleanup);
 
@@ -97,6 +97,9 @@ describe('workspace keyboard and menu integration', () => {
       onToggleToolbar={onToggleToolbar}
       onOpenShortcuts={vi.fn()}
       onOpenWindowsDefaults={vi.fn()}
+      onOpenReleasePage={vi.fn()}
+      onCheckForUpdates={vi.fn(async () => false)}
+      onOpenIndexedResult={vi.fn()}
       onExportBackup={vi.fn()}
       onImportBackup={vi.fn()}
     />);
@@ -107,5 +110,52 @@ describe('workspace keyboard and menu integration', () => {
     expect(onChange).toHaveBeenCalledWith('theme', 'dark');
     expect(onChange).toHaveBeenCalledWith('accent', 'blue');
     expect(onToggleToolbar).toHaveBeenCalledWith('search');
+  });
+});
+
+describe('barre de menus', () => {
+  const menus: MenuDefinition[] = [
+    { id: 'file', label: 'Fichier', items: [
+      { id: 'open', label: 'Ouvrir un fichier…', shortcut: 'Ctrl+O', onSelect: () => {} },
+      { id: 'save', label: 'Enregistrer', shortcut: 'Ctrl+S', disabled: true, onSelect: () => {} },
+    ] },
+    { id: 'view', label: 'Affichage', items: [
+      { id: 'immersive', label: 'Mode immersion', shortcut: 'Ctrl+Maj+F', onSelect: () => {} },
+    ] },
+  ];
+
+  it('affiche les menus côte à côte quand la place le permet', () => {
+    render(<AppMenuBar menus={menus} onOpenPalette={() => {}} />);
+    expect(screen.getByRole('button', { name: 'Fichier' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Affichage' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Tous les menus de Noto' })).toBeNull();
+  });
+
+  it('regroupe tous les menus sans perdre une commande quand la place manque', async () => {
+    const user = userEvent.setup();
+    render(<AppMenuBar menus={menus} onOpenPalette={() => {}} collapsed />);
+
+    // Les déclencheurs individuels disparaissent au profit d’un seul bouton.
+    expect(screen.queryByRole('button', { name: 'Fichier' })).toBeNull();
+    const all = screen.getByRole('button', { name: 'Tous les menus de Noto' });
+    expect(all.getAttribute('aria-expanded')).toBe('false');
+
+    await user.click(all);
+    expect(all.getAttribute('aria-expanded')).toBe('true');
+    // Chaque menu reste présent, titré, avec ses entrées et leurs raccourcis.
+    for (const menu of menus) expect(screen.getByText(menu.label)).toBeTruthy();
+    for (const item of menus.flatMap((menu) => menu.items)) expect(screen.getByRole('menuitem', { name: new RegExp(item.label) })).toBeTruthy();
+    expect(screen.getByRole('menuitem', { name: /Enregistrer/ }).hasAttribute('disabled')).toBe(true);
+  });
+
+  it('exécute la commande choisie depuis le menu regroupé', async () => {
+    const user = userEvent.setup();
+    const onSelect = vi.fn();
+    const withAction: MenuDefinition[] = [{ id: 'view', label: 'Affichage', items: [{ id: 'immersive', label: 'Mode immersion', onSelect }] }];
+    render(<AppMenuBar menus={withAction} onOpenPalette={() => {}} collapsed />);
+    await user.click(screen.getByRole('button', { name: 'Tous les menus de Noto' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Mode immersion' }));
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('menu')).toBeNull();
   });
 });

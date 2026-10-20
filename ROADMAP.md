@@ -1,10 +1,11 @@
 # Feuille de route de Noto
 
-Cette feuille ne garde que les travaux **non terminés** ou les validations encore manquantes. Les fonctionnalités déjà réalisées ont été retirées. Mise à jour : 8 octobre 2026.
+Cette feuille ne garde que les travaux **non terminés** ou les validations encore manquantes. Les fonctionnalités déjà réalisées ont été retirées. Mise à jour : 15 octobre 2026.
 
 ## Obligatoire avant une version stable — P0
 
-- [ ] **Signature Authenticode finale** : configurer les secrets du certificat de publication, valider la signature des deux bundles Windows et surveiller la réputation SmartScreen avant la première release stable. Les sommes SHA-256 et l’explication des avertissements sont désormais générées/documentées.
+- [x] **Constater les icônes par type dans l’Explorateur Windows** : le registre, les fichiers `.ico` et la désinstallation sont contrôlés automatiquement par le workflow **Windows installers**, mais l’apparence réelle (petites tailles 16/24 px, mise à l’échelle 125–200 %, contraste sur fond clair/sombre) et la restitution des associations d’origine après une mise à jour 0.2.0 → 1.0.0 demandent une machine Windows avec une version antérieure installée. Aperçu de référence : `docs/assets/icons-fichiers.png`.
+- [ ] **Signature Authenticode** : configurer les secrets du certificat de publication, signer et valider l’installeur NSIS, puis surveiller la réputation SmartScreen. Si aucun certificat n’est configuré, l’installeur publié reste non signé et Windows affiche un avertissement d’éditeur inconnu — `Get-AuthenticodeSignature` le confirme sur le poste. Les sommes SHA-256 et l’explication des avertissements sont, elles, déjà en place. (Le paquet MSI n’existe plus : le NSIS est l’unique installeur.)
 
 ## Prioritaire — P1
 
@@ -16,14 +17,14 @@ Cette feuille ne garde que les travaux **non terminés** ou les validations enco
 
 ### Lecture et édition
 
+- [ ] **Coloration chargée à la demande** : les 30 grammaires sont aujourd’hui embarquées d’avance (+73 ko, +20 ko compressés, mesurés) pour que la coloration soit immédiate ; un chargement par langage, à l’ouverture d’un fichier, réduirait le paquet au prix d’un premier rendu sans couleurs.
 - [ ] Markdown : sommaire cliquable, copie du code en un clic et largeur de lecture réglable.
 - [ ] JSON : actions explicites pour formater/indenter et minifier, sans modifier la source sans confirmation.
 - [ ] Texte/code : replier les blocs et copier le code avec son formatage.
 
 ### Gestion des fichiers
 
-- [ ] Détecter les doublons potentiels par nom et taille, puis proposer une comparaison avant toute action ; ne jamais supprimer un original sans confirmation.
-- [ ] Révéler un fichier dans l’Explorateur et proposer de l’ouvrir dans une autre application.
+- [ ] Révéler un fichier dans l’Explorateur et proposer de l’ouvrir dans une autre application. (L’atelier révèle déjà les fichiers produits ; l’action manque encore pour les fichiers d’origine.)
 - [ ] Glisser un onglet vers un groupe avec un indicateur clair de destination.
 
 ### Ergonomie
@@ -32,12 +33,17 @@ Cette feuille ne garde que les travaux **non terminés** ou les validations enco
 - [ ] Ajouter un thème automatique selon Windows, une option de réduction des animations et un contraste renforcé.
 - [ ] Ajouter des profils de barre d’outils (Lecture, Édition, Minimal).
 
+### Structure du dépôt
+
+- [ ] Découper les deux plus gros fichiers du dépôt — `src/App.tsx` (≈154 ko) et `src/styles.css` (≈124 ko) : ils concentrent aujourd’hui l’assemblage de l’interface et la mise en forme. Un découpage par domaine (onglets, barre d’état, dialogues, barre d’outils) rendrait les revues plus lisibles, sans changer le comportement. Le tri de la documentation et le test `docsIntegrity` ont été faits ; ce découpage reste à faire.
+
 ## Optionnel — P3, seulement si le besoin le justifie
 
 - [ ] Traduction anglaise de l’application avec choix manuel de la langue.
 - [ ] Favoris et étiquettes libres, avec recherche locale.
 - [ ] Extensions de viewers à permissions limitées, après revue de sécurité.
-- [ ] OCR local facultatif pour les images et PDF numérisés.
+- [ ] Embarquer le moteur OCR et les modèles dans l’installeur (choix de langue à l’installation) pour supprimer le premier téléchargement. Aujourd’hui, l’OCR demande un accord explicite, télécharge une fois le script de travail et le cœur WebAssembly du moteur (`cdn.jsdelivr.net`, environ 4,6 Mo) ainsi que les modèles choisis (`tessdata.projectnaptha.com`, 11 à 12 Mo par langue), puis les réutilise hors ligne. Tant que ce n’est pas fait, un premier traitement hors ligne est impossible et c’est la seule connexion réseau de l’application.
+- [ ] Protéger un PDF par mot de passe en écriture : l’ouverture de documents protégés est prise en charge, mais aucune solution libre et locale n’est retenue pour le chiffrement à l’écriture. La fonction n’est donc pas proposée plutôt que simulée.
 - [ ] Synchronisation cloud facultative, jamais activée automatiquement et uniquement après choix explicite du fournisseur et des dossiers.
 - [ ] Historique local de versions avec limite de stockage et suppression simple.
 - [ ] Actions personnalisées ou modèles de documents, sans exécuter de scripts de fichiers par défaut.

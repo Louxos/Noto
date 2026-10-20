@@ -149,6 +149,16 @@
   animation: boot-progress 1.2s ease-in-out infinite;
 }
 
+/* Slogan de Noto : affiché en entier, sans troncature ni ellipse. */
+.boot-tagline {
+  max-width: 340px;
+  margin: 0 0 26px;
+  color: var(--boot-text);
+  font: 500 13px/1.5 'DM Sans', 'Segoe UI', sans-serif;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
 .boot-status {
   margin: 16px 0 0;
   color: var(--boot-text);
@@ -200,6 +210,10 @@
 @keyframes boot-message-in {
   from { opacity: 0; transform: translateY(3px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 420px) {
+  .boot-tagline { max-width: 260px; font-size: 12px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

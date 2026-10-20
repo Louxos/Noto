@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Guide d’installation et de vérification
+    url: https://github.com/Louxos/Noto/blob/main/docs/installation.md
+    about: Installation, sommes SHA-256, désinstallation et dépannage courant.
+  - name: Politique de sécurité
+    url: https://github.com/Louxos/Noto/blob/main/SECURITY.md
+    about: Signaler une vulnérabilité en privé, sans détail public.
+  - name: Feuille de route
+    url: https://github.com/Louxos/Noto/blob/main/ROADMAP.md
+    about: Travaux prévus, validations restantes et fonctions volontairement non prises en charge.

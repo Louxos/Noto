@@ -1,11 +1,13 @@
 export type Theme = 'light' | 'dark';
+export type Language = 'fr' | 'en';
 export type AccentColor = 'violet' | 'blue' | 'mint' | 'rose';
-export type ToolbarAction = 'search' | 'edit' | 'save' | 'group' | 'close';
+export type ToolbarAction = 'search' | 'edit' | 'save' | 'print' | 'info' | 'group' | 'close';
 export type RecentLimit = 4 | 8 | 12 | 20;
 export type DraftRetentionDays = 1 | 7 | 30;
 
 export interface Preferences {
   theme: Theme;
+  language: Language;
   accent: AccentColor;
   textSize: number;
   editorSize: number;
@@ -18,6 +20,8 @@ export interface Preferences {
   hidePaths: boolean;
   draftRecoveryEnabled: boolean;
   draftRetentionDays: DraftRetentionDays;
+  /** Ouvrir en mode immersion un fichier transmis par Windows (double-clic). */
+  immersiveOnFileOpen: boolean;
   toolbarOrder: ToolbarAction[];
   hiddenToolbarActions: ToolbarAction[];
 }
@@ -32,12 +36,13 @@ export interface RecentFile {
   source?: 'browser' | 'desktop';
 }
 
-export const TOOLBAR_ACTIONS: ToolbarAction[] = ['search', 'edit', 'save', 'group', 'close'];
+export const TOOLBAR_ACTIONS: ToolbarAction[] = ['search', 'edit', 'save', 'print', 'info', 'group', 'close'];
 const PREFERENCES_KEY = 'noto.preferences.v1';
 const RECENTS_KEY = 'noto.recents.v1';
 
 export const defaultPreferences: Preferences = {
   theme: 'light',
+  language: 'fr',
   accent: 'violet',
   textSize: 16,
   editorSize: 14,
@@ -50,6 +55,7 @@ export const defaultPreferences: Preferences = {
   hidePaths: false,
   draftRecoveryEnabled: false,
   draftRetentionDays: 7,
+  immersiveOnFileOpen: true,
   toolbarOrder: [...TOOLBAR_ACTIONS],
   hiddenToolbarActions: [],
 };
@@ -68,6 +74,7 @@ export function normalizePreferences(value: unknown): Preferences {
   const hidden = normalizeToolbarList(parsed.hiddenToolbarActions);
   return {
     theme: parsed.theme === 'dark' ? 'dark' : 'light',
+    language: parsed.language === 'en' ? 'en' : 'fr',
     accent: parsed.accent === 'blue' || parsed.accent === 'mint' || parsed.accent === 'rose' ? parsed.accent : 'violet',
     textSize: clampNumber(parsed.textSize, 14, 20, defaultPreferences.textSize),
     editorSize: clampNumber(parsed.editorSize, 12, 20, defaultPreferences.editorSize),
@@ -80,6 +87,9 @@ export function normalizePreferences(value: unknown): Preferences {
     hidePaths: parsed.hidePaths === true,
     draftRecoveryEnabled: parsed.draftRecoveryEnabled === true,
     draftRetentionDays: parsed.draftRetentionDays === 1 || parsed.draftRetentionDays === 30 ? parsed.draftRetentionDays : 7,
+    // Le mode immersion à l’ouverture d’un fichier depuis Windows est actif par
+    // défaut : seule la valeur explicitement fausse le désactive.
+    immersiveOnFileOpen: parsed.immersiveOnFileOpen !== false,
     toolbarOrder: [...order, ...TOOLBAR_ACTIONS.filter((action) => !order.includes(action))],
     hiddenToolbarActions: hidden,
   };

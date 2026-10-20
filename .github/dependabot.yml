@@ -1,0 +1,45 @@
+# Mises à jour de dépendances : propositions hebdomadaires, groupées pour
+# rester lisibles, et toujours soumises aux mêmes vérifications continues.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: '/'
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Europe/Paris
+    open-pull-requests-limit: 5
+    labels: ['dependencies']
+    commit-message:
+      prefix: 'npm'
+    groups:
+      interface:
+        patterns: ['react', 'react-dom', '@types/react', '@types/react-dom', 'vite', '@vitejs/plugin-react', 'lucide-react']
+      outils-de-verification:
+        patterns: ['typescript', 'vitest', '@vitest/*', 'eslint', '@eslint/*', 'typescript-eslint', 'eslint-plugin-*', 'jsdom', '@testing-library/*', 'globals', 'typescript-eslint']
+      moteurs-de-traitement:
+        patterns: ['pdf-lib', 'pdfjs-dist', 'fflate', 'utif', 'exifr', 'tesseract.js', 'diff', 'highlight.js', 'react-markdown', 'remark-gfm', 'rehype-highlight']
+
+  - package-ecosystem: cargo
+    directory: '/src-tauri'
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Europe/Paris
+    open-pull-requests-limit: 5
+    labels: ['dependencies', 'rust']
+    commit-message:
+      prefix: 'cargo'
+    groups:
+      tauri:
+        patterns: ['tauri', 'tauri-*', 'wry', 'tao']
+
+  - package-ecosystem: github-actions
+    directory: '/'
+    schedule:
+      interval: monthly
+    labels: ['dependencies', 'ci']
+    commit-message:
+      prefix: 'ci'

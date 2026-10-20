@@ -1,0 +1,61 @@
+name: Checks
+
+# Vérifications rapides, exécutables partout (Linux), sur chaque poussée et
+# chaque pull request. La construction de l’installeur, les tests des commandes
+# natives Rust et l’installation réelle restent dans le workflow Windows
+# installers, qui dépend de Windows.
+
+on:
+  push:
+    branches: [main, 'arena/**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verifications:
+    name: Analyse, types, tests et construction
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
+
+      - name: Installer Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Vérifier le site GitHub Pages et ses fichiers locaux
+        run: npm run pages:check
+
+      - name: Analyse statique (ESLint)
+        run: npm run lint
+
+      - name: Types TypeScript et tests
+        run: npm run check
+
+      - name: Couverture des tests
+        run: npm run coverage
+
+      - name: Construction de l’interface
+        run: npm run build
+
+      - name: Conserver le rapport de couverture
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+          if-no-files-found: ignore
+          retention-days: 7

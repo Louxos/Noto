@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import {
-  BookOpen, BookOpenText, Check, ChevronRight, Code2, File, FileImage, FileText,
+  BookOpen, BookOpenText, Check, ChevronRight, Code2, File, FileImage, FileText, Menu,
   FileType2, FileUp, FolderOpen, Globe2, Keyboard, Pencil, Plus, Presentation, Search, ShieldCheck,
   Save, Table2, TextCursorInput, Trash2, X,
 } from 'lucide-react';
 import { getFormatLabel } from '../lib/fileTypes';
+import { MAX_FILE_NAME_LENGTH, composeFileName, describeNameChange, splitFileName, validateExtension, validateFileName } from '../lib/fileName';
 import { GROUP_COLORS, type FileGroup, type GroupColor } from '../lib/groups';
 import type { RecentFile } from '../lib/preferences';
 import type { OpenDocument } from '../types';
@@ -113,7 +114,16 @@ function formatDate(timestamp: number): string {
   return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: date.getFullYear() === today.getFullYear() ? undefined : 'numeric' });
 }
 
-export function AppMenuBar({ menus, onOpenPalette }: { menus: MenuDefinition[]; onOpenPalette: () => void }) {
+export function AppMenuBar({ menus, onOpenPalette, collapsed = false }: {
+  menus: MenuDefinition[];
+  onOpenPalette: () => void;
+  /**
+   * Quand la place manque dans la barre supérieure, les menus sont
+   * regroupés derrière un seul bouton. Aucune commande ne disparaît :
+   * le panneau reprend chaque menu avec ses entrées.
+   */
+  collapsed?: boolean;
+}) {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const menuRef = useRef<HTMLElement>(null);
 
@@ -133,6 +143,35 @@ export function AppMenuBar({ menus, onOpenPalette }: { menus: MenuDefinition[]; 
     };
   }, [openMenu]);
 
+  if (collapsed) {
+    return <nav className={`app-menubar app-menubar-collapsed ${openMenu ? 'open' : ''}`} aria-label="Menus de l’application" ref={menuRef}>
+      <div className="menu-root">
+        <button
+          className={`menu-trigger menu-trigger-all ${openMenu === 'all' ? 'open' : ''}`}
+          type="button"
+          title="Tous les menus de Noto"
+          aria-label="Tous les menus de Noto"
+          aria-haspopup="menu"
+          aria-expanded={openMenu === 'all'}
+          onClick={() => setOpenMenu((current) => current === 'all' ? null : 'all')}
+        >
+          <Menu size={14} /><span>Tous les menus</span>
+        </button>
+        {openMenu === 'all' && <div className="menu-popover menu-popover-all" role="menu" aria-label="Tous les menus de Noto">
+          {menus.map((menu) => <div className="menu-group" key={menu.id}>
+            <div className="menu-group-title">{menu.label}</div>
+            {menu.items.map((item) => <button className="menu-item" type="button" role="menuitem" key={`${menu.id}-${item.id}`} disabled={item.disabled} onClick={() => { setOpenMenu(null); item.onSelect(); }}>
+              <span className="menu-item-icon">{item.icon}</span><span className="menu-item-label">{item.label}</span>{item.shortcut && <kbd>{item.shortcut}</kbd>}
+            </button>)}
+          </div>)}
+        </div>}
+      </div>
+      <button className="command-trigger" type="button" onClick={onOpenPalette} title="Ouverture rapide (Ctrl+Maj+P)">
+        <Search size={14} /><span>Commandes</span><kbd>Ctrl ⇧ P</kbd>
+      </button>
+    </nav>;
+  }
+
   return <nav className="app-menubar" aria-label="Menus de l’application" ref={menuRef}>
     <div className="menu-list">
       {menus.map((menu) => <div className="menu-root" key={menu.id}>
@@ -147,7 +186,7 @@ export function AppMenuBar({ menus, onOpenPalette }: { menus: MenuDefinition[]; 
         </div>}
       </div>)}
     </div>
-    <button className="command-trigger" type="button" onClick={onOpenPalette} title="Ouverture rapide (Ctrl+P)">
+    <button className="command-trigger" type="button" onClick={onOpenPalette} title="Ouverture rapide (Ctrl+Maj+P)">
       <Search size={14} /><span>Commandes</span><kbd>Ctrl ⇧ P</kbd>
     </button>
   </nav>;
@@ -245,24 +284,63 @@ export function GroupDialog({ group, onClose, onSave }: { group?: FileGroup; onC
 }
 
 export function RenameFileDialog({ file, onClose, onRename }: { file: RecentFile; onClose: () => void; onRename: (nextName: string) => void }) {
-  const extensionIndex = file.name.lastIndexOf('.');
-  const extension = extensionIndex > 0 ? file.name.slice(extensionIndex) : '';
-  const initialName = extension ? file.name.slice(0, extensionIndex) : file.name;
-  const [name, setName] = useState(initialName);
-  const inputRef = useRef<HTMLInputElement>(null);
-  useEffect(() => { inputRef.current?.focus(); inputRef.current?.select(); }, []);
+  const parts = splitFileName(file.name);
+  const [name, setName] = useState(parts.base);
+  const [extension, setExtension] = useState(parts.extension);
+  const nameRef = useRef<HTMLInputElement>(null);
+  useEffect(() => { nameRef.current?.focus(); nameRef.current?.select(); }, []);
+
+  const nameCheck = validateFileName(name);
+  // Sans extension, le fichier reste sans extension : c’est un choix valide.
+  const extensionError = extension.trim() ? validateExtension(extension) : '';
+  const nextName = composeFileName(nameCheck.ok ? nameCheck.name : name, extensionError ? '' : extension);
+  const change = describeNameChange(file.name, nextName || file.name);
+  const error = !nameCheck.ok ? nameCheck.error : extensionError;
+  const unchanged = !nextName || nextName === file.name;
+
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const trimmed = name.trim();
-    if (trimmed && trimmed !== initialName) onRename(`${trimmed}${extension}`);
+    if (error || unchanged || !nextName) return;
+    onRename(nextName);
   }
+
   return <div className="modal-backdrop group-modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <form className="group-dialog rename-file-dialog" role="dialog" aria-modal="true" aria-labelledby="rename-file-title" onSubmit={submit}>
       <header className="group-dialog-header"><span className="group-dialog-icon"><Pencil size={17} /></span><div><h2 id="rename-file-title">Renommer le fichier</h2><p>Le fichier original sera renommé sur votre appareil.</p></div><button className="icon-action" type="button" aria-label="Fermer" onClick={onClose}><X size={17} /></button></header>
-      <label className="group-name-label" htmlFor="rename-file-name">{extension ? 'Nouveau nom (extension conservée)' : 'Nouveau nom'}</label>
-      <div className="rename-name-field"><input ref={inputRef} id="rename-file-name" className="group-name-input" maxLength={260} value={name} onChange={(event) => setName(event.target.value)} required />{extension && <span>{extension}</span>}</div>
+      <label className="group-name-label" htmlFor="rename-file-name">Nom du fichier</label>
+      <div className="rename-name-field">
+        <input
+          ref={nameRef}
+          id="rename-file-name"
+          className="group-name-input"
+          maxLength={MAX_FILE_NAME_LENGTH}
+          value={name}
+          aria-invalid={!nameCheck.ok}
+          aria-describedby={error ? 'rename-file-error' : undefined}
+          onChange={(event) => setName(event.target.value)}
+          required
+        />
+        <span className="rename-extension-separator" aria-hidden="true">.</span>
+        <input
+          id="rename-file-extension"
+          className="group-name-input rename-extension-input"
+          aria-label="Extension du fichier, sans le point"
+          title="Extension du fichier, sans le point"
+          maxLength={16}
+          value={extension}
+          placeholder="ex. md"
+          onChange={(event) => setExtension(event.target.value.replace(/^\.+/u, ''))}
+        />
+      </div>
+      {error && <p className="rename-file-message is-error" id="rename-file-error" role="alert">{error}</p>}
+      {!error && change.changesExtension && <p className={`rename-file-message ${change.opensWithDifferentReader ? 'is-warning' : ''}`} role="status">
+        {change.opensWithDifferentReader
+          ? `Attention : l’extension change de « .${change.previousExtension || 'aucune'} » à « .${change.nextExtension || 'aucune'} ». Le fichier restera identique, mais c’est désormais le lecteur « ${getFormatLabel(change.nextKind)} » qui l’ouvrira.`
+          : `Extension modifiée : « .${change.previousExtension || 'aucune'} » devient « .${change.nextExtension || 'aucune'} ».`}
+      </p>}
+      {!error && !change.changesExtension && change.changesName && <p className="rename-file-message">Nouveau nom complet : {nextName}</p>}
       <small className="rename-file-path">{file.path}</small>
-      <footer className="group-dialog-footer"><button className="secondary-button" type="button" onClick={onClose}>Annuler</button><button className="primary-button" type="submit"><Check size={15} />Renommer</button></footer>
+      <footer className="group-dialog-footer"><button className="secondary-button" type="button" onClick={onClose}>Annuler</button><button className="primary-button" type="submit" disabled={Boolean(error) || unchanged}><Check size={15} />Renommer</button></footer>
     </form>
   </div>;
 }
@@ -326,12 +404,13 @@ export function GroupAssignmentDialog({ file, groups, onToggle, onCreate, onClos
   </div>;
 }
 
-export function CommandPalette({ commands, onClose }: { commands: CommandOption[]; onClose: () => void }) {
+export function CommandPalette({ commands, onClose, language = 'fr' }: { commands: CommandOption[]; onClose: () => void; language?: 'fr' | 'en' }) {
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-  const normalizedQuery = query.trim().toLocaleLowerCase('fr-FR');
-  const filtered = commands.filter((command) => !command.disabled && `${command.label} ${command.detail ?? ''} ${command.keywords ?? ''}`.toLocaleLowerCase('fr-FR').includes(normalizedQuery));
+  const searchLocale = language === 'fr' ? 'fr-FR' : 'en-US';
+  const normalizedQuery = query.trim().toLocaleLowerCase(searchLocale);
+  const filtered = commands.filter((command) => !command.disabled && `${command.label} ${command.detail ?? ''} ${command.keywords ?? ''}`.toLocaleLowerCase(searchLocale).includes(normalizedQuery));
 
   useEffect(() => { inputRef.current?.focus(); }, []);
   useEffect(() => { setActiveIndex(0); }, [normalizedQuery]);
@@ -349,24 +428,25 @@ export function CommandPalette({ commands, onClose }: { commands: CommandOption[
 
   return <div className="modal-backdrop palette-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <section className="command-palette" role="dialog" aria-modal="true" aria-labelledby="palette-title">
-      <h2 id="palette-title" className="visually-hidden">Ouverture rapide et commandes</h2>
-      <div className="palette-search"><Search size={17} /><input ref={inputRef} value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={handleKeyDown} placeholder="Rechercher une commande, un onglet ou un fichier récent…" aria-label="Rechercher une commande, un onglet ou un fichier récent" /><kbd>Échap</kbd></div>
-      <div className="palette-results" role="listbox" aria-label="Commandes disponibles">
+      <h2 id="palette-title" className="visually-hidden">{language === 'fr' ? 'Ouverture rapide et commandes' : 'Quick open and commands'}</h2>
+      <div className="palette-search"><Search size={17} /><input ref={inputRef} value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={handleKeyDown} placeholder={language === 'fr' ? 'Rechercher une commande, un onglet ou un fichier récent…' : 'Search commands, tabs or recent files…'} aria-label={language === 'fr' ? 'Rechercher une commande, un onglet ou un fichier récent' : 'Search commands, tabs or recent files'} /><kbd>{language === 'fr' ? 'Échap' : 'Esc'}</kbd></div>
+      <div className="palette-results" role="listbox" aria-label={language === 'fr' ? 'Commandes disponibles' : 'Available commands'}>
         {filtered.length ? filtered.map((command, index) => <button className={`palette-command ${index === activeIndex ? 'active' : ''}`} type="button" role="option" aria-selected={index === activeIndex} disabled={command.disabled} key={command.id} onMouseEnter={() => setActiveIndex(index)} onClick={() => { onClose(); command.onSelect(); }}>
           <span className="palette-command-icon">{command.icon}</span><span className="palette-command-copy"><strong>{command.label}</strong>{command.detail && <small>{command.detail}</small>}</span>{command.shortcut && <kbd>{command.shortcut}</kbd>}
-        </button>) : <div className="palette-no-results">Aucune commande ne correspond à « {query} ».</div>}
+        </button>) : <div className="palette-no-results">{language === 'fr' ? `Aucune commande ne correspond à « ${query} ».` : `No commands match “${query}”.`}</div>}
       </div>
-      <footer className="palette-footer"><span><Keyboard size={13} />Flèches pour naviguer</span><span><kbd>Entrée</kbd> pour lancer</span><span><kbd>Esc</kbd> pour fermer</span></footer>
+      <footer className="palette-footer"><span><Keyboard size={13} />{language === 'fr' ? 'Flèches pour naviguer' : 'Use arrows to navigate'}</span><span><kbd>{language === 'fr' ? 'Entrée' : 'Enter'}</kbd> {language === 'fr' ? 'pour lancer' : 'to run'}</span><span><kbd>Esc</kbd> {language === 'fr' ? 'pour fermer' : 'to close'}</span></footer>
     </section>
   </div>;
 }
 
 const shortcutSections = [
-  { title: 'Fichiers', rows: [['Ouvrir un fichier', 'Ctrl + O'], ['Enregistrer', 'Ctrl + S'], ['Enregistrer sous', 'Ctrl + Maj + S'], ['Fermer le fichier actif', 'Ctrl + W'], ['Onglet suivant / précédent', 'Ctrl + Tab / Ctrl + Maj + Tab'], ['Aller à un onglet (1 à 9)', 'Ctrl + 1…9']] },
+  { title: 'Fichiers', rows: [['Ouvrir un fichier', 'Ctrl + O'], ['Enregistrer', 'Ctrl + S'], ['Enregistrer sous', 'Ctrl + Maj + S'], ['Imprimer le fichier', 'Ctrl + P'], ['Informations sur le fichier (mesures)', 'Ctrl + I'], ['Fermer le fichier actif', 'Ctrl + W'], ['Onglet suivant / précédent', 'Ctrl + Tab / Ctrl + Maj + Tab'], ['Aller à un onglet (1 à 9)', 'Ctrl + 1…9']] },
   { title: 'Édition & recherche', rows: [['Basculer lecture / édition', 'Ctrl + E'], ['Rechercher', 'Ctrl + F'], ['Rechercher / remplacer', 'Ctrl + H'], ['Aller à la ligne', 'Ctrl + G'], ['Résultat suivant / précédent', 'F3 / Maj + F3']] },
   { title: 'Organisation', rows: [['Créer un groupe', 'Ctrl + Maj + N'], ['Classer le fichier actif', 'Ctrl + Maj + G'], ['Renommer le groupe affiché', 'F2']] },
   { title: 'Diaporamas & livres', rows: [['Diapositive / chapitre suivant ou précédent', '← / →'], ['Plein écran dans un diaporama', 'F'], ['Quitter le plein écran', 'Échap']] },
-  { title: 'Application', rows: [['Ouvrir les commandes, onglets et fichiers récents', 'Ctrl + P'], ['Ouvrir les paramètres', 'Ctrl + ,'], ['Fermer la fenêtre ou le panneau', 'Échap']] },
+  { title: 'Affichage', rows: [['Plein écran de la fenêtre', 'F11'], ['Mode immersion (sans barre latérale ni menus)', 'Ctrl + Maj + F'], ['Quitter l’immersion', 'Échap']] },
+  { title: 'Application', rows: [['Ouvrir les commandes, onglets et fichiers récents', 'Ctrl + Maj + P'], ['Ouvrir les paramètres', 'Ctrl + ,'], ['Fermer la fenêtre ou le panneau', 'Échap']] },
 ];
 
 export function ShortcutsDialog({ onClose }: { onClose: () => void }) {

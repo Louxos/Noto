@@ -21,6 +21,38 @@ fn take_pending_open_files(state: State<'_, PendingOpenFiles>) -> Vec<String> {
     state.0.lock().map(|mut paths| std::mem::take(&mut *paths)).unwrap_or_default()
 }
 
+const RELEASES_URL: &str = "https://github.com/Louxos/Noto/releases/latest";
+
+#[tauri::command]
+fn open_release_page() -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        std::process::Command::new("explorer.exe")
+            .arg(RELEASES_URL)
+            .creation_flags(0x08000000)
+            .spawn()
+            .map_err(|error| format!("Impossible d’ouvrir la page des versions : {error}"))?;
+        Ok(())
+    }
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(RELEASES_URL)
+            .spawn()
+            .map_err(|error| format!("Impossible d’ouvrir la page des versions : {error}"))?;
+        Ok(())
+    }
+    #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(RELEASES_URL)
+            .spawn()
+            .map_err(|error| format!("Impossible d’ouvrir la page des versions : {error}"))?;
+        Ok(())
+    }
+}
+
 #[tauri::command]
 fn open_default_apps_settings() -> Result<(), String> {
     #[cfg(target_os = "windows")]
@@ -36,6 +68,71 @@ fn open_default_apps_settings() -> Result<(), String> {
     #[cfg(not(target_os = "windows"))]
     {
         Err("La gestion des associations est disponible dans l’application Windows.".to_string())
+    }
+}
+
+/// Affiche un fichier produit dans l’explorateur Windows (dossier parent si le
+/// fichier n’existe plus). Aucun programme n’est lancé depuis le fichier :
+/// seule la sélection dans l’explorateur est demandée.
+#[tauri::command]
+fn reveal_path(path: String) -> Result<(), String> {
+    let requested = std::path::PathBuf::from(path.trim());
+    if path.trim().is_empty() {
+        return Err("Aucun chemin à afficher n’a été fourni.".to_string());
+    }
+    if !requested.exists() {
+        return Err(format!(
+            "« {} » n’existe plus à cet emplacement.",
+            requested.display()
+        ));
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        let mut command = std::process::Command::new("explorer.exe");
+        if requested.is_file() {
+            // `/select,` ouvre l’explorateur avec le fichier sélectionné.
+            command.arg("/select,").arg(&requested);
+        } else {
+            command.arg(&requested);
+        }
+        command
+            .creation_flags(0x08000000)
+            .spawn()
+            .map_err(|error| format!("Impossible d’ouvrir l’explorateur : {error}"))?;
+        return Ok(());
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        let mut command = std::process::Command::new("open");
+        if requested.is_file() {
+            command.arg("-R").arg(&requested);
+        } else {
+            command.arg(&requested);
+        }
+        command
+            .spawn()
+            .map_err(|error| format!("Impossible d’ouvrir le Finder : {error}"))?;
+        return Ok(());
+    }
+
+    #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+    {
+        let directory = if requested.is_dir() {
+            requested.clone()
+        } else {
+            requested
+                .parent()
+                .map(std::path::Path::to_path_buf)
+                .unwrap_or_else(|| std::path::PathBuf::from("."))
+        };
+        std::process::Command::new("xdg-open")
+            .arg(&directory)
+            .spawn()
+            .map_err(|error| format!("Impossible d’ouvrir le gestionnaire de fichiers : {error}"))?;
+        return Ok(());
     }
 }
 
@@ -96,6 +193,13 @@ mod tests {
     use std::path::Path;
 
     #[test]
+    fn reveal_path_refuses_empty_or_missing_targets() {
+        assert!(super::reveal_path(String::new()).is_err());
+        assert!(super::reveal_path("   ".to_string()).is_err());
+        assert!(super::reveal_path("chemin/inexistant-noto-42.txt".to_string()).is_err());
+    }
+
+    #[test]
     fn recognizes_supported_image_types_without_recursing_or_reading_contents() {
         assert!(is_supported_image(Path::new("folder/Photo.JPEG")));
         assert!(is_supported_image(Path::new("folder/page-2.tiff")));
@@ -127,13 +231,17 @@ fn main() {
         }))
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             startup_paths,
             take_pending_open_files,
+            open_release_page,
             open_default_apps_settings,
             allow_file_access,
             allow_directory_access,
-            adjacent_image_paths
+            adjacent_image_paths,
+            reveal_path
         ])
         .run(tauri::generate_context!())
         .expect("Noto n’a pas pu démarrer.");

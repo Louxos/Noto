@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react';
 import { BookOpen, ChevronLeft, ChevronRight, Copy, FileText } from 'lucide-react';
 import { extractOfficeChapters, type DocumentChapter } from '../lib/archiveReader';
 import type { OpenDocument } from '../types';
+import type { StatRow } from '../lib/fileStats';
 import { ContextMenu, type MenuEntry } from './WorkspaceTools';
 
-export function OfficeDocumentViewer({ document, fileContextItems }: { document: OpenDocument; fileContextItems: MenuEntry[] }) {
+export function OfficeDocumentViewer({ document, fileContextItems, onReadout }: { document: OpenDocument; fileContextItems: MenuEntry[]; onReadout?: (rows: StatRow[]) => void }) {
   const [chapters, setChapters] = useState<DocumentChapter[]>([]);
   const [chapterIndex, setChapterIndex] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -55,6 +56,16 @@ export function OfficeDocumentViewer({ document, fileContextItems }: { document:
   }, [chapters.length, isEbook]);
 
   const chapter = chapters[chapterIndex];
+
+  // Relevé pour la barre d’état : parties du document et position affichée.
+  useEffect(() => {
+    if (!onReadout) return;
+    const label = isEbook ? 'Parties' : 'Sections';
+    onReadout([
+      { label, value: chapters.length ? chapters.length.toLocaleString('fr-FR') : '—' },
+      ...(chapters.length ? [{ label: 'Partie affichée', value: `${Math.min(chapterIndex + 1, chapters.length)} / ${chapters.length}`, raw: chapterIndex + 1 }] : []),
+    ]);
+  }, [onReadout, chapters.length, chapterIndex, isEbook]);
   const menuItems: MenuEntry[] = [
     ...fileContextItems,
     { id: 'copy', label: 'Copier le texte de cette partie', icon: <Copy size={15} />, disabled: !chapter, onSelect: () => {

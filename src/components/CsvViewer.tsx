@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { ArrowDown, ArrowUp, ArrowUpDown, Download, Search } from 'lucide-react';
-import { parseCsv, serializeCsvRows } from '../lib/csv';
+import { detectDelimiter, parseCsv, serializeCsvRows } from '../lib/csv';
+import type { StatRow } from '../lib/fileStats';
 
 const MAX_VISIBLE_ROWS = 5_000;
 const DEFAULT_COLUMN_WIDTH = 190;
 const MIN_COLUMN_WIDTH = 80;
 const MAX_COLUMN_WIDTH = 640;
 
-export function CsvViewer({ content, fileName = 'tableau.csv' }: { content: string; fileName?: string }) {
+export function CsvViewer({ content, fileName = 'tableau.csv', onReadout }: { content: string; fileName?: string; onReadout?: (rows: StatRow[]) => void }) {
   const parsed = useMemo(() => parseCsv(content), [content]);
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<{ column: number; ascending: boolean } | null>(null);
@@ -37,6 +38,20 @@ export function CsvViewer({ content, fileName = 'tableau.csv' }: { content: stri
   const visibleRows = matchingRows.slice(0, MAX_VISIBLE_ROWS);
   const selectedVisibleCount = visibleRows.reduce((count, item) => count + Number(selectedRows.has(item.index)), 0);
   const allVisibleSelected = visibleRows.length > 0 && selectedVisibleCount === visibleRows.length;
+
+  // Relevé pour la barre d’état et la fenêtre d’informations : dimensions du
+  // tableau tel qu’il est lu, et lignes réellement affichées.
+  useEffect(() => {
+    if (!onReadout) return;
+    const delimiter = detectDelimiter(content);
+    onReadout([
+      { label: 'Lignes', value: Math.max(0, parsed.rows.length - 1).toLocaleString('fr-FR') },
+      { label: 'Colonnes', value: String(header.length) },
+      { label: 'Cellules', value: parsed.rows.reduce((total, row) => total + row.length, 0).toLocaleString('fr-FR') },
+      { label: 'Séparateur détecté', value: delimiter === '\t' ? 'tabulation' : delimiter === ';' ? 'point-virgule' : delimiter === ',' ? 'virgule' : delimiter === '|' ? 'barre verticale' : `« ${delimiter} »` },
+      ...(matchingRows.length > visibleRows.length ? [{ label: 'Lignes affichées', value: `${visibleRows.length.toLocaleString('fr-FR')} sur ${matchingRows.length.toLocaleString('fr-FR')}` }] : []),
+    ]);
+  }, [onReadout, parsed.rows, header.length, matchingRows.length, visibleRows.length, content]);
 
   useEffect(() => {
     setColumnWidths({});

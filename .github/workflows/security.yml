@@ -1,0 +1,63 @@
+name: Security
+
+# Analyse statique de sécurité (CodeQL, gratuit sur les dépôts publics) et
+# contrôle des avis de vulnérabilité des dépendances.
+#
+# Ces vérifications ne bloquent pas les pull requests : un avis publié sur une
+# dépendance transitive ne doit pas empêcher de corriger le reste. Elles
+# apparaissent dans l’onglet Security du dépôt et dans l’historique des
+# exécutions.
+
+on:
+  push:
+    branches: [main, 'arena/**']
+  pull_request:
+  schedule:
+    - cron: '17 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  codeql:
+    name: Analyse CodeQL (JavaScript/TypeScript)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
+
+      - name: Initialiser CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+
+      - name: Analyser
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: '/language:javascript-typescript'
+
+  audit:
+    name: Avis de sécurité des dépendances
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
+
+      - name: Installer Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Vérifier les avis de vulnérabilité
+        run: npm audit --audit-level=high
