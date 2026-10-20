@@ -1,13 +1,15 @@
 {
   "name": "noto",
   "private": true,
-  "version": "1.2.1",
+  "version": "1.2.2",
   "type": "module",
   "description": "Noto — suite documentaire locale pour Windows : lire, éditer, imprimer et traiter vos fichiers, sans compte ni cloud. Gratuit et open source (MIT).",
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 1420 --strictPort",
     "build": "tsc -b && vite build",
-    "verify": "npm run lint && npm run check && npm run build",
+    "verify": "npm run pages:check && npm run lint && npm run check && npm run build",
+    "pages:sync": "node scripts/sync-pages-root.mjs",
+    "pages:check": "node scripts/sync-pages-root.mjs --check",
     "preview": "vite preview --host 0.0.0.0",
     "test": "vitest run --environment node",
     "check": "tsc -b && vitest run",

@@ -2,6 +2,15 @@
 
 Les changements notables sont consignés ici, selon une version simplifiée de Keep a Changelog.
 
+## [1.2.2] — 2026-10-20
+
+### Corrigé
+- **Bouton de mise à jour** : le libellé « Vérifier les mises à jour » reste entièrement contenu dans le bouton et la ligne s’adapte aux fenêtres étroites.
+
+### Amélioré
+- **Site public Noto** : typographie et contraste renforcés, présentation plus soignée, données structurées pour les moteurs de recherche, plan du site et prise en charge de la configuration GitHub Pages actuelle sans toucher à l’entrée Vite de l’application.
+- **Accessibilité du site** : le contenu reste visible si JavaScript ou les animations d’apparition sont indisponibles ; le respect de `prefers-reduced-motion` est conservé.
+
 ## [1.2.1] — 2026-10-20
 
 ### Corrigé

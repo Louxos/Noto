@@ -1,43 +1,41 @@
 # Site public de Noto
 
-Site statique, sans dépendances ni compilation : `index.html`, `styles.css`, `site.js` et `assets/`.
+Site statique autonome, sans framework ni dépendance externe : `index.html`, `styles.css`, `premium.css`, `site.js`, `assets/`, `robots.txt` et `sitemap.xml`. Aucun service analytique, police distante, publicité ni contenu tiers n’est chargé.
 
-## Publication GitHub Pages
+## Dossier à publier
 
-État vérifié le 18 octobre 2026 via l’API GitHub Pages : `build_type=legacy`, source `arena/30f013fe-noto:/`, aucun domaine personnalisé (`cname=null`), HTTPS forcé. L’adresse actuelle `https://louxos.github.io/Noto/` publie la racine du dépôt, pas le site produit de `docs/site/`.
+La source du site est **`docs/site/`**. Son contenu devient la racine publique de GitHub Pages ; il ne faut pas remplacer le `index.html` à la racine du dépôt, qui est le point d’entrée Vite de l’application de bureau.
 
-Pour publier ce site :
+Le dépôt prend en charge les deux modes :
 
-1. Fusionner les fichiers du site sur `main`.
-2. Dans le dépôt GitHub, ouvrir **Settings → Pages** et choisir **GitHub Actions** comme source.
-3. Lancer une fois **Actions → GitHub Pages → Run workflow** (ou attendre la prochaine poussée des fichiers du site sur `main`).
-4. Vérifier l’adresse publiée et l’état HTTPS dans l’environnement `github-pages` et **Settings → Pages**. Aucun domaine personnalisé n’est actuellement configuré.
+- **GitHub Actions (recommandé)** : `.github/workflows/pages.yml` déploie directement `docs/site/` comme racine du site.
+- **Source de branche `/docs`** : `docs/index.html` est une copie générée de la page principale, avec les chemins d’assets adaptés à `docs/site/`. Elle permet à l’URL Pages de servir la même page depuis la configuration classique.
 
-Le workflow `.github/workflows/pages.yml` publie uniquement le dossier `docs/site/`. Il est relancé automatiquement lorsqu’un fichier du site change sur `main`.
+La copie de compatibilité est maintenue par `scripts/sync-pages-root.mjs` : après une modification de `docs/site/index.html`, lancer `npm run pages:sync`. `npm run verify` vérifie automatiquement qu’elle reste synchronisée. Ne pas modifier `docs/index.html` à la main.
+
+Le contrôle GitHub Pages du 20 octobre 2026 indiquait une source classique (`build_type=legacy`), branche `arena/30f013fe-noto`, dossier `/docs`, sans domaine personnalisé, HTTPS forcé. Pour utiliser le workflow Actions, ouvrir **Settings → Pages**, choisir **GitHub Actions** comme source, puis lancer le workflow **GitHub Pages** ou pousser les changements sur `main`. L’URL du projet est `https://louxos.github.io/Noto/`.
+
+> Le chemin local `/root` dépend du poste depuis lequel vous publiez. Le dépôt peut être cloné dans `/root`, mais la source publique reste `docs/site/` ; les fichiers `docs/index.html` et `docs/site/` assurent la compatibilité avec la configuration Pages existante.
 
 ## Prévisualisation locale
 
-Depuis la racine du dépôt :
+Depuis la racine du dépôt (également si le clone se trouve dans `/root`) :
 
 ```sh
-python3 -m http.server 8000 --directory docs/site
+python3 -m http.server 8000 --bind 0.0.0.0 --directory docs/site
 ```
 
-Ouvrir ensuite `http://localhost:8000`. Aucun `npm install` n’est nécessaire pour le site.
+Ouvrir `http://localhost:8000`. Aucun `npm install` n’est nécessaire pour prévisualiser le site. Pour régénérer l’entrée Pages classique : `npm run pages:sync`.
 
 ## Dernière version et téléchargements
 
-`site.js` interroge, à l’ouverture de la page, l’API publique GitHub Releases pour actualiser le numéro de version et les liens de l’installeur `.exe` et du fichier `SHA256SUMS.txt`. La requête porte uniquement sur les métadonnées de publication ; aucun nom de visiteur, document, chemin de fichier ni événement d’usage n’est transmis. En cas d’échec réseau ou de quota, les liens de secours mènent à la page officielle des Releases.
-
-Le site ne charge ni police distante, ni analytique, ni contenu publicitaire. Les autres liens externes sont ouverts à la demande.
+`site.js` interroge, à l’ouverture de la page, l’API publique GitHub Releases pour actualiser la version, la date et les liens de l’installeur `.exe` et du fichier `SHA256SUMS.txt`. Cette requête ne porte que sur les métadonnées de publication ; aucun identifiant de visiteur, document, chemin de fichier ni événement d’usage n’est transmis. En cas d’échec réseau ou de quota, la page conserve ses liens de secours vers la release officielle.
 
 ## Captures produit
 
-Le dépôt ne contient pas encore de captures d’écran certifiées prises sur un poste Windows. Les présentations de l’interface sont donc **explicitement indiquées comme illustrations** ; la planche des icônes est une ressource réelle du projet (`icons-fichiers.png`). Pour remplacer les illustrations par des captures authentiques :
+Le dépôt ne contient pas encore de captures d’écran certifiées prises sur un poste Windows. Les présentations de l’interface sont donc **explicitement indiquées comme illustrations** ; la planche des icônes est une ressource réelle du projet (`docs/site/assets/icons-fichiers.png`). Ne pas présenter de maquette comme une capture réelle. Pour la remplacer ultérieurement :
 
 - capturer la version Windows publiée, en thème clair et sombre, à 1440 × 900 px ou plus ;
-- recadrer les noms de fichiers et données personnelles de test ; utiliser uniquement des documents d’exemple ;
-- exporter en WebP ou PNG optimisé, puis ajouter les textes alternatifs descriptifs ;
-- mettre à jour les `figure` de `index.html` et vérifier sur mobile ainsi qu’avec `prefers-reduced-motion`.
-
-Ne pas présenter de maquette ou d’illustration comme une capture réelle.
+- utiliser des documents d’exemple et recadrer toute donnée personnelle ;
+- exporter en WebP ou PNG optimisé, renseigner un texte alternatif descriptif ;
+- vérifier le rendu mobile et le paramètre `prefers-reduced-motion`.

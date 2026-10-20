@@ -36,6 +36,9 @@ jobs:
       - name: Installer les dépendances
         run: npm ci
 
+      - name: Vérifier le site GitHub Pages et ses fichiers locaux
+        run: npm run pages:check
+
       - name: Analyse statique (ESLint)
         run: npm run lint
 

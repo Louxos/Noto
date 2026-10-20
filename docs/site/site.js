@@ -1,5 +1,9 @@
 /* global document, window, IntersectionObserver, fetch */
 (() => {
+  // Motion is progressive enhancement: the page remains fully readable if this
+  // script is unavailable, while the CSS enables reveal transitions when ready.
+  document.documentElement.classList.add('has-js');
+
   const header = document.querySelector('.site-header');
   const progress = document.getElementById('scroll-progress');
   const navToggle = document.querySelector('.nav-toggle');
