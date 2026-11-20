@@ -1,0 +1,815 @@
+# PROMPT PRINCIPAL — GRANDE ÉVOLUTION DE NOTO
+## Suite documentaire locale, complète, fiable et réellement utilisable
+
+Tu interviens sur le dépôt GitHub Louxos/Noto, branche main. Ta mission est de faire évoluer l'application Noto existante en une suite documentaire et de productivité locale beaucoup plus complète, sans repartir de zéro et sans détruire ce qui fonctionne déjà.
+
+Ce document est un cahier des charges d'implémentation. Il ne s'agit pas de produire une simple maquette, une liste de tâches, un audit théorique ou des boutons factices. Tu dois examiner le projet, comprendre son architecture, planifier les changements, puis les réaliser réellement et progressivement dans le dépôt.
+
+# 0. RÈGLES ABSOLUES
+
+## Préserver l'existant
+- Noto est déjà développé, installé et utilisé depuis plusieurs mois. Il rend déjà service pour ouvrir, lire et parfois modifier des fichiers Markdown, PDF et d'autres formats.
+- Ce n'est PAS une refonte totale ni un nouveau projet.
+- Commence par auditer le dépôt et l'application : architecture, composants, bibliothèques, fonctionnalités, tests, configuration Tauri, stockage, interface et limitations.
+- Identifie précisément ce qui existe avant de modifier quoi que ce soit.
+- Réutilise et améliore les composants et moteurs existants lorsque c'est pertinent.
+- Préserve toutes les fonctions qui marchent, les données locales, les préférences, les formats pris en charge et les habitudes d'utilisation.
+- Ne supprime, ne remplace et ne dégrade aucune fonction existante sans nécessité technique démontrée.
+- Évite les réécritures massives. Préfère des évolutions modulaires, testables et compatibles.
+- Ne suppose jamais qu'une fonction est absente sans avoir vérifié le code.
+- Ne duplique pas une fonction déjà disponible : améliore-la ou relie-la à la nouvelle interface.
+
+## Gratuité et local-first
+- Le projet doit rester utilisable gratuitement.
+- Aucune API payante obligatoire, aucun abonnement, service cloud payant, hébergement payant ou compte obligatoire.
+- Aucun envoi automatique des documents vers un serveur.
+- Priorité absolue au traitement local sur l'appareil.
+- Bibliothèques open source et outils gratuits privilégiés, licences vérifiées.
+- Une fonctionnalité ne doit jamais dépendre d'un service externe payant.
+- Si une fonction avancée ne peut pas être réalisée correctement en local, indique la limite et propose une solution locale ou facultative, jamais une dépendance payante obligatoire.
+- Pas de télémétrie intrusive ni de collecte cachée.
+
+## Qualité et honnêteté
+- Aucun bouton décoratif ou inactif présenté comme fonctionnel.
+- Aucun faux résultat, fausse progression ou simulation prétendant être une vraie opération.
+- Aucun message de succès avant la fin réelle.
+- Toute erreur doit être compréhensible et proposer une action utile.
+- Ne jamais annoncer une prise en charge parfaite si elle est partielle.
+- Les traitements longs doivent être asynchrones, annulables si possible et accompagnés d'une progression réelle.
+- Gérer les gros fichiers, erreurs, fichiers verrouillés et interruptions.
+- Les originaux sont préservés par défaut.
+- Les opérations destructrices nécessitent une confirmation claire.
+
+## Architecture
+- Inspecte les versions et la structure réellement présentes avant de choisir une solution.
+- Conserve les technologies et conventions existantes sauf justification solide.
+- Le projet a historiquement utilisé React, TypeScript, Vite et Tauri 2 : vérifie les fichiers actuels.
+- Ne migre pas de framework ou de version majeure pour suivre une mode.
+- Respecte les permissions minimales de Tauri et les contraintes de sécurité.
+- Architecture modulaire : interface, services métier, moteurs de traitement, accès fichiers et persistance séparés.
+- Centralise les opérations communes.
+- Évite les dépendances lourdes lorsqu'une solution légère et maintenue existe.
+- Toute dépendance doit être gratuite, justifiée, correctement licenciée et compatible avec le traitement local.
+
+# 1. OBJECTIF GÉNÉRAL
+
+Faire de Noto une suite documentaire de bureau complète et cohérente, capable de remplacer plusieurs petits logiciels du quotidien, tout en restant simple à utiliser.
+
+Noto doit réunir :
+1. Lecture et édition de documents.
+2. Lecteur PDF moderne et personnalisable.
+3. Outils PDF complets.
+4. Éditeur Markdown et texte amélioré.
+5. Gestionnaire de fichiers intégré.
+6. Outils de traitement d'images.
+7. Convertisseur de formats.
+8. Comparaison de documents.
+9. Traitement par lots.
+10. Espaces de travail et productivité.
+11. Analyse de sécurité documentaire et détection de contenus cachés.
+12. Historique et rapports.
+13. Paramètres détaillés et interface personnalisable.
+
+Les fonctions doivent se compléter, partager les mêmes conventions d'interface et utiliser les mêmes systèmes de fichiers, progression, historique et préférences. Ne transforme pas Noto en une suite confuse avec des dizaines de menus. La navigation doit être évidente, les outils faciles à trouver et les fonctions avancées accessibles sans encombrer l'expérience de base.
+
+# 2. AUDIT INITIAL OBLIGATOIRE
+
+Avant toute modification :
+1. Inspecte l'arborescence complète du dépôt.
+2. Lis README, changelog, roadmap, documents techniques et consignes.
+3. Examine package.json et le fichier de verrouillage.
+4. Examine composants React, services, hooks, stores et persistance.
+5. Examine commandes et permissions Tauri.
+6. Identifie les bibliothèques utilisées pour PDF, Markdown, Office, images, archives et conversions.
+7. Identifie les fonctions déjà disponibles et leur niveau réel de finition.
+8. Identifie tests, scripts de vérification et workflows de compilation.
+9. Repère les bugs connus, limitations et zones fragiles.
+10. Établis une cartographie des fonctions à préserver.
+
+Produis docs/EVOLUTION_AUDIT.md avec fonctionnalités existantes, améliorations, fonctions manquantes, dépendances réutilisables, risques et ordre d'implémentation. L'audit ne doit pas devenir un prétexte pour s'arrêter : commence ensuite l'implémentation réelle.
+
+# 3. EXPÉRIENCE GÉNÉRALE ET INTERFACE
+
+## Interface
+- Conserve l'identité visuelle existante si elle est cohérente.
+- Améliore hiérarchie visuelle, espacements, icônes, menus, panneaux et états vides.
+- Interface moderne, professionnelle, sobre et facile à comprendre.
+- Évite effets futuristes excessifs, animations inutiles et surcharge.
+- Interface claire, lisible et réactive.
+- Boîtes de dialogue, menus contextuels, notifications, panneaux latéraux et barres d'outils cohérents.
+- Accessibilité : contrastes, navigation clavier, focus visible, zones cliquables suffisantes et libellés compréhensibles.
+
+## Personnalisation globale
+Ajouter ou améliorer selon l'architecture :
+- thèmes clair, sombre et système ;
+- densité de l'interface ;
+- taille du texte ;
+- taille et disposition des panneaux ;
+- vue par défaut ;
+- préférences de navigation ;
+- raccourcis clavier configurables si possible ;
+- comportement des onglets ;
+- comportement à l'ouverture des fichiers ;
+- préférences de notifications et sauvegarde ;
+- préférences de confidentialité et d'analyse automatique.
+
+Les réglages sont persistés localement et restaurés au prochain lancement.
+
+## Notifications et tâches
+- Notifications discrètes et non bloquantes.
+- Les traitements en cours peuvent apparaître dans une zone en bas à droite de la fenêtre.
+- Une notification permet d'ouvrir le détail du traitement.
+- États réels : en attente, en cours, terminé, avertissement, erreur, annulé.
+- Progression uniquement si réellement mesurable.
+- Pas de notification bloquée après fermeture d'un fichier ou fin d'un traitement.
+
+## Navigation
+- Améliore la navigation entre outils.
+- Recherche globale des fonctions et fichiers récents si compatible avec les permissions.
+- Raccourcis clavier cohérents et documentés.
+- Palette de commandes si intégrable proprement.
+- Pas de doublons entre menus, barres d'outils et commandes.
+
+# 4. GESTIONNAIRE DE FICHIERS INTÉGRÉ
+
+Créer ou améliorer un explorateur de fichiers local :
+- parcourir les emplacements explicitement autorisés ;
+- ouvrir un fichier avec Noto ;
+- afficher les informations utiles ;
+- aperçu rapide lorsque le format le permet ;
+- tri par nom, type, taille et date ;
+- filtres par format ;
+- recherche locale ;
+- favoris et dossiers épinglés ;
+- accès aux fichiers récents ;
+- collections ou regroupements personnalisés ;
+- navigation par dossiers ;
+- menu contextuel adapté au type de fichier ;
+- renommer, déplacer, copier, supprimer et créer un dossier lorsque les permissions le permettent ;
+- confirmation avant suppression ;
+- gestion claire des erreurs de permission et fichiers inaccessibles.
+
+Ne parcours jamais silencieusement tout le disque. Respecte les autorisations Tauri, demande l'accès à un emplacement si nécessaire, ne supprime ou déplace aucun fichier sans action explicite et protège contre les chemins arbitraires et traversées de répertoires.
+
+# 5. LECTEUR PDF — EXPÉRIENCE INSPIRÉE DE GOOGLE CHROME
+
+Priorité explicite. Proposer un lecteur PDF intégré à Noto avec une expérience fonctionnelle proche de celle de Google Chrome. S'inspirer de son ergonomie et de ses outils, sans copier son identité graphique.
+
+## Barre d'outils
+Selon les capacités réelles :
+- numéro de page courante et nombre total ;
+- accès direct à une page ;
+- zoom avant et arrière ;
+- valeur du zoom ;
+- ajuster à la largeur ;
+- ajuster à la page ;
+- taille réelle / 100 % ;
+- mode plein écran ;
+- rotation ;
+- recherche dans le document ;
+- impression ;
+- export ou téléchargement lorsque pertinent ;
+- accès aux miniatures ;
+- signets et table des matières si présents ;
+- annotations si prises en charge.
+
+## Modes d'affichage
+- plein écran réel, sortie facile par Échap ;
+- masquer ou afficher barres et panneaux ;
+- page unique ;
+- double page lorsque pertinent ;
+- défilement continu ;
+- navigation page par page ;
+- ajustement à la largeur ;
+- ajustement à la hauteur ou à la page ;
+- zoom personnalisé ;
+- rotation de la vue ;
+- mode de lecture confortable si réalisable ;
+- arrière-plan de lecture personnalisable si utile.
+
+## Navigation
+- panneau de miniatures ;
+- navigation rapide entre pages ;
+- recherche de texte et navigation entre occurrences ;
+- signets et table des matières lorsque présents ;
+- mémorisation de la dernière page consultée si possible ;
+- navigation clavier ;
+- liens internes PDF fonctionnels lorsque le moteur le permet.
+
+## Personnalisation
+Mémoriser :
+- zoom par défaut ;
+- mode d'affichage ;
+- défilement continu ou page par page ;
+- panneau latéral ouvert ou fermé ;
+- miniatures visibles ou non ;
+- comportement à l'ouverture ;
+- préférences de barre d'outils.
+Les préférences peuvent être globales et éventuellement surchargées par document.
+
+## Fiabilité
+- affichage fluide des gros PDF ;
+- chargement progressif lorsque possible ;
+- gestion des PDF endommagés ou protégés ;
+- messages d'erreur explicites ;
+- aucune perte de qualité non demandée ;
+- distinguer rotation de la vue et modification permanente ;
+- enregistrer les modifications permanentes uniquement sur demande.
+
+L'impression doit ouvrir une boîte de dialogue fiable et respecter les options disponibles. Ne présente pas une fonction comme disponible si elle ne marche pas dans la version desktop.
+
+# 6. OUTILS PDF COMPLETS
+
+Créer un espace d'outils PDF en réutilisant les moteurs existants. Fonctions à prendre en charge selon faisabilité locale :
+- fusionner plusieurs PDF ;
+- diviser un PDF ;
+- extraire des pages ;
+- réorganiser, supprimer, dupliquer des pages ;
+- faire pivoter des pages et enregistrer le résultat ;
+- insérer des pages depuis un autre PDF ou une image ;
+- compresser ;
+- convertir PDF vers images ;
+- convertir des images vers PDF ;
+- extraire texte et images ;
+- lire et modifier les métadonnées lorsque possible ;
+- ajouter numéros de page, en-têtes et pieds de page ;
+- filigrane ;
+- annotations, surlignage, soulignement et commentaires ;
+- remplir les formulaires ;
+- comparer deux PDF ;
+- protéger par mot de passe lorsque les bibliothèques locales le permettent ;
+- vérification d'accessibilité de base ;
+- PDF consultables à partir de scans avec OCR local ;
+- gérer formulaires et signatures dans les limites techniques clairement indiquées.
+
+La caviardisation doit supprimer réellement et irréversiblement le contenu sous-jacent, pas seulement poser un rectangle noir. Si une vraie caviardisation est impossible, ne présente jamais une superposition comme une suppression sécurisée. Pour mots de passe, signatures et restrictions, indique honnêtement ce que l'outil garantit.
+
+# 7. DÉTECTEUR UNIVERSEL DE CONTENUS CACHÉS ET D'INSTRUCTIONS SUSPECTES
+
+Deuxième grande fonctionnalité explicitement demandée. Créer un système d'analyse documentaire qui repère les contenus invisibles, dissimulés ou inhabituels, notamment des instructions qui pourraient être lues par une IA alors qu'elles ne sont pas normalement visibles à l'écran.
+
+C'est un outil de transparence et de sécurité documentaire. Il ne doit pas être présenté comme un détecteur infaillible d'IA, ni comme une preuve de triche ou d'intention malveillante.
+
+## Formats prioritaires
+1. PDF ;
+2. Word / DOCX ;
+3. Markdown / MD ;
+4. texte brut / TXT.
+
+Étendre aux autres formats ouverts par Noto lorsque le contenu est accessible : DOC et autres formats Office pris en charge, PPTX, ODT, ODP, HTML, RTF, EPUB, CSV, TSV, images avec OCR local si possible, et autres formats documentaires pris en charge.
+
+La couverture doit être explicite par format. Ne jamais afficher « analyse complète » pour un format dont seuls certains éléments ont été inspectés.
+
+## Éléments recherchés
+Selon le format :
+- texte blanc sur fond blanc ;
+- texte transparent ou opacité très faible ;
+- texte de couleur proche du fond ;
+- texte de taille anormalement petite ;
+- texte hors zone visible ou hors page ;
+- éléments masqués ;
+- calques ou objets invisibles ;
+- commentaires HTML ;
+- texte masqué dans les propriétés ou structures ;
+- commentaires et annotations ;
+- notes de présentation ;
+- caractères Unicode invisibles ou de contrôle inhabituels ;
+- espaces ou séparateurs invisibles ;
+- instructions explicites adressées à une IA ;
+- demandes d'ignorer les consignes visibles ou de modifier le comportement d'un assistant ;
+- texte dans les métadonnées accessibles ;
+- texte détectable par OCR dans une image ou un scan si l'OCR local existe.
+
+## Analyse PDF
+Inspecter lorsque les bibliothèques le permettent :
+- texte extrait et coordonnées ;
+- taille et couleur du texte ;
+- couleur et opacité ;
+- ordre de dessin et position ;
+- éléments hors page ;
+- annotations ;
+- champs de formulaire ;
+- calques ;
+- métadonnées ;
+- contenu des objets textuels accessibles.
+Le PDF est complexe : le rapport doit indiquer ce qui a effectivement été inspecté et les limites.
+
+## Analyse DOCX et Office
+Inspecter :
+- texte marqué comme masqué ;
+- styles et couleurs ;
+- tailles anormales ;
+- commentaires ;
+- notes ;
+- en-têtes et pieds de page ;
+- zones de texte accessibles ;
+- métadonnées ;
+- structures XML pertinentes.
+Ne jamais modifier le document original.
+
+## Analyse Markdown
+Inspecter :
+- commentaires HTML invisibles dans le rendu ;
+- blocs ou éléments non affichés dans l'aperçu ;
+- liens ou contenus inhabituels ;
+- caractères Unicode invisibles ;
+- instructions cachées dans commentaires ou blocs non visibles ;
+- différences entre source et rendu.
+Distinguer le Markdown légitime d'un contenu réellement suspect.
+
+## Analyse TXT et formats texte
+Inspecter :
+- caractères invisibles ;
+- caractères de contrôle inhabituels ;
+- caractères Unicode de direction ou de formatage ;
+- instructions suspectes ;
+- séquences pouvant être ignorées visuellement.
+Ne jamais supprimer ou normaliser automatiquement le contenu original.
+
+## Résultats et classification
+Chaque résultat comporte :
+- catégorie ;
+- niveau de sévérité ou priorité ;
+- emplacement précis ;
+- page, paragraphe, zone ou ligne si possible ;
+- extrait du contenu ;
+- raison de la détection ;
+- explication compréhensible ;
+- niveau de confiance ;
+- état : confirmé techniquement, suspect ou simplement inhabituel.
+
+Éviter les fausses alertes et les conclusions abusives. Un texte blanc peut être légitime ; un commentaire HTML n'est pas forcément malveillant ; un caractère Unicode invisible peut avoir un rôle linguistique ou technique.
+
+## Rapport d'analyse
+Rapport lisible avec :
+- fichier analysé ;
+- date ;
+- format ;
+- méthodes réellement exécutées ;
+- zones inspectées ;
+- nombre d'éléments signalés ;
+- détail de chaque résultat ;
+- limites connues ;
+- conclusion prudente.
+Permettre d'ouvrir le document à l'emplacement du résultat lorsque possible.
+Exporter localement en HTML, TXT, Markdown ou PDF si la génération PDF existe.
+
+## Lecture seule
+- Analyse strictement en lecture seule.
+- Ne supprimer ni réécrire aucun contenu.
+- Ne pas masquer un élément dans le fichier source.
+- Si un nettoyage est ajouté ultérieurement, créer une copie distincte, afficher un aperçu des modifications et demander confirmation.
+
+# 8. ANALYSE AUTOMATIQUE À L'OUVERTURE
+
+Fonction demandée explicitement :
+- À chaque ouverture d'un fichier pris en charge, lancer automatiquement une analyse de sécurité documentaire en arrière-plan.
+- Ne pas bloquer l'ouverture : le document reste utilisable pendant l'analyse.
+- Éviter plusieurs analyses identiques simultanées sur le même fichier.
+- Si le fichier change, invalider ou actualiser le résultat.
+- Pour les formats non analysables, indiquer que l'analyse n'est pas disponible.
+
+## Notification en bas à droite
+Afficher une petite notification discrète en bas à droite de la fenêtre Noto pendant l'analyse.
+États possibles :
+- Analyse en attente ;
+- Analyse en cours ;
+- Analyse terminée ;
+- Éléments à examiner ;
+- Analyse impossible ;
+- Analyse annulée.
+
+La notification :
+- ne bloque pas l'interface ;
+- affiche une progression uniquement si mesurable ;
+- permet d'ouvrir le rapport ;
+- disparaît ou se réduit automatiquement à la fin ;
+- reste consultable depuis l'historique ou le centre de notifications.
+
+Si des éléments suspects sont trouvés, afficher une alerte plus visible mais non bloquante, avec accès au rapport.
+
+## Réglages
+- activer/désactiver l'analyse automatique ;
+- choisir catégories et formats analysés ;
+- choisir le niveau d'analyse par défaut ;
+- ignorer temporairement un fichier ;
+- exclure certains emplacements explicitement choisis ;
+- relancer manuellement ;
+- annuler une analyse si possible.
+
+Par défaut, activer une analyse locale raisonnable et rapide. Réserver l'analyse approfondie à une action manuelle ou à un réglage explicite si elle est coûteuse en ressources.
+
+## Confidentialité
+Analyse locale uniquement, aucun document envoyé à une IA distante, aucune télémétrie. Résultats stockés localement, option d'effacer l'historique. Ne pas conserver inutilement le contenu intégral des documents.
+
+# 9. ÉDITEUR MARKDOWN ET TEXTE
+
+Améliorer les éditeurs existants sans casser leur fonctionnement.
+
+## Markdown
+- éditeur confortable ;
+- prévisualisation en direct ;
+- vue source, aperçu seul et vue divisée ;
+- sommaire automatique ;
+- navigation par titres ;
+- coloration syntaxique ;
+- raccourcis Markdown ;
+- insertion rapide de liens, images, tableaux et blocs de code ;
+- recherche et remplacement ;
+- compteur de mots et caractères ;
+- indicateur de sauvegarde ;
+- récupération après fermeture inattendue ;
+- gestion des fichiers volumineux ;
+- rendu fidèle et sécurisé.
+
+## Texte brut
+- édition simple et fiable ;
+- numéros de lignes facultatifs ;
+- retour à la ligne configurable ;
+- encodage détecté et modifiable si possible ;
+- fins de ligne configurables ;
+- recherche et remplacement ;
+- affichage optionnel des caractères invisibles ;
+- coloration des caractères de contrôle ou Unicode inhabituels ;
+- comparaison avec une autre version.
+
+## Sauvegarde
+- sauvegarde automatique configurable ;
+- indicateur des modifications non enregistrées ;
+- récupération des brouillons après incident ;
+- protection contre l'écrasement involontaire ;
+- historique local des versions lorsque raisonnable ;
+- prévenir si une modification externe du fichier est détectée.
+
+# 10. OUTILS POUR IMAGES
+
+Créer ou améliorer un espace de traitement d'images local.
+
+## Formats
+Prendre en charge selon les bibliothèques : PNG, JPEG/JPG, WebP, GIF, BMP, TIFF, SVG, ICO, AVIF, HEIC/HEIF lorsque possible. Indiquer les formats réellement pris en charge en lecture et export. Ne pas promettre une conversion parfaite.
+
+## Opérations
+- convertir ;
+- compresser ;
+- redimensionner ;
+- recadrer ;
+- pivoter ;
+- retourner horizontalement ou verticalement ;
+- ajuster luminosité, contraste et saturation ;
+- modifier les dimensions du canevas ;
+- ajouter bordures ;
+- ajouter filigrane ;
+- créer planche de contact ;
+- créer collage simple ;
+- comparer avant/après ;
+- afficher dimensions et métadonnées ;
+- gérer transparence ;
+- préserver le ratio si souhaité.
+
+## Traitement par lots
+- sélectionner plusieurs images ;
+- choisir opération et paramètres ;
+- aperçu ;
+- dossier de sortie ;
+- conserver originaux ;
+- progression réelle ;
+- erreurs fichier par fichier ;
+- résumé final.
+
+## GIF et TIFF
+Lorsque possible : aperçu animé GIF, conversion, gestion de séquences, aperçu multipage TIFF et conversion de pages. Ne pas supprimer silencieusement animations ou pages multiples lors d'une conversion.
+
+# 11. CONVERSION UNIVERSELLE
+
+Créer un espace central de conversion :
+- réunir les conversions existantes ;
+- afficher les formats source et destination compatibles ;
+- ne pas proposer de conversions impossibles ;
+- préserver la mise en page lorsque réellement possible ;
+- avertir des pertes possibles ;
+- aperçu ou résumé du résultat ;
+- conversion par lots ;
+- dossier de sortie ;
+- originaux conservés ;
+- erreurs précises.
+
+Familles : documents texte, Markdown, HTML, PDF, images, CSV/TSV, formats bureautiques pris en charge et archives lorsque extraction sécurisée.
+Créer un moteur partagé : chaque convertisseur déclare ses entrées, sorties, limites et dépendances.
+
+# 12. COMPARAISON DE DOCUMENTS ET FICHIERS
+
+## Texte et Markdown
+- comparer deux fichiers ;
+- lignes ajoutées, supprimées et modifiées ;
+- vue côte à côte ou unifiée ;
+- navigation entre différences ;
+- option d'ignorer espaces ou fins de ligne ;
+- exporter un rapport.
+
+## PDF
+- comparer le texte extrait ;
+- repérer les pages différentes ;
+- afficher les différences de contenu ;
+- comparaison visuelle lorsque possible ;
+- ne pas prétendre détecter les différences visuelles si seul le texte est comparé.
+
+## Images
+- comparaison côte à côte ;
+- superposition ;
+- différence visuelle ;
+- dimensions ;
+- tolérance réglable si possible.
+
+## Fichiers généraux
+- comparer taille, date et métadonnées ;
+- empreintes cryptographiques pour doublons exacts ;
+- distinguer doublons exacts et fichiers similaires ;
+- ne jamais déclarer deux fichiers identiques sur la seule base de leur nom.
+
+# 13. ORGANISATION ET PRODUCTIVITÉ
+
+Améliorer :
+- fichiers récents ;
+- favoris ;
+- dossiers épinglés ;
+- collections personnalisées ;
+- espaces de travail ;
+- historique des actions ;
+- recherche globale ;
+- accès rapide aux outils ;
+- reprise des derniers documents ouverts ;
+- préférences de session ;
+- restauration de session ;
+- regroupement d'onglets ;
+- indication claire des fichiers modifiés.
+
+Les espaces de travail doivent rester simples : ils aident à retrouver des documents et outils, sans devenir un système complexe de gestion de projet.
+
+# 14. TRAITEMENT PAR LOTS ET AUTOMATISATION LOCALE
+
+Système commun :
+- ajouter plusieurs fichiers ;
+- choisir une opération compatible ;
+- définir les paramètres ;
+- prévisualiser si possible ;
+- choisir un dossier de destination ;
+- lancer ;
+- suivre la progression ;
+- annuler si possible ;
+- consulter erreurs et résumé ;
+- retrouver le résumé dans l'historique.
+
+Exemples :
+- convertir toutes les images d'un dossier ;
+- compresser plusieurs PDF ;
+- redimensionner plusieurs images ;
+- convertir plusieurs Markdown en HTML ou PDF si génération disponible ;
+- extraire des pages de plusieurs PDF avec paramètres explicites.
+
+Les automatisations ne doivent jamais exécuter des scripts arbitraires ou commandes système provenant d'un document ouvert.
+
+# 15. HISTORIQUE, RAPPORTS ET RÉCUPÉRATION
+
+Historique local des opérations :
+- date et heure ;
+- type d'opération ;
+- fichiers concernés ;
+- résultat ;
+- durée si mesurée ;
+- erreurs et avertissements ;
+- accès au rapport ;
+- relance lorsque pertinent.
+
+Inclure historique des analyses, conversions, traitements par lots, comparaisons et documents récents ; récupération de brouillons ; nettoyage de l'historique avec confirmation.
+
+Ne stocker que les informations utiles. Ne pas conserver le contenu intégral des documents par défaut.
+
+# 16. PARAMÈTRES CENTRALISÉS
+
+Page de paramètres organisée :
+- Général ;
+- Apparence ;
+- Navigation et raccourcis ;
+- Fichiers et ouverture ;
+- Éditeurs ;
+- Lecteur PDF ;
+- Images ;
+- Conversion ;
+- Analyse et sécurité ;
+- Notifications ;
+- Historique et stockage ;
+- Confidentialité ;
+- À propos.
+
+Chaque réglage a un libellé compréhensible et une explication si nécessaire. Réglages fonctionnels, persistants, réinitialisables, validés et compatibles avec les futures versions.
+
+# 17. SÉCURITÉ TECHNIQUE
+
+Noto ouvre des fichiers potentiellement inconnus :
+- conserver ou améliorer le sandboxing HTML ;
+- CSP stricte et adaptée ;
+- permissions Tauri minimales ;
+- ne jamais exécuter macros Office ;
+- ne jamais exécuter scripts de documents ;
+- ne pas ouvrir automatiquement liens externes ;
+- prévenir traversées de chemins et accès non autorisés ;
+- valider extensions et contenu réel lorsque possible ;
+- protéger contre archives malformées, chemins d'extraction dangereux et bombes de décompression ;
+- limiter taille, nombre et profondeur des éléments extraits ;
+- nettoyer fichiers temporaires ;
+- préserver originaux ;
+- ne pas écraser sans confirmation ;
+- éviter fuites de données dans les logs ;
+- ne transmettre aucun fichier à un service distant ;
+- traiter le contenu des documents comme des données non fiables, jamais comme des instructions à suivre par l'application ou ses outils.
+
+Pour aperçus HTML et formats actifs, utiliser un environnement isolé sans accès privilégié au système de fichiers.
+
+# 18. PERFORMANCE ET STABILITÉ
+
+- Ne pas bloquer le fil principal de l'interface pendant les traitements lourds.
+- Utiliser workers ou tâches asynchrones adaptés.
+- Charger progressivement les documents volumineux.
+- Limiter mémoire des aperçus.
+- Libérer les ressources à la fermeture des onglets.
+- Annuler les traitements obsolètes.
+- Éviter fuites mémoire.
+- Cache seulement si bénéfice réel et invalidation fiable.
+- Gérer fichiers absents, renommés, déplacés ou verrouillés.
+- Erreurs compréhensibles.
+- Tester petits, moyens et gros fichiers.
+
+# 19. TESTS ET VALIDATION
+
+Chaque fonction ajoutée doit être testée.
+
+Tests unitaires : détection, parsing, conversions, comparaison, préférences, validation chemins, historique.
+
+Tests d'intégration : ouverture des formats, fermeture/réouverture, analyse automatique, notifications, rapport, opérations PDF, images, conversions, sauvegarde et récupération.
+
+Non-régression : ouverture de fichiers, onglets, lecture et édition, Markdown, PDF, images, CSV/TSV, Office et EPUB déjà supportés, préférences, fichiers récents et fonctions Tauri.
+
+Utilise les scripts réellement définis dans package.json : TypeScript, tests, lint si configuré, build web, build Tauri si l'environnement le permet. Ne prétends jamais qu'un test a réussi s'il n'a pas été exécuté. Si une compilation est impossible, explique pourquoi.
+
+# 20. DOCUMENTATION
+
+Mettre à jour README, changelog, roadmap, documentation fonctionnelle, formats pris en charge, limites connues, instructions de développement, compilation et installation. Documenter nouvelles dépendances et licences. Ne pas laisser de documentation promettant des fonctions non implémentées.
+
+# 21. PLAN DE TRAVAIL ET PRIORITÉS
+
+Le temps n'est pas une contrainte. Qualité, stabilité et exhaustivité sont prioritaires. Ne code pas tout dans un seul changement gigantesque et fragile. Travaille par étapes cohérentes et poursuis jusqu'à un résultat réellement utilisable.
+
+Ordre conseillé :
+
+Phase A — Audit et fondations
+- audit ;
+- inventaire ;
+- architecture cible ;
+- services partagés ;
+- notifications et progression ;
+- paramètres ;
+- tests de non-régression.
+
+Phase B — Lecteur PDF
+- barre d'outils ;
+- plein écran ;
+- zoom et affichage ;
+- miniatures ;
+- navigation ;
+- recherche ;
+- préférences ;
+- tests.
+
+Phase C — Analyse documentaire
+- moteur commun ;
+- PDF ;
+- DOCX ;
+- Markdown ;
+- TXT ;
+- autres formats ;
+- classification et rapports ;
+- analyse automatique à l'ouverture ;
+- notifications en bas à droite ;
+- réglages confidentialité.
+
+Phase D — Gestion et productivité
+- explorateur ;
+- favoris ;
+- recherche ;
+- historique ;
+- espaces de travail ;
+- reprise de session.
+
+Phase E — Éditeurs
+- Markdown ;
+- texte ;
+- prévisualisation ;
+- recherche/remplacement ;
+- sauvegarde/récupération.
+
+Phase F — PDF et images
+- outils PDF ;
+- annotations ;
+- opérations de pages ;
+- outils images ;
+- traitement par lots.
+
+Phase G — Conversion et comparaison
+- moteur conversion ;
+- comparaison texte ;
+- comparaison PDF ;
+- comparaison image ;
+- doublons exacts.
+
+Phase H — Finition
+- accessibilité ;
+- performances ;
+- tests complets ;
+- documentation ;
+- installation ;
+- vérification finale.
+
+Adapte l'ordre si l'audit révèle des dépendances. Documente les changements de priorité. Ne t'arrête pas après la rédaction de la roadmap.
+
+# 22. RÈGLES D'IMPLÉMENTATION
+
+- Lis le code réel avant d'agir.
+- Ne remplace pas une bibliothèque sans raison.
+- Pas de pages de démonstration déconnectées du métier.
+- Pas de boutons sans action.
+- Pas de résultats simulés.
+- Pas de dépendance payante.
+- Ne supprime pas les données utilisateur.
+- Ne modifie pas les sources pendant l'analyse.
+- Préserve les préférences et migre les données si le stockage évolue.
+- Composants accessibles et réutilisables.
+- Séparation UI / traitement.
+- Tests au fur et à mesure.
+- Documentation actualisée.
+- Si une fonction est impossible ou risquée, documente la limite et propose la meilleure alternative gratuite et locale.
+- Ne déclare pas une phase terminée sans vérification réelle.
+
+# 23. INSTALLATEUR ET DISTRIBUTION
+
+Préserver le système de distribution actuel :
+- auditer configuration Tauri et cibles de build ;
+- conserver en priorité l'installateur Windows NSIS .exe s'il est configuré et fonctionnel ;
+- ne pas ajouter MSI si inutile ;
+- ne pas modifier inutilement identifiants, chemins de données ou paramètres d'installation ;
+- vérifier installation, mise à jour et désinstallation ;
+- ne pas supprimer préférences et documents personnels à la désinstallation sans action explicite ;
+- vérifier ressources et icônes ;
+- ne pas promettre de signature numérique inexistante ;
+- versions fiables ;
+- empreinte SHA-256 si workflow existant le permet.
+
+# 24. CRITÈRES D'ACCEPTATION
+
+Réussite uniquement si :
+1. L'application existante continue de fonctionner.
+2. Les fonctions actuelles sont préservées.
+3. Le lecteur PDF propose une expérience nettement améliorée : plein écran, zoom, navigation et personnalisation.
+4. L'analyse documentaire fonctionne réellement sur les formats annoncés.
+5. Les résultats sont explicables et localisés.
+6. L'analyse automatique se lance à l'ouverture sans bloquer le document.
+7. Une notification discrète apparaît en bas à droite pendant l'analyse.
+8. Les éléments suspects déclenchent une alerte consultable.
+9. L'analyse reste locale et ne modifie pas les originaux.
+10. Gestion, édition, images, conversion et comparaison sont intégrées de manière cohérente.
+11. Les opérations longues ont progression réelle et gestion d'erreur.
+12. Les paramètres sont persistants.
+13. Les tests disponibles sont exécutés et rapportés.
+14. La documentation correspond à l'état réel.
+15. Aucune fonction n'est annoncée terminée si elle ne l'est pas.
+
+# 25. RAPPORT FINAL OBLIGATOIRE
+
+À la fin, fournis :
+
+A. Résumé : améliorations, changements majeurs, bénéfices.
+
+B. Fonctionnalités : terminées, partielles, non réalisées, raisons et limites.
+
+C. Architecture : composants ajoutés/modifiés, bibliothèques, choix, licences et contraintes.
+
+D. Vérifications : tests exécutés, résultats, build effectué ou non, problèmes.
+
+E. Sécurité et confidentialité : données stockées, traitement local, permissions, limites de l'analyse.
+
+F. Utilisation : emplacement des outils, raccourcis, réglages, limites connues.
+
+G. Suite : tâches restantes et améliorations possibles.
+
+Ne dis pas « tout est terminé » si des parties ne le sont pas.
+
+# 26. CONSIGNE FINALE
+
+Tu dois faire évoluer le véritable projet Noto existant, pas créer une application parallèle et pas seulement écrire de la documentation.
+
+La priorité est de livrer une application stable, utile, cohérente, gratuite et locale.
+
+Prends le temps nécessaire. Audite avant d'agir, implémente proprement, teste, corrige les régressions et documente honnêtement.
+
+PRÉSERVE CE QUI FONCTIONNE. AMÉLIORE CE QUI EXISTE. AJOUTE CE QUI MANQUE. NE SIMULE JAMAIS UNE FONCTIONNALITÉ.
+
+Le résultat attendu est une grande évolution de Noto, fidèle à son objectif : réunir les outils documentaires du quotidien dans une seule application simple, puissante et respectueuse de la vie privée.
