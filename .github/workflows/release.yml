@@ -423,7 +423,7 @@ jobs:
 
       - name: Publish versioned GitHub Release downloads
         if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           name: Noto ${{ github.ref_name }}
           # Notes rédigées quand le tag en possède, sinon notes générées par GitHub.
